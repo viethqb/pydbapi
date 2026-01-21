@@ -424,9 +424,9 @@ RestrictedPython = ">=7.0"
 - [x] **3.4.2** `api-assignments/debug` calls `ApiExecutor.execute`
 - [x] **3.4.3** `pyproject.toml`: `RestrictedPython>=7.0`
 - [x] Tests: unit (pool/connect, sql, script) + api_assignments debug validation tests
-- [ ] **Optional:** `tests/engines/test_api_executor.py` (unit); integration (postgres, mysql, debug E2E)
-- [ ] **Optional:** `EXTERNAL_DB_STATEMENT_TIMEOUT` in `pool/connect.execute()` (nếu DB hỗ trợ)
-- [ ] **Optional:** Script exec timeout (signal / multiprocessing)
+- [x] **Optional:** `tests/engines/test_api_executor.py` (unit)
+- [x] **Optional:** `EXTERNAL_DB_STATEMENT_TIMEOUT` in `pool/connect.execute()` (Postgres: statement_timeout, MySQL: max_execution_time)
+- [x] **Optional:** Script exec timeout (`SCRIPT_EXEC_TIMEOUT` + signal.SIGALRM on Unix)
 
 ---
 

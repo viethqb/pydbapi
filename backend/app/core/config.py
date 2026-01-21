@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     EXTERNAL_DB_POOL_SIZE: int = 5
     EXTERNAL_DB_CONNECT_TIMEOUT: int = 10
     EXTERNAL_DB_STATEMENT_TIMEOUT: int | None = None
+    SCRIPT_EXEC_TIMEOUT: int | None = None  # seconds; uses signal.SIGALRM on Unix when set
 
     # -------------------------------------------------------------------------
     # DBAPI Phase 1: Cache (Redis)

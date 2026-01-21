@@ -1,11 +1,13 @@
 """Unit tests for engines.script.executor and context (Phase 3, Task 3.3)."""
 
+import signal
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.engines.script import ScriptContext, ScriptExecutor
+from app.engines.script.executor import ScriptTimeoutError
 from app.models_dbapi import DataSource, ProductTypeEnum
 
 
@@ -68,6 +70,20 @@ class TestScriptExecutorBasic:
         )
         with pytest.raises(NameError, match="open"):
             ScriptExecutor().execute("result = open('/etc/passwd')", ctx)
+
+
+@patch("app.engines.script.executor.settings")
+@pytest.mark.skipif(not hasattr(signal, "SIGALRM"), reason="SIGALRM not available (e.g. Windows)")
+def test_script_executor_timeout_raises(mock_settings: MagicMock) -> None:
+    """When SCRIPT_EXEC_TIMEOUT is set, a long-running script raises ScriptTimeoutError."""
+    mock_settings.SCRIPT_EXEC_TIMEOUT = 1
+    ctx = ScriptContext(
+        datasource=_make_datasource(),
+        req={},
+        pool_manager=MockPool(),
+    )
+    with pytest.raises(ScriptTimeoutError, match="timed out"):
+        ScriptExecutor().execute("while True: pass", ctx)
 
 
 class TestScriptContextToDict:

@@ -7,6 +7,7 @@ Uses POSTGRES_* and MYSQL_* from env (integration-test.sh exports them).
 
 import os
 import uuid
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -138,6 +139,33 @@ def test_health_check_fails_on_closed_connection() -> None:
     conn.close()
     ok = health_check(conn, ProductTypeEnum.POSTGRES)
     assert ok is False
+
+
+@patch("app.core.pool.connect.settings")
+def test_execute_applies_statement_timeout_when_configured(mock_settings: MagicMock) -> None:
+    """When EXTERNAL_DB_STATEMENT_TIMEOUT is set, execute() runs SET statement_timeout (Postgres) before query and resets after."""
+    mock_settings.EXTERNAL_DB_STATEMENT_TIMEOUT = 5
+    calls: list[tuple[str, tuple]] = []
+    mock_cur = MagicMock()
+    mock_cur.execute = lambda s, p=None: calls.append((s, p if p is not None else ()))
+    mock_cur.description = [("n",)]
+    mock_cur.fetchall = lambda: [(1,)]
+    mock_cur.close = lambda: None
+    mock_conn = MagicMock()
+    mock_conn.cursor.return_value = mock_cur
+
+    cur = execute(
+        mock_conn,
+        "SELECT 1 AS n",
+        product_type=ProductTypeEnum.POSTGRES,
+    )
+
+    assert len(calls) >= 2
+    assert "statement_timeout" in calls[0][0]
+    assert "5000" in str(calls[0][1])
+    assert calls[1][0] == "SELECT 1 AS n"
+    assert "statement_timeout" in calls[2][0] and "0" in calls[2][0]
+    assert cur is mock_cur
 
 
 # --- PoolManager ---

@@ -81,18 +81,48 @@ def execute(
     sql: str,
     params: dict | list | tuple | None = None,
     *,
-    product_type: ProductTypeEnum | None = None,  # noqa: ARG001  # reserved for dialect-specific behavior
+    product_type: ProductTypeEnum | None = None,
 ) -> Any:
     """
     Execute SQL and return the cursor. Caller uses cursor_to_dicts(cursor) or cursor.rowcount.
 
-    - product_type: reserved for dialect-specific behavior; not used for initial postgres/mysql.
+    - product_type: used for EXTERNAL_DB_STATEMENT_TIMEOUT (Postgres: statement_timeout,
+      MySQL: max_execution_time). When set, applies timeout in ms before the query and resets after.
     """
+    timeout_sec = settings.EXTERNAL_DB_STATEMENT_TIMEOUT
+
+    if timeout_sec is not None and timeout_sec > 0 and product_type is not None:
+        timeout_ms = int(timeout_sec * 1000)
+        cur_set = conn.cursor()
+        try:
+            if product_type == ProductTypeEnum.POSTGRES:
+                cur_set.execute("SET statement_timeout = %s", (str(timeout_ms),))
+            elif product_type == ProductTypeEnum.MYSQL:
+                cur_set.execute("SET SESSION max_execution_time = %s", (timeout_ms,))
+        finally:
+            try:
+                cur_set.close()
+            except Exception:
+                pass
+
     cur = conn.cursor()
-    if params is not None:
-        cur.execute(sql, params)
-    else:
-        cur.execute(sql)
+    try:
+        if params is not None:
+            cur.execute(sql, params)
+        else:
+            cur.execute(sql)
+    finally:
+        if timeout_sec is not None and timeout_sec > 0 and product_type is not None:
+            try:
+                cur_reset = conn.cursor()
+                if product_type == ProductTypeEnum.POSTGRES:
+                    cur_reset.execute("SET statement_timeout = 0")
+                elif product_type == ProductTypeEnum.MYSQL:
+                    cur_reset.execute("SET SESSION max_execution_time = 0")
+                cur_reset.close()
+            except Exception:
+                pass
+
     return cur
 
 
