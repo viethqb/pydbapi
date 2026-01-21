@@ -10,6 +10,7 @@ from app.api.routes import (
     items,
     login,
     modules,
+    overview,
     private,
     users,
     utils,
@@ -28,6 +29,7 @@ api_router.include_router(api_assignments.router)
 api_router.include_router(clients.router)
 api_router.include_router(firewall.router)
 api_router.include_router(alarm.router)
+api_router.include_router(overview.router)
 
 
 if settings.ENVIRONMENT == "local":

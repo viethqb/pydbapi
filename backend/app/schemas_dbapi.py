@@ -489,3 +489,56 @@ class UnifyAlarmListOut(SQLModel):
 
     data: list[UnifyAlarmPublic]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Overview / Dashboard (Task 2.7)
+# ---------------------------------------------------------------------------
+
+
+class OverviewStats(SQLModel):
+    """Response for GET /overview/stats; counts of main entities."""
+
+    datasources: int = 0
+    modules: int = 0
+    groups: int = 0
+    apis_total: int = 0
+    apis_published: int = 0
+    clients: int = 0
+    firewall_rules: int = 0
+    alarms: int = 0
+
+
+class AccessRecordPublic(SQLModel):
+    """Minimal schema for AccessRecord in recent-access; request_body excluded."""
+
+    id: uuid.UUID
+    api_assignment_id: uuid.UUID | None
+    app_client_id: uuid.UUID | None
+    ip_address: str
+    http_method: str
+    path: str
+    status_code: int
+    created_at: datetime
+
+
+class VersionCommitPublic(SQLModel):
+    """Minimal schema for VersionCommit in recent-commits; content_snapshot excluded."""
+
+    id: uuid.UUID
+    api_assignment_id: uuid.UUID
+    version: int
+    commit_message: str | None
+    committed_at: datetime
+
+
+class RecentAccessOut(SQLModel):
+    """Response for GET /overview/recent-access."""
+
+    data: list[AccessRecordPublic]
+
+
+class RecentCommitsOut(SQLModel):
+    """Response for GET /overview/recent-commits."""
+
+    data: list[VersionCommitPublic]

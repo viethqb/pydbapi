@@ -15,7 +15,6 @@
 | **2.3** | `api/routes/modules.py`, `api/routes/groups.py` | ApiModule, ApiGroup: CRUD + list (POST) |
 | **2.4** | `api/routes/clients.py` | AppClient: CRUD, list, regenerate secret |
 | **2.5** | `api/routes/firewall.py`, `alarm.py`, `topology.py` | FirewallRules, UnifyAlarm, Topology (see §2.5) |
-| **2.6** | `api/routes/mcp.py` | McpTool, McpClient: CRUD, list |
 | **2.7** | `api/routes/overview.py` | Dashboard: counts, recent access, etc. |
 
 **Shared structure:**
@@ -36,12 +35,11 @@
     Groups       ──┘
 2.4 Clients
 2.5 Firewall, Alarm, Topology
-2.6 MCP
 2.7 Overview (reads from multiple tables, implement last)
 ```
 
 **Suggested order:**  
-2.1 → 2.3 → 2.2 → 2.4 → 2.5 → 2.6 → 2.7.
+2.1 → 2.3 → 2.2 → 2.4 → 2.5 → 2.7.
 
 ---
 
@@ -234,46 +232,16 @@
 
 ---
 
-## 8. Task 2.6: MCP Service
-
-**File:** `api/routes/mcp.py`  
-Use sub-paths under prefix `/mcp` for tools and clients.
-
-### 8.1 McpTool
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/mcp/tools/list` | POST | List with pagination |
-| `/mcp/tools/create` | POST | name, config (dict), is_active? |
-| `/mcp/tools/update` | POST | Update |
-| `/mcp/tools/delete/{id}` | DELETE | Delete |
-| `/mcp/tools/{id}` | GET | Detail |
-
-### 8.2 McpClient
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/mcp/clients/list` | POST | List with pagination |
-| `/mcp/clients/create` | POST | name, config, is_active? |
-| `/mcp/clients/update` | POST | Update |
-| `/mcp/clients/delete/{id}` | DELETE | Delete |
-| `/mcp/clients/{id}` | GET | Detail |
-
-**Schemas:**  
-`McpToolCreate/Update/Public`, `McpClientCreate/Update/Public`; `config` is a `dict` (JSONB).
-
----
-
-## 9. Task 2.7: Overview / Dashboard
+## 8. Task 2.7: Overview / Dashboard
 
 **File:** `api/routes/overview.py`  
 **Prefix:** `/overview`
 
-### 9.1 Endpoints (suggested)
+### 8.1 Endpoints (suggested)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/overview/stats` | GET | Counts: datasources, modules, groups, apis (published/total), clients, firewall rules, alarms, mcp tools, mcp clients. |
+| `/overview/stats` | GET | Counts: datasources, modules, groups, apis (published/total), clients, firewall rules, alarms. |
 | `/overview/recent-access` | GET | Latest `AccessRecord` entries (e.g. limit=20). |
 | `/overview/recent-commits` | GET | Latest `VersionCommit` entries (optional). |
 
@@ -304,7 +272,6 @@ from app.api.routes import (
     firewall,
     alarm,
     topology,
-    mcp,
     overview,
 )
 
@@ -317,7 +284,6 @@ api_router.include_router(clients.router, prefix="/clients", tags=["clients"])
 api_router.include_router(firewall.router, prefix="/firewall", tags=["firewall"])
 api_router.include_router(alarm.router, prefix="/alarm", tags=["alarm"])
 api_router.include_router(topology.router, prefix="/topology", tags=["topology"])
-api_router.include_router(mcp.router, prefix="/mcp", tags=["mcp"])
 api_router.include_router(overview.router, prefix="/overview", tags=["overview"])
 ```
 
@@ -350,7 +316,6 @@ api_router.include_router(overview.router, prefix="/overview", tags=["overview"]
 | `app/api/routes/firewall.py` | Task 2.5 |
 | `app/api/routes/alarm.py` | Task 2.5 |
 | `app/api/routes/topology.py` | Task 2.5 (aggregate read-only) |
-| `app/api/routes/mcp.py` | Task 2.6 |
 | `app/api/routes/overview.py` | Task 2.7 |
 
 ### Update
@@ -378,7 +343,6 @@ api_router.include_router(overview.router, prefix="/overview", tags=["overview"]
 - [ ] **2.2** `api_assignments.py` + schemas (publish; debug → 501)  
 - [ ] **2.4** `clients.py` + `regenerate-secret` + hashing  
 - [ ] **2.5** `firewall.py`, `alarm.py`, `topology.py` (aggregate)  
-- [ ] **2.6** `mcp.py` (tools + clients)  
 - [ ] **2.7** `overview.py`  
 - [ ] Register all routers in `api/main.py`  
 - [ ] `pyproject.toml`: psycopg2-binary, pymysql  
