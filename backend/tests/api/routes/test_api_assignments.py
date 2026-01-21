@@ -269,16 +269,42 @@ def test_publish_api_assignment_not_found(
     assert response.status_code == 404
 
 
-# --- debug (501) ---
+# --- debug (Phase 3: ApiExecutor) ---
 
 
-def test_debug_api_assignment_returns_501(
+def test_debug_api_assignment_missing_datasource_id_returns_400(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """Inline debug with SQL but no datasource_id returns 400."""
+    response = client.post(
+        f"{_base()}/debug",
+        headers=superuser_token_headers,
+        json={"content": "SELECT 1", "execute_engine": "SQL"},
+    )
+    assert response.status_code == 400
+    assert "datasource_id" in response.json()["detail"]
+
+
+def test_debug_api_assignment_missing_content_or_id_returns_400(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """Inline debug with no content and no id returns 400."""
+    response = client.post(
+        f"{_base()}/debug",
+        headers=superuser_token_headers,
+        json={"execute_engine": "SQL", "datasource_id": "00000000-0000-0000-0000-000000000001"},
+    )
+    assert response.status_code == 400
+    assert "id or content" in response.json()["detail"]
+
+
+def test_debug_api_assignment_by_id_not_found_returns_404(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     response = client.post(
         f"{_base()}/debug",
         headers=superuser_token_headers,
-        json={"id": None, "content": "SELECT 1", "execute_engine": "SQL"},
+        json={"id": str(uuid.uuid4())},
     )
-    assert response.status_code == 501
-    assert "Phase 3" in response.json()["detail"]
+    assert response.status_code == 404
+    assert "ApiAssignment not found" in response.json()["detail"]

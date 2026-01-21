@@ -2,6 +2,7 @@
 API Assignment + ApiContext management (Phase 2, Task 2.2).
 
 Endpoints: list, create, update, delete, get detail, publish, debug.
+Phase 3: debug calls ApiExecutor.execute (SQL or SCRIPT).
 """
 
 import uuid
@@ -13,6 +14,7 @@ from sqlalchemy import delete
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.engines import ApiExecutor
 from app.models import Message
 from app.models_dbapi import (
     ApiAssignment,
@@ -215,14 +217,64 @@ def publish_api_assignment(
 
 @router.post("/debug")
 def debug_api_assignment(
+    session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
-    body: ApiAssignmentDebugIn,  # noqa: ARG001
+    body: ApiAssignmentDebugIn,
 ) -> Any:
-    """Run API (SQL/script) for testing. Phase 2: returns 501 Not Implemented."""
-    raise HTTPException(
-        status_code=501,
-        detail="Debug requires Phase 3 SQL/Script engine",
-    )
+    """
+    Run API (SQL or Script) for testing. Phase 3: uses ApiExecutor.
+
+    - If body.id: load ApiAssignment + ApiContext; use content, execute_engine, datasource_id.
+    - If body.content (inline): use content, execute_engine, datasource_id from body.
+    Returns {"data": ...}, {"rowcount": n}, or {"error": "..."}.
+    """
+    content: str
+    engine = body.execute_engine
+    datasource_id = body.datasource_id
+
+    if body.id is not None:
+        a = session.get(ApiAssignment, body.id)
+        if not a:
+            raise HTTPException(status_code=404, detail="ApiAssignment not found")
+        ctx = session.exec(
+            select(ApiContext).where(ApiContext.api_assignment_id == a.id)
+        ).first()
+        content = (ctx.content if ctx else "") or ""
+        if engine is None:
+            engine = a.execute_engine
+        if datasource_id is None:
+            datasource_id = a.datasource_id
+    else:
+        content = body.content or ""
+        if not content:
+            raise HTTPException(
+                status_code=400,
+                detail="Either id or content is required",
+            )
+        if engine is None:
+            raise HTTPException(
+                status_code=400,
+                detail="execute_engine is required when using inline content",
+            )
+
+    if (engine and engine.value == "SQL") or (engine and engine.value == "SCRIPT"):
+        if datasource_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="datasource_id is required for SQL and SCRIPT engines",
+            )
+
+    try:
+        out = ApiExecutor().execute(
+            engine=engine,
+            content=content,
+            params=body.params or {},
+            datasource_id=datasource_id,
+            session=session,
+        )
+        return out
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.delete("/delete/{id}", response_model=Message)

@@ -411,19 +411,22 @@ RestrictedPython = ">=7.0"
 
 ## 10. Implementation Checklist
 
-- [ ] **3.1.1** `core/pool/connect.py` (connect, execute, cursor_to_dicts by product_type)
-- [ ] **3.1.2** `core/pool/manager.py`, `health.py`
-- [ ] **3.1.3** Update `datasources/preTest`, `datasources/test/{id}` to use `connect` + `health_check` (and/or pool). Consider removing `/datasources/{type}/drivers`.
-- [ ] **3.2.1** `engines/sql/filters.py` (in_list, sql_int, sql_date, sql_datetime, sql_like…)
-- [ ] **3.2.2** `engines/sql/template_engine.py` (`render`, `parse_parameters`), `extensions.py` (optional)
-- [ ] **3.2.3** `engines/sql/executor.py` (`execute_sql`)
-- [ ] **3.3.1** `engines/script/sandbox.py` (RestrictedPython)
-- [ ] **3.3.2** `engines/script/context.py`, `modules/db`, `http`, `cache`, `env`, `log`
-- [ ] **3.3.3** `engines/script/executor.py` (`ScriptExecutor.execute`)
-- [ ] **3.4.1** `engines/executor.py` or `core/api_executor.py` (`ApiExecutor.execute`)
-- [ ] **3.4.2** `api-assignments/debug` calls `ApiExecutor.execute`
-- [ ] **3.4.3** `pyproject.toml`: `RestrictedPython>=7.0`
-- [ ] Tests: unit (pool/connect, sql, script, api_executor) + integration (postgres, mysql, debug)
+- [x] **3.1.1** `core/pool/connect.py` (connect, execute, cursor_to_dicts by product_type)
+- [x] **3.1.2** `core/pool/manager.py`, `health.py`
+- [x] **3.1.3** Update `datasources/preTest`, `datasources/test/{id}` to use `connect` + `health_check` (and/or pool). Consider removing `/datasources/{type}/drivers`.
+- [x] **3.2.1** `engines/sql/filters.py` (in_list, sql_int, sql_date, sql_datetime, sql_like…)
+- [x] **3.2.2** `engines/sql/template_engine.py` (`render`, `parse_parameters`), `extensions.py` (optional)
+- [x] **3.2.3** `engines/sql/executor.py` (`execute_sql`)
+- [x] **3.3.1** `engines/script/sandbox.py` (RestrictedPython)
+- [x] **3.3.2** `engines/script/context.py`, `modules/db`, `http`, `cache`, `env`, `log`
+- [x] **3.3.3** `engines/script/executor.py` (`ScriptExecutor.execute`)
+- [x] **3.4.1** `engines/executor.py` (`ApiExecutor.execute`)
+- [x] **3.4.2** `api-assignments/debug` calls `ApiExecutor.execute`
+- [x] **3.4.3** `pyproject.toml`: `RestrictedPython>=7.0`
+- [x] Tests: unit (pool/connect, sql, script) + api_assignments debug validation tests
+- [ ] **Optional:** `tests/engines/test_api_executor.py` (unit); integration (postgres, mysql, debug E2E)
+- [ ] **Optional:** `EXTERNAL_DB_STATEMENT_TIMEOUT` in `pool/connect.execute()` (nếu DB hỗ trợ)
+- [ ] **Optional:** Script exec timeout (signal / multiprocessing)
 
 ---
 
