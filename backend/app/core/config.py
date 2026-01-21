@@ -68,6 +68,40 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
+    # -------------------------------------------------------------------------
+    # DBAPI Phase 1: External DB connections (pool/runtime for DataSource)
+    # -------------------------------------------------------------------------
+    EXTERNAL_DB_POOL_SIZE: int = 5
+    EXTERNAL_DB_CONNECT_TIMEOUT: int = 10
+    EXTERNAL_DB_STATEMENT_TIMEOUT: int | None = None
+
+    # -------------------------------------------------------------------------
+    # DBAPI Phase 1: Cache (Redis)
+    # -------------------------------------------------------------------------
+    REDIS_URL: str | None = None
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str | None = None
+    REDIS_SSL: bool = False
+    CACHE_ENABLED: bool = True
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def redis_url(self) -> str:
+        if self.REDIS_URL:
+            return self.REDIS_URL
+        scheme = "rediss" if self.REDIS_SSL else "redis"
+        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
+        return f"{scheme}://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    # -------------------------------------------------------------------------
+    # DBAPI Phase 1: Flow control
+    # -------------------------------------------------------------------------
+    FLOW_CONTROL_RATE_LIMIT_PER_MINUTE: int = 60
+    FLOW_CONTROL_RATE_LIMIT_ENABLED: bool = True
+    FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: int = 10
+
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
     SMTP_PORT: int = 587

@@ -46,6 +46,44 @@ This is useful for:
 
 The backend is automatically configured to use Mailcatcher when running with Docker Compose locally (SMTP on port 1025). All captured emails can be viewed at <http://localhost:1080>.
 
+## PyDBAPI: venv, tests, integration
+
+* Create a virtualenv and install dependencies (prefer [uv](https://docs.astral.sh/uv/)):
+
+```bash
+make venv
+# or: ./scripts/setup-venv.sh
+```
+
+* Run unit tests (requires a running Postgres with migrations; see `.env`):
+
+```bash
+make test
+```
+
+* Run integration tests with Docker (starts Postgres + Redis via `docker-compose.test.yml`, runs migrations and pytest, then tears down):
+
+```bash
+make integration-test
+```
+
+* Only start the test stack (db + redis) for manual testing:
+
+```bash
+make docker-up
+# use POSTGRES_SERVER=localhost REDIS_HOST=localhost, then e.g. cd backend && uv run alembic upgrade head && uv run pytest
+make docker-down
+```
+
+* Migrations:
+
+```bash
+make migrate
+make migrate-new msg=add_foo
+```
+
+The override Compose adds **Redis** (`redis:7-alpine`) and `REDIS_HOST=redis` for the backend when using `docker compose watch`.
+
 ## Local Development
 
 The Docker Compose files are configured so that each of the services is available in a different port in `localhost`.
