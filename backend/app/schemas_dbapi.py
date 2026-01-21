@@ -10,7 +10,7 @@ from datetime import datetime
 from pydantic import Field
 from sqlmodel import SQLModel
 
-from app.models_dbapi import ProductTypeEnum
+from app.models_dbapi import ExecuteEngineEnum, HttpMethodEnum, ProductTypeEnum
 
 # ---------------------------------------------------------------------------
 # DataSource (Task 2.1)
@@ -214,3 +214,108 @@ class ApiGroupListOut(SQLModel):
 
     data: list[ApiGroupPublic]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# ApiAssignment + ApiContext (Task 2.2)
+# ---------------------------------------------------------------------------
+
+
+class ApiAssignmentCreate(SQLModel):
+    """Body for POST /api-assignments/create."""
+
+    module_id: uuid.UUID
+    name: str = Field(..., min_length=1, max_length=255)
+    path: str = Field(..., min_length=1, max_length=255)
+    http_method: HttpMethodEnum
+    execute_engine: ExecuteEngineEnum
+    datasource_id: uuid.UUID | None = None
+    description: str | None = Field(default=None, max_length=512)
+    sort_order: int = Field(default=0)
+    content: str | None = Field(default=None, description="SQL/script → ApiContext (1-1)")
+    group_ids: list[uuid.UUID] = Field(default_factory=list, description="ApiGroup IDs to link")
+
+
+class ApiAssignmentUpdate(SQLModel):
+    """Body for POST /api-assignments/update; id required, others optional."""
+
+    id: uuid.UUID
+    module_id: uuid.UUID | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    path: str | None = Field(default=None, min_length=1, max_length=255)
+    http_method: HttpMethodEnum | None = None
+    execute_engine: ExecuteEngineEnum | None = None
+    datasource_id: uuid.UUID | None = None
+    description: str | None = None
+    sort_order: int | None = None
+    content: str | None = None
+    group_ids: list[uuid.UUID] | None = Field(default=None, description="If set, replace group links")
+
+
+class ApiContextPublic(SQLModel):
+    """Response schema for ApiContext (included in ApiAssignmentDetail)."""
+
+    id: uuid.UUID
+    api_assignment_id: uuid.UUID
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApiAssignmentPublic(SQLModel):
+    """Response schema for ApiAssignment (core fields; omit api_context in list)."""
+
+    id: uuid.UUID
+    module_id: uuid.UUID
+    name: str
+    path: str
+    http_method: HttpMethodEnum
+    execute_engine: ExecuteEngineEnum
+    datasource_id: uuid.UUID | None
+    description: str | None
+    is_published: bool
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApiAssignmentDetail(ApiAssignmentPublic):
+    """Detail for GET /api-assignments/{id}; adds api_context and group_ids."""
+
+    api_context: ApiContextPublic | None = None
+    group_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class ApiAssignmentListIn(SQLModel):
+    """Body for POST /api-assignments/list; pagination and optional filters."""
+
+    page: int = Field(default=1, ge=1, description="1-based page number")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    module_id: uuid.UUID | None = None
+    is_published: bool | None = None
+    name__ilike: str | None = Field(default=None, max_length=255)
+    http_method: HttpMethodEnum | None = None
+    execute_engine: ExecuteEngineEnum | None = None
+
+
+class ApiAssignmentListOut(SQLModel):
+    """Paginated list of ApiAssignment."""
+
+    data: list[ApiAssignmentPublic]
+    total: int
+
+
+class ApiAssignmentPublishIn(SQLModel):
+    """Body for POST /api-assignments/publish."""
+
+    id: uuid.UUID
+
+
+class ApiAssignmentDebugIn(SQLModel):
+    """Body for POST /api-assignments/debug; Phase 2 returns 501."""
+
+    id: uuid.UUID | None = None
+    content: str | None = None
+    execute_engine: ExecuteEngineEnum | None = None
+    datasource_id: uuid.UUID | None = None
+    params: dict | None = Field(default=None, description="Optional params dict")
