@@ -98,3 +98,119 @@ class DataSourceTestResult(SQLModel):
 
     ok: bool
     message: str
+
+
+# ---------------------------------------------------------------------------
+# ApiModule (Task 2.3)
+# ---------------------------------------------------------------------------
+
+
+class ApiModuleCreate(SQLModel):
+    """Body for POST /modules/create."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=512)
+    path_prefix: str = Field(default="/", max_length=255)
+    sort_order: int = Field(default=0)
+    is_active: bool = Field(default=True)
+
+
+class ApiModuleUpdate(SQLModel):
+    """Body for POST /modules/update; id required, others optional."""
+
+    id: uuid.UUID
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    path_prefix: str | None = Field(default=None, max_length=255)
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
+class ApiModulePublic(SQLModel):
+    """Response schema for ApiModule."""
+
+    id: uuid.UUID
+    name: str
+    description: str | None
+    path_prefix: str
+    sort_order: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApiModuleListIn(SQLModel):
+    """Body for POST /modules/list; pagination and optional filters."""
+
+    page: int = Field(default=1, ge=1, description="1-based page number")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    name__ilike: str | None = Field(default=None, max_length=255)
+    is_active: bool | None = None
+
+
+class ApiModuleListOut(SQLModel):
+    """Paginated list of ApiModule."""
+
+    data: list[ApiModulePublic]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# ApiGroup (Task 2.3)
+# ---------------------------------------------------------------------------
+
+
+class ApiGroupCreate(SQLModel):
+    """Body for POST /groups/create."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=512)
+    is_active: bool = Field(default=True)
+
+
+class ApiGroupUpdate(SQLModel):
+    """Body for POST /groups/update; id required, others optional."""
+
+    id: uuid.UUID
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    is_active: bool | None = None
+
+
+class ApiGroupPublic(SQLModel):
+    """Response schema for ApiGroup."""
+
+    id: uuid.UUID
+    name: str
+    description: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApiGroupDetail(SQLModel):
+    """Detail response for GET /groups/{id}; includes api_assignment_ids."""
+
+    id: uuid.UUID
+    name: str
+    description: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    api_assignment_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class ApiGroupListIn(SQLModel):
+    """Body for POST /groups/list; pagination and optional filters."""
+
+    page: int = Field(default=1, ge=1, description="1-based page number")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    name__ilike: str | None = Field(default=None, max_length=255)
+    is_active: bool | None = None
+
+
+class ApiGroupListOut(SQLModel):
+    """Paginated list of ApiGroup."""
+
+    data: list[ApiGroupPublic]
+    total: int
