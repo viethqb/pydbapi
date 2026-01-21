@@ -108,6 +108,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     GATEWAY_JWT_EXPIRE_SECONDS: int = 3600
     GATEWAY_AUTH_X_API_KEY_ENABLED: bool = True
+    GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True  # When no rule matches
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
