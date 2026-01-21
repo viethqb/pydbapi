@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     api_assignments,
+    clients,
     datasources,
     groups,
     items,
@@ -22,6 +23,7 @@ api_router.include_router(datasources.router)
 api_router.include_router(modules.router)
 api_router.include_router(groups.router)
 api_router.include_router(api_assignments.router)
+api_router.include_router(clients.router)
 
 
 if settings.ENVIRONMENT == "local":

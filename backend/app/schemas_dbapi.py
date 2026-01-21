@@ -319,3 +319,61 @@ class ApiAssignmentDebugIn(SQLModel):
     execute_engine: ExecuteEngineEnum | None = None
     datasource_id: uuid.UUID | None = None
     params: dict | None = Field(default=None, description="Optional params dict")
+
+
+# ---------------------------------------------------------------------------
+# AppClient (Task 2.4)
+# ---------------------------------------------------------------------------
+
+
+class AppClientCreate(SQLModel):
+    """Body for POST /clients/create; backend generates client_id, hashes client_secret."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    client_secret: str = Field(..., min_length=8, max_length=512, description="Plain secret; stored hashed")
+    description: str | None = Field(default=None, max_length=512)
+    is_active: bool = Field(default=True)
+
+
+class AppClientUpdate(SQLModel):
+    """Body for POST /clients/update; id required. client_id and client_secret not updated here."""
+
+    id: uuid.UUID
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    is_active: bool | None = None
+
+
+class AppClientPublic(SQLModel):
+    """Response schema; excludes client_secret (see regenerate-secret for one-time plain secret)."""
+
+    id: uuid.UUID
+    name: str
+    client_id: str
+    description: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class AppClientListIn(SQLModel):
+    """Body for POST /clients/list; pagination and optional filters."""
+
+    page: int = Field(default=1, ge=1, description="1-based page number")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    name__ilike: str | None = Field(default=None, max_length=255)
+    is_active: bool | None = None
+
+
+class AppClientListOut(SQLModel):
+    """Paginated list of AppClient."""
+
+    data: list[AppClientPublic]
+    total: int
+
+
+class AppClientRegenerateSecretOut(SQLModel):
+    """Response for POST /clients/{id}/regenerate-secret; plain secret shown once."""
+
+    message: str = "Client secret regenerated. Save it now; it will not be shown again."
+    client_secret: str
