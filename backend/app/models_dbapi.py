@@ -10,13 +10,18 @@ no longer stores committed_by; can add committed_by_id -> user.id later if neede
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
 from sqlalchemy import Column, Enum as SQLEnum, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
+
+
+def _utc_now() -> datetime:
+    """Timezone-aware UTC now (replaces deprecated datetime.utcnow())."""
+    return datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -85,8 +90,8 @@ class DataSource(SQLModel, table=True):
     driver_version: str | None = Field(default=None, max_length=64)
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     api_assignments: list["ApiAssignment"] = Relationship(back_populates="datasource")
 
@@ -105,8 +110,8 @@ class ApiModule(SQLModel, table=True):
     path_prefix: str = Field(max_length=255, default="/")
     sort_order: int = Field(default=0)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     api_assignments: list["ApiAssignment"] = Relationship(
         back_populates="module", cascade_delete=True
@@ -125,8 +130,8 @@ class ApiGroup(SQLModel, table=True):
     name: str = Field(max_length=255, index=True)
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     api_assignments: list["ApiAssignmentGroupLink"] = Relationship(
         back_populates="api_group"
@@ -199,8 +204,8 @@ class ApiAssignment(SQLModel, table=True):
     description: str | None = Field(default=None, max_length=512)
     is_published: bool = Field(default=False)
     sort_order: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     module: "ApiModule" = Relationship(back_populates="api_assignments")
     datasource: "DataSource" = Relationship(back_populates="api_assignments")
@@ -233,8 +238,8 @@ class ApiContext(SQLModel, table=True):
         ondelete="CASCADE",
     )
     content: str = Field(sa_column=Column(Text, nullable=False))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     api_assignment: "ApiAssignment" = Relationship(back_populates="api_context")
 
@@ -253,8 +258,8 @@ class AppClient(SQLModel, table=True):
     client_secret: str = Field(max_length=512)  # Hashed
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     access_records: list["AccessRecord"] = Relationship(back_populates="app_client")
 
@@ -284,8 +289,8 @@ class FirewallRules(SQLModel, table=True):
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)
     sort_order: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
 
 # ---------------------------------------------------------------------------
@@ -301,8 +306,8 @@ class UnifyAlarm(SQLModel, table=True):
     alarm_type: str = Field(max_length=64, index=True)
     config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
     is_enabled: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
 
 # ---------------------------------------------------------------------------
@@ -317,8 +322,8 @@ class McpTool(SQLModel, table=True):
     name: str = Field(max_length=255, index=True)
     config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
 
 # ---------------------------------------------------------------------------
@@ -333,8 +338,8 @@ class McpClient(SQLModel, table=True):
     name: str = Field(max_length=255, index=True)
     config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
 
 # ---------------------------------------------------------------------------
@@ -352,7 +357,7 @@ class VersionCommit(SQLModel, table=True):
     version: int = Field(default=1)
     content_snapshot: str = Field(sa_column=Column(Text, nullable=False))
     commit_message: str | None = Field(default=None, max_length=512)
-    committed_at: datetime = Field(default_factory=datetime.utcnow)
+    committed_at: datetime = Field(default_factory=_utc_now)
 
     api_assignment: "ApiAssignment" = Relationship(back_populates="version_commits")
 
@@ -383,7 +388,7 @@ class AccessRecord(SQLModel, table=True):
     path: str = Field(max_length=512)
     status_code: int = Field(default=0)
     request_body: str | None = Field(default=None, sa_column=Column(Text))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
 
     api_assignment: "ApiAssignment" = Relationship(back_populates="access_records")
     app_client: "AppClient" = Relationship(back_populates="access_records")

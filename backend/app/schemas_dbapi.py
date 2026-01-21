@@ -10,7 +10,12 @@ from datetime import datetime
 from pydantic import Field
 from sqlmodel import SQLModel
 
-from app.models_dbapi import ExecuteEngineEnum, HttpMethodEnum, ProductTypeEnum
+from app.models_dbapi import (
+    ExecuteEngineEnum,
+    FirewallRuleTypeEnum,
+    HttpMethodEnum,
+    ProductTypeEnum,
+)
 
 # ---------------------------------------------------------------------------
 # DataSource (Task 2.1)
@@ -377,3 +382,110 @@ class AppClientRegenerateSecretOut(SQLModel):
 
     message: str = "Client secret regenerated. Save it now; it will not be shown again."
     client_secret: str
+
+
+# ---------------------------------------------------------------------------
+# FirewallRules (Task 2.5)
+# ---------------------------------------------------------------------------
+
+
+class FirewallRuleCreate(SQLModel):
+    """Body for POST /firewall/create."""
+
+    rule_type: FirewallRuleTypeEnum
+    ip_range: str = Field(..., min_length=1, max_length=128)
+    description: str | None = Field(default=None, max_length=512)
+    is_active: bool = Field(default=True)
+    sort_order: int = Field(default=0)
+
+
+class FirewallRuleUpdate(SQLModel):
+    """Body for POST /firewall/update; id required, others optional."""
+
+    id: uuid.UUID
+    rule_type: FirewallRuleTypeEnum | None = None
+    ip_range: str | None = Field(default=None, min_length=1, max_length=128)
+    description: str | None = None
+    is_active: bool | None = None
+    sort_order: int | None = None
+
+
+class FirewallRulePublic(SQLModel):
+    """Response schema for FirewallRules."""
+
+    id: uuid.UUID
+    rule_type: FirewallRuleTypeEnum
+    ip_range: str
+    description: str | None
+    is_active: bool
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class FirewallRuleListIn(SQLModel):
+    """Body for POST /firewall/list; pagination and optional filters."""
+
+    page: int = Field(default=1, ge=1, description="1-based page number")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    rule_type: FirewallRuleTypeEnum | None = None
+    is_active: bool | None = None
+
+
+class FirewallRuleListOut(SQLModel):
+    """Paginated list of FirewallRules."""
+
+    data: list[FirewallRulePublic]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# UnifyAlarm (Task 2.5)
+# ---------------------------------------------------------------------------
+
+
+class UnifyAlarmCreate(SQLModel):
+    """Body for POST /alarm/create."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    alarm_type: str = Field(..., min_length=1, max_length=64)
+    config: dict = Field(default_factory=dict, description="JSON config")
+    is_enabled: bool = Field(default=True)
+
+
+class UnifyAlarmUpdate(SQLModel):
+    """Body for POST /alarm/update; id required, others optional."""
+
+    id: uuid.UUID
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    alarm_type: str | None = Field(default=None, min_length=1, max_length=64)
+    config: dict | None = None
+    is_enabled: bool | None = None
+
+
+class UnifyAlarmPublic(SQLModel):
+    """Response schema for UnifyAlarm."""
+
+    id: uuid.UUID
+    name: str
+    alarm_type: str
+    config: dict
+    is_enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class UnifyAlarmListIn(SQLModel):
+    """Body for POST /alarm/list; pagination and optional filters."""
+
+    page: int = Field(default=1, ge=1, description="1-based page number")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    alarm_type: str | None = Field(default=None, max_length=64)
+    is_enabled: bool | None = None
+
+
+class UnifyAlarmListOut(SQLModel):
+    """Paginated list of UnifyAlarm."""
+
+    data: list[UnifyAlarmPublic]
+    total: int

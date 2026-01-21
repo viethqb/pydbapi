@@ -5,7 +5,7 @@ Endpoints: list, create, update, delete, get detail, publish, debug.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -166,7 +166,7 @@ def update_api_assignment(
         ).first()
         if ctx:
             ctx.content = body.content or ""
-            ctx.updated_at = datetime.utcnow()
+            ctx.updated_at = datetime.now(timezone.utc)
             session.add(ctx)
         else:
             session.add(
@@ -206,7 +206,7 @@ def publish_api_assignment(
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
     a.is_published = True
-    a.updated_at = datetime.utcnow()
+    a.updated_at = datetime.now(timezone.utc)
     session.add(a)
     session.commit()
     session.refresh(a)
