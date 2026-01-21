@@ -28,7 +28,7 @@
 | `ApiModuleEntity` | `ApiModule` | Module grouping APIs |
 | `ApiGroupEntity` | `ApiGroup` | Authorization group |
 | `AppClientEntity` | `AppClient` | Client application |
-| `SystemUserEntity` | `SystemUser` | System user |
+| ~~`SystemUserEntity`~~ | — | *Dropped: web login uses `app.models.User`* |
 | `FirewallRulesEntity` | `FirewallRules` | Firewall rules |
 | `UnifyAlarmEntity` | `UnifyAlarm` | Alarm config |
 | `McpToolEntity` | `McpTool` | MCP Tool config |

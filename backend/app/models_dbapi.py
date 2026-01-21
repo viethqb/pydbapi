@@ -2,8 +2,11 @@
 DBAPI migration models (Phase 1).
 
 Entities: DataSource, ApiAssignment, ApiModule, ApiGroup, AppClient,
-SystemUser, FirewallRules, UnifyAlarm, McpTool, McpClient, ApiContext,
+FirewallRules, UnifyAlarm, McpTool, McpClient, ApiContext,
 VersionCommit, AccessRecord.
+
+Note: SystemUser removed; web login uses app.models.User. VersionCommit
+no longer stores committed_by; can add committed_by_id -> user.id later if needed.
 """
 
 import uuid
@@ -257,25 +260,6 @@ class AppClient(SQLModel, table=True):
 
 
 # ---------------------------------------------------------------------------
-# SystemUser - System user (MCP / internal, distinct from app User)
-# ---------------------------------------------------------------------------
-
-
-class SystemUser(SQLModel, table=True):
-    __tablename__ = "app_system_user"  # avoid reserved "system_user" in PostgreSQL
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    username: str = Field(max_length=255, unique=True, index=True)
-    hashed_password: str = Field(max_length=512)
-    full_name: str | None = Field(default=None, max_length=255)
-    is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    version_commits: list["VersionCommit"] = Relationship(back_populates="committed_by_user")
-
-
-# ---------------------------------------------------------------------------
 # FirewallRules - Firewall rules (IP allow/deny)
 # ---------------------------------------------------------------------------
 
@@ -369,15 +353,8 @@ class VersionCommit(SQLModel, table=True):
     content_snapshot: str = Field(sa_column=Column(Text, nullable=False))
     commit_message: str | None = Field(default=None, max_length=512)
     committed_at: datetime = Field(default_factory=datetime.utcnow)
-    committed_by_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="app_system_user.id",
-        index=True,
-        ondelete="SET NULL",
-    )
 
     api_assignment: "ApiAssignment" = Relationship(back_populates="version_commits")
-    committed_by_user: "SystemUser" = Relationship(back_populates="version_commits")
 
 
 # ---------------------------------------------------------------------------

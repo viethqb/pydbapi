@@ -20,7 +20,6 @@ from app.models_dbapi import (
     McpClient,
     McpTool,
     ProductTypeEnum,
-    SystemUser,
     UnifyAlarm,
     VersionCommit,
 )
@@ -35,7 +34,6 @@ def test_models_dbapi_import():
     assert ApiAssignmentGroupLink.__tablename__ == "api_assignment_group_link"
     assert ApiContext.__tablename__ == "api_context"
     assert AppClient.__tablename__ == "app_client"
-    assert SystemUser.__tablename__ == "app_system_user"
     assert FirewallRules.__tablename__ == "firewall_rules"
     assert UnifyAlarm.__tablename__ == "unify_alarm"
     assert McpTool.__tablename__ == "mcp_tool"

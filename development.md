@@ -75,12 +75,14 @@ make docker-up
 make docker-down
 ```
 
-* Migrations:
+* Migrations: one consolidated revision `a00000000001_initial_schema` (user, item, DBAPI Phase 1). New changes: `make migrate-new msg=...`.
 
 ```bash
 make migrate
 make migrate-new msg=add_foo
 ```
+
+If the DB was created with old multi-version migrations, reset and re-run: drop DB (or `docker compose -f docker-compose.test.yml down -v` for test), create/start DB, then `alembic upgrade head`.
 
 The override Compose adds **Redis** (`redis:7-alpine`) and `REDIS_HOST=redis` for the backend when using `docker compose watch`.
 
