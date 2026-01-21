@@ -2,7 +2,7 @@
 
 > Based on `docs/MIGRATION_PLAN_SQLREST.md`.  
 > **Prerequisites:** Phase 1 (models, migrations, config), Phase 2 (DataSource, ApiAssignment, ApiModule, ApiGroup, AppClient, FirewallRules, …), Phase 3 (Pool, SQL Jinja2, Script Python, ApiExecutor).  
-> **Goal:** Dynamic gateway `/api/gateway/{module}/{path}` executes SQL/Script and returns JSON; token auth for clients; IP firewall; rate limiting; request/response normalization (form, JSON; camelCase, snake_case).
+> **Goal:** Dynamic gateway `/api/{module}/{path}` executes SQL/Script and returns JSON; token auth for clients; IP firewall; rate limiting; request/response normalization (form, JSON; camelCase, snake_case).
 
 ---
 
@@ -42,10 +42,10 @@
 **Core logic:** `backend/app/core/gateway/`
 
 **URL pattern (per Migration Plan):**  
-`/api/gateway/{module}/{path:path}`  
+`/api/{module}/{path:path}`  
 → `{module}` = one segment (e.g. `v1`, `public`, `myapi`); `{path}` = the rest (e.g. `users`, `users/123`, `orders/1/items`).
 
-**Note:** Overall prefix may still use `API_V1_STR` if gateway is mounted under `api_router`; a separate prefix such as `GATEWAY_STR=/api/gateway` can be used for reverse-proxy.
+**Note:** Gateway is mounted at app root with prefix `/api`; admin APIs remain at `{API_V1_STR}` = `/api/v1/...`.
 
 ---
 
@@ -115,9 +115,9 @@ backend/app/core/
 
 ### 3.4 Gateway endpoint
 
-**Mount:** Gateway router may use prefix `/gateway` (full URL: `{API_V1_STR}/gateway`) or `/api/gateway` depending on `main.py`.
+**Mount:** Gateway router at `app.include_router(gateway_router, prefix="/api")`; route `/{module}/{path:path}`.
 
-**Example:** `GET/POST/PUT/PATCH/DELETE /api/v1/gateway/{module}/{path:path}`
+**Example:** `GET/POST/PUT/PATCH/DELETE /api/{module}/{path:path}`
 
 **Processing flow (dependency / middleware):**
 
@@ -250,7 +250,7 @@ backend/app/core/
 
 ```python
 # Gateway
-GATEWAY_STR: str = "/api/gateway"           # gateway prefix (may match API_V1_STR + /gateway)
+GATEWAY_STR: str = "/api"                   # gateway prefix for /api/{module}/{path:path} (optional, for reverse-proxy)
 GATEWAY_JWT_EXPIRE_SECONDS: int = 3600      # JWT for client (if separate)
 GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True # When no rule matches
 GATEWAY_AUTH_X_API_KEY_ENABLED: bool = True # Allow X-API-Key or not
@@ -338,12 +338,11 @@ Add table `app_client_group_link` (app_client_id, api_group_id). Gateway:
 ```python
 from app.api.routes import gateway
 
-# Gateway: prefix may be /gateway when api_router already has prefix /api/v1
-# Or separate: app.include_router(gateway.router, prefix="/api/gateway")
-api_router.include_router(gateway.router, prefix="/gateway", tags=["gateway"])
+# Gateway: app.include_router(gateway_router, prefix="/api") in main.py (after api_router).
+# Route: /{module}/{path:path} → full URL /api/{module}/{path:path}
 ```
 
-**Note:** `POST /token/generate` is mounted at app root (not under `/api/v1/gateway`). The gateway `/{module}/{path:path}` is under `/api/v1/gateway`, so no conflict.
+**Note:** `POST /token/generate` is mounted at app root. The gateway `/{module}/{path:path}` is under `/api`, so no conflict. Admin APIs stay at `/api/v1/...`.
 
 ---
 
@@ -356,7 +355,7 @@ api_router.include_router(gateway.router, prefix="/gateway", tags=["gateway"])
 @router.post("/generate")  # prefix /token → POST /token/generate
 def token_generate(...): ...
 
-# In app/api/routes/gateway.py (under /api/v1/gateway):
+# In app/api/routes/gateway.py (mounted at /api):
 @router.api_route("/{module}/{path:path}", methods=["GET","POST","PUT","PATCH","DELETE"])
 def gateway_proxy(module: str, path: str, request: Request, session: SessionDep): ...
 ```
@@ -384,7 +383,7 @@ def gateway_proxy(module: str, path: str, request: Request, session: SessionDep)
 | File | Changes |
 |------|---------|
 | `app/core/config.py` | GATEWAY_STR, GATEWAY_JWT_EXPIRE_SECONDS, GATEWAY_FIREWALL_DEFAULT_ALLOW, GATEWAY_AUTH_X_API_KEY_ENABLED, GATEWAY_ACCESS_LOG_BODY |
-| `app/api/main.py` | include_router(gateway.router, prefix="/gateway", tags=["gateway"]) |
+| `app/main.py` | include_router(gateway_router, prefix="/api") – after api_router |
 | `app/main.py` | include_router(token_router) at app root for POST /token/generate |
 | `app/models_dbapi.py` | (Option B) Add `AppClientGroupLink` and `gateway_key` on `ApiModule`; Alembic migration |
 | `app/core/security.py` | (If separate) create_gateway_token, verify_gateway_token; or reuse create_access_token with GATEWAY_JWT_EXPIRE_SECONDS |
@@ -412,11 +411,11 @@ def gateway_proxy(module: str, path: str, request: Request, session: SessionDep)
 
 - Create AppClient, ApiModule (path_prefix/gateway_key), published ApiAssignment + ApiContext (simple SQL), DataSource.
 - Call `POST /token/generate` with client_id/secret → receive JWT.
-- Call `GET /api/v1/gateway/{module}/{path}` with `Authorization: Bearer <jwt>` → 200, JSON body.
+- Call `GET /api/{module}/{path}` with `Authorization: Bearer <jwt>` → 200, JSON body.
 - Call without token → 401.
 - Add FirewallRules DENY for test IP → 403.
 - Call over rate limit → 429.
-- Call `POST /api/v1/gateway/{module}/{path}` with JSON body, `?naming=camel` → verify params to SQL and response naming.
+- Call `POST /api/{module}/{path}` with JSON body, `?naming=camel` → verify params to SQL and response naming.
 
 ### Test locations
 
@@ -439,7 +438,7 @@ def gateway_proxy(module: str, path: str, request: Request, session: SessionDep)
 - [ ] **4.1** `core/gateway/resolver.py`: resolve_module (path_prefix/gateway_key), resolve_api_assignment (path pattern → path_params)
 - [ ] **4.1** `core/gateway/runner.py`: run(api, params, ...), ApiExecutor, AccessRecord
 - [ ] **4.1** `api/routes/token.py`: POST /token/generate; `api/routes/gateway.py`: /{module}/{path:path}; middleware/deps: IP → firewall → auth → rate limit → resolve → parse_params → run → format
-- [ ] `api/main.py`: include_router(gateway, prefix="/gateway")
+- [ ] `app/main.py`: include_router(gateway_router, prefix="/api") after api_router
 - [ ] `config.py`: GATEWAY_*; verify FLOW_CONTROL_*
 - [ ] (Optional) `ApiModule.gateway_key` + migration; `AppClientGroupLink` if using group-based authorization
 - [ ] Unit tests: resolver, auth, firewall, ratelimit, request_response

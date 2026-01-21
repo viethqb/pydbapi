@@ -94,7 +94,8 @@ def _run(coro) -> object:
 def test_parse_params_path_only() -> None:
     async def run() -> dict:
         req = _make_request()
-        return await parse_params(req, {"id": "123"}, "GET")
+        params, _ = await parse_params(req, {"id": "123"}, "GET")
+        return params
 
     assert _run(run()) == {"id": "123"}
 
@@ -102,7 +103,8 @@ def test_parse_params_path_only() -> None:
 def test_parse_params_path_and_query() -> None:
     async def run() -> dict:
         req = _make_request(query_string=b"a=1&b=2")
-        return await parse_params(req, {"id": "123"}, "GET")
+        params, _ = await parse_params(req, {"id": "123"}, "GET")
+        return params
 
     out = _run(run())
     assert out["id"] == "123"
@@ -119,7 +121,8 @@ def test_parse_params_merge_order_path_wins() -> None:
             headers=[(b"content-type", b"application/json")],
             body=b'{"a": "b", "b": "b", "c": "b"}',
         )
-        return await parse_params(req, {"c": "p", "d": "p"}, "POST")
+        params, _ = await parse_params(req, {"c": "p", "d": "p"}, "POST")
+        return params
 
     out = _run(run())
     assert out["a"] == "b"
@@ -135,7 +138,8 @@ def test_parse_params_json_body() -> None:
             headers=[(b"content-type", b"application/json")],
             body=b'{"x": 1, "y": [2, 3]}',
         )
-        return await parse_params(req, {}, "POST")
+        params, _ = await parse_params(req, {}, "POST")
+        return params
 
     out = _run(run())
     assert out == {"x": 1, "y": [2, 3]}
@@ -148,7 +152,8 @@ def test_parse_params_form_body() -> None:
             headers=[(b"content-type", b"application/x-www-form-urlencoded")],
             body=b"k1=v1&k2=v2",
         )
-        return await parse_params(req, {}, "POST")
+        params, _ = await parse_params(req, {}, "POST")
+        return params
 
     out = _run(run())
     assert out["k1"] == "v1"
@@ -163,7 +168,8 @@ def test_parse_params_naming_camel_converts_body_and_query() -> None:
             headers=[(b"content-type", b"application/json")],
             body=b'{"userId": 1, "firstName": "Joe"}',
         )
-        return await parse_params(req, {"id": "x"}, "POST")
+        params, _ = await parse_params(req, {"id": "x"}, "POST")
+        return params
 
     out = _run(run())
     assert out["user_id"] == 1
@@ -176,13 +182,14 @@ def test_parse_params_naming_camel_converts_body_and_query() -> None:
 def test_parse_params_no_body_returns_empty_body() -> None:
     async def run() -> dict:
         req = _make_request(method="GET", headers=[])
-        return await parse_params(req, {}, "GET")
+        params, _ = await parse_params(req, {}, "GET")
+        return params
 
     assert _run(run()) == {}
 
 
 def test_parse_params_unknown_content_type_body_empty() -> None:
-    async def run() -> dict:
+    async def run() -> tuple[dict, str | None]:
         req = _make_request(
             method="POST",
             headers=[(b"content-type", b"text/plain")],
@@ -190,7 +197,32 @@ def test_parse_params_unknown_content_type_body_empty() -> None:
         )
         return await parse_params(req, {}, "POST")
 
-    assert _run(run()) == {}
+    params, body_for_log = _run(run())
+    assert params == {}
+    assert body_for_log is None
+
+
+def test_parse_params_body_for_log_returned() -> None:
+    """When body is present, body_for_log is JSON string; when empty, None."""
+    async def run_json() -> tuple[dict, str | None]:
+        req = _make_request(
+            method="POST",
+            headers=[(b"content-type", b"application/json")],
+            body=b'{"a": 1}',
+        )
+        return await parse_params(req, {}, "POST")
+
+    params, body_for_log = _run(run_json())
+    assert params == {"a": 1}
+    assert body_for_log == '{"a": 1}'
+
+    async def run_no_body() -> tuple[dict, str | None]:
+        req = _make_request(method="GET")
+        return await parse_params(req, {"x": "y"}, "GET")
+
+    params2, body_for_log2 = _run(run_no_body())
+    assert params2 == {"x": "y"}
+    assert body_for_log2 is None
 
 
 # --- format_response ---

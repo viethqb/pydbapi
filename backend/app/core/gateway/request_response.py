@@ -2,9 +2,11 @@
 Gateway request/response (Phase 4, Task 4.3): parse_params, keys_to_snake, keys_to_camel, format_response.
 
 - parse_params: merge path, query, body (path > query > body); optional camel→snake for body/query.
+  Returns (params, body_for_log) for AccessRecord when GATEWAY_ACCESS_LOG_BODY.
 - format_response: optional snake→camel for result; always JSON-serializable structure.
 """
 
+import json
 import re
 from typing import Any
 
@@ -72,7 +74,7 @@ async def parse_params(
     request: Request,
     path_params: dict[str, Any],
     http_method: str,  # noqa: ARG001 reserved for future (e.g. skip body for GET)
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], str | None]:
     """
     Merge path, query, and body into a single params dict for ApiExecutor.
     Conflict order: path > query > body (path wins).
@@ -86,7 +88,8 @@ async def parse_params(
     body and query keys from camelCase to snake_case before merge. Path params are
     not converted.
 
-    Returns: dict for ApiExecutor.execute(..., params=...).
+    Returns: (params for ApiExecutor.execute(..., params=...), body_for_log for
+      AccessRecord when GATEWAY_ACCESS_LOG_BODY; body_for_log is JSON string or None).
     """
     query = dict(request.query_params)
     naming_req = (query.get("naming") or "snake").strip().lower()
@@ -103,7 +106,14 @@ async def parse_params(
     out.update(body)
     out.update(query)
     out.update(path_params)
-    return out
+
+    body_for_log: str | None = None
+    if body:
+        try:
+            body_for_log = json.dumps(body, default=str)
+        except Exception:
+            pass
+    return (out, body_for_log)
 
 
 def _response_naming(request: Request) -> str:

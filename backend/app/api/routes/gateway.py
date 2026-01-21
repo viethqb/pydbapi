@@ -1,7 +1,80 @@
 """
-Gateway (Phase 4): dynamic gateway /{module}/{path:path} (Task 4.1, implemented later).
+Gateway (Phase 4, Task 4.1): dynamic /{module}/{path:path}.
+
+Flow: IP -> firewall -> auth -> rate limit -> resolve -> parse_params -> run -> format_response.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 
-router = APIRouter(prefix="/gateway", tags=["gateway"])
+from app.api.deps import SessionDep
+from app.core.gateway import (
+    check_firewall,
+    check_rate_limit,
+    format_response,
+    parse_params,
+    verify_gateway_client,
+)
+from app.core.gateway.resolver import resolve_api_assignment, resolve_module
+from app.core.gateway.runner import run as runner_run
+
+router = APIRouter(prefix="", tags=["gateway"])
+
+
+def _get_client_ip(request: Request) -> str:
+    """Client IP: X-Forwarded-For (rightmost) or request.client.host. Plan: rightmost if multiple."""
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[-1].strip()
+    return getattr(getattr(request, "client", None), "host", None) or "0.0.0.0"
+
+
+@router.api_route("/{module}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def gateway_proxy(
+    module: str,
+    path: str,
+    request: Request,
+    session: SessionDep,
+) -> JSONResponse:
+    """
+    Dynamic gateway: resolve {module}/{path} to ApiAssignment, run SQL/Script, return JSON.
+    Requires: auth (Bearer/Basic/X-API-Key), firewall allow, rate limit. 404 if no match.
+    """
+    ip = _get_client_ip(request)
+    if not check_firewall(ip, session):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    app_client = verify_gateway_client(request, session)
+    if not app_client:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    if not check_rate_limit(app_client.client_id or ip):
+        raise HTTPException(status_code=429, detail="Too Many Requests")
+
+    mod = resolve_module(module, session)
+    if not mod:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    resolved = resolve_api_assignment(mod.id, path, request.method, session)
+    if not resolved:
+        raise HTTPException(status_code=404, detail="Not Found")
+    api, path_params = resolved
+
+    params, body_for_log = await parse_params(request, path_params, request.method)
+
+    try:
+        result = runner_run(
+            api,
+            params,
+            session=session,
+            app_client_id=app_client.id,
+            ip=ip,
+            http_method=request.method,
+            request_path=f"{module}/{path}".rstrip("/"),
+            request_body=body_for_log,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    out = format_response(result, request)
+    return JSONResponse(content=out)

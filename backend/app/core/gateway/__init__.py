@@ -11,6 +11,8 @@ from app.core.gateway.request_response import (
     keys_to_snake,
     parse_params,
 )
+from app.core.gateway.resolver import path_to_regex, resolve_api_assignment, resolve_module
+from app.core.gateway.runner import run as run_api
 
 __all__ = [
     "check_firewall",
@@ -19,5 +21,9 @@ __all__ = [
     "keys_to_camel",
     "keys_to_snake",
     "parse_params",
+    "path_to_regex",
+    "resolve_api_assignment",
+    "resolve_module",
+    "run_api",
     "verify_gateway_client",
 ]

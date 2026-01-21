@@ -6,7 +6,6 @@ from app.api.routes import (
     clients,
     datasources,
     firewall,
-    gateway,
     groups,
     items,
     login,
@@ -20,7 +19,6 @@ from app.core.config import settings
 
 api_router = APIRouter()
 api_router.include_router(login.router)
-api_router.include_router(gateway.router)
 api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(items.router)

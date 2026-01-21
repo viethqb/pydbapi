@@ -329,7 +329,7 @@ redis = ">=5.0.0"
 
 > **Detailed plan:** `docs/PHASE4_GATEWAY_SECURITY_PLAN.md`
 
-- **4.1** Dynamic gateway: `/api/gateway/{module}/{path}` → execute (SQL or script) → JSON
+- **4.1** Dynamic gateway: `/api/{module}/{path}` → execute (SQL or script) → JSON
 - **4.2** Token auth for clients, IP firewall, rate limiting
 - **4.3** Request/response: `application/x-www-form-urlencoded`, `application/json`; naming (camelCase, snake_case)
 
