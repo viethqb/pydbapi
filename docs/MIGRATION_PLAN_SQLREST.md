@@ -116,11 +116,11 @@
 > **SQL Engine**: **Jinja2**  
 > **Script Engine**: **Python** (replacing Groovy), sandboxed execution
 
-### Task 3.1: Kết nối DB & Connection Pool (không có tầng Driver)
+### Task 3.1: DB Connection & Connection Pool (no Driver layer)
 
-**Khác SQLREST (Java):** Ở SQLREST, **driver = file JAR JDBC** — cần lưu, chọn theo từng loại DB. Ở pydbapi, **psycopg** và **pymysql** đã **cài sẵn qua pip**; **chỉ cần thêm DataSource** (product_type, host, port, database, username, password). Không có "driver" để quản lý. Có thể **bỏ** endpoint `/datasources/{type}/drivers` và cột `driver_version` (hoặc giữ để tương thích).
+**Difference from SQLREST (Java):** In SQLREST, **driver = JDBC JAR files** — must be stored and selected per DB type. In pydbapi, **psycopg** and **pymysql** are **pre-installed via pip**; **only need to add a DataSource** (product_type, host, port, database, username, password). There is no "driver" to manage. The endpoint `/datasources/{type}/drivers` and column `driver_version` may be **dropped** (or kept for compatibility).
 
-**Scope (initial)**: **PostgreSQL** and **MySQL** only. Các DB khác (Oracle, SQL Server, ClickHouse, …) thêm sau — chỉ cần mở rộng `connect()` và `ProductTypeEnum`.
+**Scope (initial)**: **PostgreSQL** and **MySQL** only. Other DBs (Oracle, SQL Server, ClickHouse, …) to be added later — extend `connect()` and `ProductTypeEnum`.
 
 **Directory layout**:
 
@@ -128,18 +128,18 @@
 backend/app/core/
 └── pool/
     ├── __init__.py       # export: connect, execute, cursor_to_dicts, health_check, PoolManager
-    ├── connect.py        # connect(datasource) — if/else psycopg vs pymysql theo product_type
+    ├── connect.py        # connect(datasource) — if/else psycopg vs pymysql by product_type
     ├── manager.py        # PoolManager: get_connection, release, dispose
     └── health.py         # health_check(conn, product_type)
 ```
 
 **Supported databases (initial)**:
 
-| Database | Python lib (cài sẵn pip) | Status |
-|----------|---------------------------|--------|
+| Database | Python lib (pre-installed via pip) | Status |
+|----------|-----------------------------------|--------|
 | PostgreSQL | `psycopg` | ✅ Initial |
 | MySQL / MariaDB | `pymysql` | ✅ Initial |
-| Oracle, SQL Server, SQLite, ClickHouse, … | TBD | 🔜 Later — thêm nhánh trong `connect.py` + pip |
+| Oracle, SQL Server, SQLite, ClickHouse, … | TBD | 🔜 Later — add branch in `connect.py` + pip |
 
 ---
 
@@ -326,6 +326,8 @@ redis = ">=5.0.0"
 ---
 
 ## PHASE 4: Gateway & Security
+
+> **Detailed plan:** `docs/PHASE4_GATEWAY_SECURITY_PLAN.md`
 
 - **4.1** Dynamic gateway: `/api/gateway/{module}/{path}` → execute (SQL or script) → JSON
 - **4.2** Token auth for clients, IP firewall, rate limiting

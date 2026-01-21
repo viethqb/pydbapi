@@ -542,3 +542,24 @@ class RecentCommitsOut(SQLModel):
     """Response for GET /overview/recent-commits."""
 
     data: list[VersionCommitPublic]
+
+
+# ---------------------------------------------------------------------------
+# Gateway (Phase 4 – token auth)
+# ---------------------------------------------------------------------------
+
+
+class GatewayTokenIn(SQLModel):
+    """Body for POST /token/generate (JSON or form)."""
+
+    client_id: str = Field(..., min_length=1, max_length=255)
+    client_secret: str = Field(..., min_length=1, max_length=512)
+    grant_type: str = Field(default="client_credentials", max_length=64)
+
+
+class GatewayTokenResponse(SQLModel):
+    """Response for POST /token/generate."""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int

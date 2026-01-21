@@ -103,6 +103,12 @@ class Settings(BaseSettings):
     FLOW_CONTROL_RATE_LIMIT_ENABLED: bool = True
     FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: int = 10
 
+    # -------------------------------------------------------------------------
+    # DBAPI Phase 4: Gateway & auth
+    # -------------------------------------------------------------------------
+    GATEWAY_JWT_EXPIRE_SECONDS: int = 3600
+    GATEWAY_AUTH_X_API_KEY_ENABLED: bool = True
+
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
     SMTP_PORT: int = 587
