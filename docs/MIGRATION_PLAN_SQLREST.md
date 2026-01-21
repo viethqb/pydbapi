@@ -116,40 +116,30 @@
 > **SQL Engine**: **Jinja2**  
 > **Script Engine**: **Python** (replacing Groovy), sandboxed execution
 
-### Task 3.1: Database Driver Management
+### Task 3.1: Kết nối DB & Connection Pool (không có tầng Driver)
 
-**Scope (initial)**: **PostgreSQL** and **MySQL** only.  
-Other databases (Oracle, SQL Server, SQLite, ClickHouse, Hive, Impala, etc.) will be implemented later.
+**Khác SQLREST (Java):** Ở SQLREST, **driver = file JAR JDBC** — cần lưu, chọn theo từng loại DB. Ở pydbapi, **psycopg** và **pymysql** đã **cài sẵn qua pip**; **chỉ cần thêm DataSource** (product_type, host, port, database, username, password). Không có "driver" để quản lý. Có thể **bỏ** endpoint `/datasources/{type}/drivers` và cột `driver_version` (hoặc giữ để tương thích).
+
+**Scope (initial)**: **PostgreSQL** and **MySQL** only. Các DB khác (Oracle, SQL Server, ClickHouse, …) thêm sau — chỉ cần mở rộng `connect()` và `ProductTypeEnum`.
 
 **Directory layout**:
 
 ```
-backend/app/
-├── core/
-│   ├── drivers/
-│   │   ├── __init__.py
-│   │   ├── registry.py          # Driver registry
-│   │   ├── base.py              # Base driver interface
-│   │   ├── postgresql.py        # ✅ initial
-│   │   ├── mysql.py             # ✅ initial
-│   │   └── ...                  # Oracle, SQL Server, etc. – later
-│   └── pool/
-│       ├── __init__.py
-│       ├── manager.py           # Connection pool manager
-│       └── health.py            # Connection health check
+backend/app/core/
+└── pool/
+    ├── __init__.py       # export: connect, execute, cursor_to_dicts, health_check, PoolManager
+    ├── connect.py        # connect(datasource) — if/else psycopg vs pymysql theo product_type
+    ├── manager.py        # PoolManager: get_connection, release, dispose
+    └── health.py         # health_check(conn, product_type)
 ```
 
 **Supported databases (initial)**:
 
-| Database | Python driver | Status |
-|----------|---------------|--------|
-| PostgreSQL | `psycopg2` / `asyncpg` | ✅ Initial |
-| MySQL / MariaDB | `pymysql` / `aiomysql` | ✅ Initial |
-| Oracle | `cx_Oracle` / `oracledb` | 🔜 Later |
-| SQL Server | `pyodbc` / `pymssql` | 🔜 Later |
-| SQLite | `sqlite3` | 🔜 Later |
-| ClickHouse | `clickhouse-driver` | 🔜 Later |
-| Others (Hive, Impala, TDengine, DM, Kingbase, GBase, OceanBase, OpenGauss, etc.) | TBD | 🔜 Later |
+| Database | Python lib (cài sẵn pip) | Status |
+|----------|---------------------------|--------|
+| PostgreSQL | `psycopg` | ✅ Initial |
+| MySQL / MariaDB | `pymysql` | ✅ Initial |
+| Oracle, SQL Server, SQLite, ClickHouse, … | TBD | 🔜 Later — thêm nhánh trong `connect.py` + pip |
 
 ---
 

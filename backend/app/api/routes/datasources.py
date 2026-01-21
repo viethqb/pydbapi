@@ -2,18 +2,17 @@
 DataSource management (Phase 2, Task 2.1).
 
 Endpoints: types, drivers, list, create, update, delete, test, preTest.
+Phase 3: test/preTest use core.pool.connect + health_check.
 """
 
 import uuid
 from typing import Any, Literal
 
-import psycopg
-import pymysql
 from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.core.config import settings
+from app.core.pool import connect, health_check
 from app.models import Message
 from app.models_dbapi import DataSource, ProductTypeEnum
 from app.schemas_dbapi import (
@@ -34,53 +33,22 @@ DATASOURCE_TYPES: list[str] = [
     ProductTypeEnum.MYSQL.value,
 ]
 
-# Default driver label per type (Phase 2: single option; Phase 3 can extend)
+# Default driver label per type (Phase 2: single option; Phase 3: no driver layer, can remove later)
 DRIVERS_BY_TYPE: dict[str, list[str]] = {
     ProductTypeEnum.POSTGRES.value: ["default"],
     ProductTypeEnum.MYSQL.value: ["default"],
 }
 
 
-def _test_connection(
-    product_type: ProductTypeEnum,
-    host: str,
-    port: int,
-    database: str,
-    username: str,
-    password: str,
-    timeout: int | None = None,
-) -> tuple[bool, str]:
-    """Try to connect to the external DB. Returns (ok, message)."""
-    t = timeout or settings.EXTERNAL_DB_CONNECT_TIMEOUT
-    if product_type == ProductTypeEnum.POSTGRES:
-        try:
-            conn = psycopg.connect(
-                host=host,
-                port=port,
-                dbname=database,
-                user=username,
-                password=password,
-                connect_timeout=t,
-            )
-            conn.close()
-            return True, "Connection successful"
-        except Exception as e:
-            return False, str(e)
-    if product_type == ProductTypeEnum.MYSQL:
-        try:
-            conn = pymysql.connect(
-                host=host,
-                port=port,
-                user=username,
-                password=password,
-                database=database,
-                connect_timeout=t,
-            )
-            conn.close()
-            return True, "Connection successful"
-        except Exception as e:
-            return False, str(e)
-    return False, f"Unsupported product_type: {product_type}"
+def _test_connection(datasource: DataSource | DataSourcePreTestIn) -> tuple[bool, str]:
+    """Connect, run SELECT 1, close. Uses core.pool (Phase 3)."""
+    try:
+        conn = connect(datasource)
+        health_check(conn, datasource.product_type)
+        conn.close()
+        return True, "Connection successful"
+    except Exception as e:
+        return False, str(e)
 
 
 def _to_public(ds: DataSource) -> DataSourcePublic:
@@ -202,9 +170,7 @@ def test_datasource(
     ds = session.get(DataSource, id)
     if not ds:
         raise HTTPException(status_code=404, detail="DataSource not found")
-    ok, message = _test_connection(
-        ds.product_type, ds.host, ds.port, ds.database, ds.username, ds.password
-    )
+    ok, message = _test_connection(ds)
     return DataSourceTestResult(ok=ok, message=message)
 
 
@@ -214,12 +180,5 @@ def pre_test_datasource(
     body: DataSourcePreTestIn,
 ) -> Any:
     """Test connection before saving (connection params in body)."""
-    ok, message = _test_connection(
-        body.product_type,
-        body.host,
-        body.port,
-        body.database,
-        body.username,
-        body.password,
-    )
+    ok, message = _test_connection(body)
     return DataSourceTestResult(ok=ok, message=message)

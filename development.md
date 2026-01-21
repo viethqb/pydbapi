@@ -61,17 +61,17 @@ make venv
 make test
 ```
 
-* Run integration tests with Docker (starts Postgres + Redis via `docker-compose.test.yml`, runs migrations and pytest, then tears down):
+* Run integration tests with Docker (starts Postgres + MySQL + Redis via `docker-compose.test.yml`, runs migrations and pytest, then tears down):
 
 ```bash
 make integration-test
 ```
 
-* Only start the test stack (db + redis) for manual testing:
+* Only start the test stack (db + mysql + redis) for manual testing:
 
 ```bash
 make docker-up
-# use POSTGRES_SERVER=localhost REDIS_HOST=localhost, then e.g. cd backend && uv run alembic upgrade head && uv run pytest
+# use POSTGRES_SERVER=localhost REDIS_HOST=localhost MYSQL_HOST=localhost (or run via make integration-test which exports these), then e.g. cd backend && uv run alembic upgrade head && uv run pytest
 make docker-down
 ```
 
@@ -84,7 +84,7 @@ make migrate-new msg=add_foo
 
 If the DB was created with old multi-version migrations, reset and re-run: drop DB (or `docker compose -f docker-compose.test.yml down -v` for test), create/start DB, then `alembic upgrade head`.
 
-The override Compose adds **Redis** (`redis:7-alpine`) and `REDIS_HOST=redis` for the backend when using `docker compose watch`.
+The override Compose adds **Redis** (`redis:7-alpine`) and `REDIS_HOST=redis` for the backend when using `docker compose watch`. The test Compose (`docker-compose.test.yml`) adds **MySQL 8** for `core.pool` integration tests (connect to Postgres and MySQL).
 
 ## Local Development
 

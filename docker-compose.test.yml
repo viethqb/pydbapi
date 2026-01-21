@@ -1,7 +1,7 @@
-# Docker Compose for integration tests: Postgres + Redis.
+# Docker Compose for integration tests: Postgres + Redis + MySQL.
 # Use: docker compose -f docker-compose.test.yml up -d --wait
 # Then run backend tests with POSTGRES_SERVER=localhost REDIS_HOST=localhost
-# Or use: make integration-test
+# and MYSQL_HOST=localhost (or use: make integration-test)
 
 services:
   db:
@@ -17,6 +17,22 @@ services:
       interval: 3s
       retries: 10
       start_period: 5s
+      timeout: 5s
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      retries: 10
+      start_period: 15s
       timeout: 5s
 
   redis:
