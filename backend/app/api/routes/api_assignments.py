@@ -63,6 +63,7 @@ def _to_detail(a: ApiAssignment) -> ApiAssignmentDetail:
             id=a.api_context.id,
             api_assignment_id=a.api_context.api_assignment_id,
             content=a.api_context.content,
+            params=a.api_context.params,
             created_at=a.api_context.created_at,
             updated_at=a.api_context.updated_at,
         )
@@ -122,13 +123,32 @@ def create_api_assignment(
     body: ApiAssignmentCreate,
 ) -> Any:
     """Create API assignment; if content provided, create ApiContext (1-1). Optionally link groups."""
-    assign_data = body.model_dump(exclude={"content", "group_ids"})
+    assign_data = body.model_dump(exclude={"content", "group_ids", "params"})
     a = ApiAssignment(**assign_data)
     session.add(a)
     session.flush()
 
-    if body.content is not None:
-        ctx = ApiContext(api_assignment_id=a.id, content=body.content)
+    # Create ApiContext if content or params provided
+    if body.content is not None or body.params:
+        # Store params as JSON in ApiContext if provided
+        params_dict = None
+        if body.params:
+            params_dict = [
+                {
+                    "name": p.name,
+                    "location": p.location,
+                    "data_type": p.data_type,
+                    "is_required": p.is_required,
+                    "validate_type": p.validate_type,
+                    "validate": p.validate,
+                }
+                for p in body.params
+            ]
+        ctx = ApiContext(
+            api_assignment_id=a.id,
+            content=body.content or "",
+            params=params_dict,
+        )
         session.add(ctx)
 
     for gid in body.group_ids or []:
@@ -156,25 +176,55 @@ def update_api_assignment(
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
 
     update_data = body.model_dump(
-        exclude_unset=True, exclude={"id", "content", "group_ids"}
+        exclude_unset=True, exclude={"id", "content", "group_ids", "params"}
     )
     if update_data:
         a.sqlmodel_update(update_data)
         session.add(a)
 
-    if "content" in body.model_fields_set:
+    if "content" in body.model_fields_set or "params" in body.model_fields_set:
         ctx = session.exec(
             select(ApiContext).where(ApiContext.api_assignment_id == a.id)
         ).first()
         if ctx:
-            ctx.content = body.content or ""
+            if "content" in body.model_fields_set:
+                ctx.content = body.content or ""
+            if "params" in body.model_fields_set:
+                params_dict = None
+                if body.params:
+                    params_dict = [
+                        {
+                            "name": p.name,
+                            "location": p.location,
+                            "data_type": p.data_type,
+                            "is_required": p.is_required,
+                            "validate_type": p.validate_type,
+                            "validate": p.validate,
+                        }
+                        for p in body.params
+                    ]
+                ctx.params = params_dict
             ctx.updated_at = datetime.now(timezone.utc)
             session.add(ctx)
         else:
+            params_dict = None
+            if body.params:
+                params_dict = [
+                    {
+                        "name": p.name,
+                        "location": p.location,
+                        "data_type": p.data_type,
+                        "is_required": p.is_required,
+                        "validate_type": p.validate_type,
+                        "validate": p.validate,
+                    }
+                    for p in body.params
+                ]
             session.add(
                 ApiContext(
                     api_assignment_id=a.id,
                     content=body.content or "",
+                    params=params_dict,
                 )
             )
 
@@ -208,6 +258,24 @@ def publish_api_assignment(
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
     a.is_published = True
+    a.updated_at = datetime.now(timezone.utc)
+    session.add(a)
+    session.commit()
+    session.refresh(a)
+    return _to_public(a)
+
+
+@router.post("/unpublish", response_model=ApiAssignmentPublic)
+def unpublish_api_assignment(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    body: ApiAssignmentPublishIn,
+) -> Any:
+    """Set is_published=False for the given API assignment."""
+    a = session.get(ApiAssignment, body.id)
+    if not a:
+        raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    a.is_published = False
     a.updated_at = datetime.now(timezone.utc)
     session.add(a)
     session.commit()

@@ -226,6 +226,31 @@ class ApiGroupListOut(SQLModel):
 # ---------------------------------------------------------------------------
 
 
+class ApiParameter(SQLModel):
+    """Parameter definition for API validation."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Parameter name")
+    location: str = Field(..., description="Parameter location: query, header, or body")
+    data_type: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Data type: string, number, integer, boolean, array, object, etc."
+    )
+    is_required: bool = Field(
+        default=False,
+        description="Whether this parameter is required (cannot be null/empty)"
+    )
+    validate_type: str | None = Field(
+        default=None,
+        max_length=32,
+        description="Validation type: 'regex' or 'python'"
+    )
+    validate: str | None = Field(
+        default=None,
+        description="Validation: regex pattern (if validate_type='regex') or Python function code (if validate_type='python')"
+    )
+
+
 class ApiAssignmentCreate(SQLModel):
     """Body for POST /api-assignments/create."""
 
@@ -239,6 +264,7 @@ class ApiAssignmentCreate(SQLModel):
     sort_order: int = Field(default=0)
     content: str | None = Field(default=None, description="SQL/script → ApiContext (1-1)")
     group_ids: list[uuid.UUID] = Field(default_factory=list, description="ApiGroup IDs to link")
+    params: list[ApiParameter] = Field(default_factory=list, description="Parameter definitions for validation")
 
 
 class ApiAssignmentUpdate(SQLModel):
@@ -255,6 +281,7 @@ class ApiAssignmentUpdate(SQLModel):
     sort_order: int | None = None
     content: str | None = None
     group_ids: list[uuid.UUID] | None = Field(default=None, description="If set, replace group links")
+    params: list[ApiParameter] | None = Field(default=None, description="If set, replace parameter definitions")
 
 
 class ApiContextPublic(SQLModel):
@@ -263,6 +290,7 @@ class ApiContextPublic(SQLModel):
     id: uuid.UUID
     api_assignment_id: uuid.UUID
     content: str
+    params: list[dict] | None = Field(default=None, description="Parameter definitions: list of {name, location, data_type, is_required, validate_type, validate}")
     created_at: datetime
     updated_at: datetime
 

@@ -93,6 +93,7 @@ services:
       SMTP_TLS: "false"
       EMAILS_FROM_EMAIL: "noreply@example.com"
       REDIS_HOST: "redis"
+      FRONTEND_HOST: "http://localhost:5173"
 
   mailcatcher:
     image: schickling/mailcatcher

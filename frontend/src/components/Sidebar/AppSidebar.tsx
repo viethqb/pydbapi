@@ -26,7 +26,14 @@ import { User } from "./User"
 const baseItems: Item[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/" },
   { icon: Database, title: "Connection", path: "/connection" },
-  { icon: Code2, title: "API Dev", path: "/api-dev/modules" },
+  {
+    icon: Code2,
+    title: "API Dev",
+    submenu: [
+      { title: "Modules", path: "/api-dev/modules" },
+      { title: "APIs", path: "/api-dev/apis" },
+    ],
+  },
   { icon: BookOpen, title: "API Repository", path: "/api-repository" },
   {
     icon: Settings,

@@ -238,6 +238,11 @@ class ApiContext(SQLModel, table=True):
         ondelete="CASCADE",
     )
     content: str = Field(sa_column=Column(Text, nullable=False))
+    params: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+        description="Parameter definitions for validation: list of {name, location}",
+    )
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
 
