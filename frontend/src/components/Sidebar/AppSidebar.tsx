@@ -1,4 +1,12 @@
-import { Home, Users } from "lucide-react"
+import {
+  BookOpen,
+  Code2,
+  Database,
+  LayoutDashboard,
+  Settings,
+  Users,
+} from "lucide-react"
+import { Link as RouterLink } from "@tanstack/react-router"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -7,13 +15,29 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
 const baseItems: Item[] = [
-  { icon: Home, title: "Dashboard", path: "/" },
+  { icon: LayoutDashboard, title: "Dashboard", path: "/" },
+  { icon: Database, title: "Connection", path: "/connection" },
+  { icon: Code2, title: "API Dev", path: "/api-dev/modules" },
+  { icon: BookOpen, title: "API Repository", path: "/api-repository" },
+  {
+    icon: Settings,
+    title: "System",
+    submenu: [
+      { title: "Groups", path: "/system/groups" },
+      { title: "Clients", path: "/system/clients" },
+      { title: "Firewall", path: "/system/firewall" },
+      { title: "Alarm", path: "/system/alarm" },
+    ],
+  },
 ]
 
 export function AppSidebar() {
@@ -32,6 +56,15 @@ export function AppSidebar() {
         <Main items={items} />
       </SidebarContent>
       <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="About">
+              <RouterLink to="/about">
+                <span>About</span>
+              </RouterLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <SidebarAppearance />
         <User user={currentUser} />
       </SidebarFooter>

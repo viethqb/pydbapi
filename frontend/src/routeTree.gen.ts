@@ -16,8 +16,24 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
-import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutAboutRouteImport } from './routes/_layout/about'
+import { Route as LayoutConnectionIndexRouteImport } from './routes/_layout/connection/index'
+import { Route as LayoutApiRepositoryIndexRouteImport } from './routes/_layout/api-repository/index'
+import { Route as LayoutSystemGroupsRouteImport } from './routes/_layout/system/groups'
+import { Route as LayoutSystemFirewallRouteImport } from './routes/_layout/system/firewall'
+import { Route as LayoutSystemClientsRouteImport } from './routes/_layout/system/clients'
+import { Route as LayoutSystemAlarmRouteImport } from './routes/_layout/system/alarm'
+import { Route as LayoutConnectionCreateRouteImport } from './routes/_layout/connection/create'
+import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connection/$id'
+import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
+import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
+import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
+import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id.edit'
+import { Route as LayoutApiDevModulesIdRouteImport } from './routes/_layout/api-dev/modules/$id'
+import { Route as LayoutApiDevApisCreateRouteImport } from './routes/_layout/api-dev/apis/create'
+import { Route as LayoutApiDevApisIdRouteImport } from './routes/_layout/api-dev/apis/$id'
+import { Route as LayoutApiDevApisIdEditRouteImport } from './routes/_layout/api-dev/apis/$id.edit'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -53,36 +69,150 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutItemsRoute = LayoutItemsRouteImport.update({
-  id: '/items',
-  path: '/items',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAboutRoute = LayoutAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutConnectionIndexRoute = LayoutConnectionIndexRouteImport.update({
+  id: '/connection/',
+  path: '/connection/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApiRepositoryIndexRoute =
+  LayoutApiRepositoryIndexRouteImport.update({
+    id: '/api-repository/',
+    path: '/api-repository/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutSystemGroupsRoute = LayoutSystemGroupsRouteImport.update({
+  id: '/system/groups',
+  path: '/system/groups',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSystemFirewallRoute = LayoutSystemFirewallRouteImport.update({
+  id: '/system/firewall',
+  path: '/system/firewall',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSystemClientsRoute = LayoutSystemClientsRouteImport.update({
+  id: '/system/clients',
+  path: '/system/clients',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSystemAlarmRoute = LayoutSystemAlarmRouteImport.update({
+  id: '/system/alarm',
+  path: '/system/alarm',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutConnectionCreateRoute = LayoutConnectionCreateRouteImport.update({
+  id: '/connection/create',
+  path: '/connection/create',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutConnectionIdRoute = LayoutConnectionIdRouteImport.update({
+  id: '/connection/$id',
+  path: '/connection/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApiRepositoryIdRoute = LayoutApiRepositoryIdRouteImport.update({
+  id: '/api-repository/$id',
+  path: '/api-repository/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApiDevModulesIndexRoute =
+  LayoutApiDevModulesIndexRouteImport.update({
+    id: '/api-dev/modules/',
+    path: '/api-dev/modules/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutApiDevApisIndexRoute = LayoutApiDevApisIndexRouteImport.update({
+  id: '/api-dev/apis/',
+  path: '/api-dev/apis/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutConnectionIdEditRoute = LayoutConnectionIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => LayoutConnectionIdRoute,
+} as any)
+const LayoutApiDevModulesIdRoute = LayoutApiDevModulesIdRouteImport.update({
+  id: '/api-dev/modules/$id',
+  path: '/api-dev/modules/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApiDevApisCreateRoute = LayoutApiDevApisCreateRouteImport.update({
+  id: '/api-dev/apis/create',
+  path: '/api-dev/apis/create',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApiDevApisIdRoute = LayoutApiDevApisIdRouteImport.update({
+  id: '/api-dev/apis/$id',
+  path: '/api-dev/apis/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApiDevApisIdEditRoute = LayoutApiDevApisIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => LayoutApiDevApisIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/about': typeof LayoutAboutRoute
   '/admin': typeof LayoutAdminRoute
-  '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
-  '/': typeof LayoutIndexRoute
+  '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
+  '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
+  '/connection/create': typeof LayoutConnectionCreateRoute
+  '/system/alarm': typeof LayoutSystemAlarmRoute
+  '/system/clients': typeof LayoutSystemClientsRoute
+  '/system/firewall': typeof LayoutSystemFirewallRoute
+  '/system/groups': typeof LayoutSystemGroupsRoute
+  '/api-repository/': typeof LayoutApiRepositoryIndexRoute
+  '/connection/': typeof LayoutConnectionIndexRoute
+  '/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
+  '/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
+  '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRoute
+  '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
+  '/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
+  '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/about': typeof LayoutAboutRoute
   '/admin': typeof LayoutAdminRoute
-  '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
+  '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
+  '/connection/create': typeof LayoutConnectionCreateRoute
+  '/system/alarm': typeof LayoutSystemAlarmRoute
+  '/system/clients': typeof LayoutSystemClientsRoute
+  '/system/firewall': typeof LayoutSystemFirewallRoute
+  '/system/groups': typeof LayoutSystemGroupsRoute
+  '/api-repository': typeof LayoutApiRepositoryIndexRoute
+  '/connection': typeof LayoutConnectionIndexRoute
+  '/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
+  '/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
+  '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRoute
+  '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/api-dev/apis': typeof LayoutApiDevApisIndexRoute
+  '/api-dev/modules': typeof LayoutApiDevModulesIndexRoute
+  '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -91,32 +221,80 @@ export interface FileRoutesById {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/_layout/about': typeof LayoutAboutRoute
   '/_layout/admin': typeof LayoutAdminRoute
-  '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/api-repository/$id': typeof LayoutApiRepositoryIdRoute
+  '/_layout/connection/$id': typeof LayoutConnectionIdRouteWithChildren
+  '/_layout/connection/create': typeof LayoutConnectionCreateRoute
+  '/_layout/system/alarm': typeof LayoutSystemAlarmRoute
+  '/_layout/system/clients': typeof LayoutSystemClientsRoute
+  '/_layout/system/firewall': typeof LayoutSystemFirewallRoute
+  '/_layout/system/groups': typeof LayoutSystemGroupsRoute
+  '/_layout/api-repository/': typeof LayoutApiRepositoryIndexRoute
+  '/_layout/connection/': typeof LayoutConnectionIndexRoute
+  '/_layout/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
+  '/_layout/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
+  '/_layout/api-dev/modules/$id': typeof LayoutApiDevModulesIdRoute
+  '/_layout/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/_layout/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
+  '/_layout/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
+  '/_layout/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/login'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/about'
     | '/admin'
-    | '/items'
     | '/settings'
-    | '/'
+    | '/api-repository/$id'
+    | '/connection/$id'
+    | '/connection/create'
+    | '/system/alarm'
+    | '/system/clients'
+    | '/system/firewall'
+    | '/system/groups'
+    | '/api-repository/'
+    | '/connection/'
+    | '/api-dev/apis/$id'
+    | '/api-dev/apis/create'
+    | '/api-dev/modules/$id'
+    | '/connection/$id/edit'
+    | '/api-dev/apis/'
+    | '/api-dev/modules/'
+    | '/api-dev/apis/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/about'
     | '/admin'
-    | '/items'
     | '/settings'
     | '/'
+    | '/api-repository/$id'
+    | '/connection/$id'
+    | '/connection/create'
+    | '/system/alarm'
+    | '/system/clients'
+    | '/system/firewall'
+    | '/system/groups'
+    | '/api-repository'
+    | '/connection'
+    | '/api-dev/apis/$id'
+    | '/api-dev/apis/create'
+    | '/api-dev/modules/$id'
+    | '/connection/$id/edit'
+    | '/api-dev/apis'
+    | '/api-dev/modules'
+    | '/api-dev/apis/$id/edit'
   id:
     | '__root__'
     | '/_layout'
@@ -124,10 +302,26 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/_layout/about'
     | '/_layout/admin'
-    | '/_layout/items'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/api-repository/$id'
+    | '/_layout/connection/$id'
+    | '/_layout/connection/create'
+    | '/_layout/system/alarm'
+    | '/_layout/system/clients'
+    | '/_layout/system/firewall'
+    | '/_layout/system/groups'
+    | '/_layout/api-repository/'
+    | '/_layout/connection/'
+    | '/_layout/api-dev/apis/$id'
+    | '/_layout/api-dev/apis/create'
+    | '/_layout/api-dev/modules/$id'
+    | '/_layout/connection/$id/edit'
+    | '/_layout/api-dev/apis/'
+    | '/_layout/api-dev/modules/'
+    | '/_layout/api-dev/apis/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,7 +365,7 @@ declare module '@tanstack/react-router' {
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -189,13 +383,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/items': {
-      id: '/_layout/items'
-      path: '/items'
-      fullPath: '/items'
-      preLoaderRoute: typeof LayoutItemsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/admin': {
       id: '/_layout/admin'
       path: '/admin'
@@ -203,21 +390,190 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/about': {
+      id: '/_layout/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof LayoutAboutRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/connection/': {
+      id: '/_layout/connection/'
+      path: '/connection'
+      fullPath: '/connection/'
+      preLoaderRoute: typeof LayoutConnectionIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-repository/': {
+      id: '/_layout/api-repository/'
+      path: '/api-repository'
+      fullPath: '/api-repository/'
+      preLoaderRoute: typeof LayoutApiRepositoryIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/system/groups': {
+      id: '/_layout/system/groups'
+      path: '/system/groups'
+      fullPath: '/system/groups'
+      preLoaderRoute: typeof LayoutSystemGroupsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/system/firewall': {
+      id: '/_layout/system/firewall'
+      path: '/system/firewall'
+      fullPath: '/system/firewall'
+      preLoaderRoute: typeof LayoutSystemFirewallRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/system/clients': {
+      id: '/_layout/system/clients'
+      path: '/system/clients'
+      fullPath: '/system/clients'
+      preLoaderRoute: typeof LayoutSystemClientsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/system/alarm': {
+      id: '/_layout/system/alarm'
+      path: '/system/alarm'
+      fullPath: '/system/alarm'
+      preLoaderRoute: typeof LayoutSystemAlarmRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/connection/create': {
+      id: '/_layout/connection/create'
+      path: '/connection/create'
+      fullPath: '/connection/create'
+      preLoaderRoute: typeof LayoutConnectionCreateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/connection/$id': {
+      id: '/_layout/connection/$id'
+      path: '/connection/$id'
+      fullPath: '/connection/$id'
+      preLoaderRoute: typeof LayoutConnectionIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-repository/$id': {
+      id: '/_layout/api-repository/$id'
+      path: '/api-repository/$id'
+      fullPath: '/api-repository/$id'
+      preLoaderRoute: typeof LayoutApiRepositoryIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-dev/modules/': {
+      id: '/_layout/api-dev/modules/'
+      path: '/api-dev/modules'
+      fullPath: '/api-dev/modules/'
+      preLoaderRoute: typeof LayoutApiDevModulesIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-dev/apis/': {
+      id: '/_layout/api-dev/apis/'
+      path: '/api-dev/apis'
+      fullPath: '/api-dev/apis/'
+      preLoaderRoute: typeof LayoutApiDevApisIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/connection/$id/edit': {
+      id: '/_layout/connection/$id/edit'
+      path: '/edit'
+      fullPath: '/connection/$id/edit'
+      preLoaderRoute: typeof LayoutConnectionIdEditRouteImport
+      parentRoute: typeof LayoutConnectionIdRoute
+    }
+    '/_layout/api-dev/modules/$id': {
+      id: '/_layout/api-dev/modules/$id'
+      path: '/api-dev/modules/$id'
+      fullPath: '/api-dev/modules/$id'
+      preLoaderRoute: typeof LayoutApiDevModulesIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-dev/apis/create': {
+      id: '/_layout/api-dev/apis/create'
+      path: '/api-dev/apis/create'
+      fullPath: '/api-dev/apis/create'
+      preLoaderRoute: typeof LayoutApiDevApisCreateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-dev/apis/$id': {
+      id: '/_layout/api-dev/apis/$id'
+      path: '/api-dev/apis/$id'
+      fullPath: '/api-dev/apis/$id'
+      preLoaderRoute: typeof LayoutApiDevApisIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-dev/apis/$id/edit': {
+      id: '/_layout/api-dev/apis/$id/edit'
+      path: '/edit'
+      fullPath: '/api-dev/apis/$id/edit'
+      preLoaderRoute: typeof LayoutApiDevApisIdEditRouteImport
+      parentRoute: typeof LayoutApiDevApisIdRoute
+    }
   }
 }
 
+interface LayoutConnectionIdRouteChildren {
+  LayoutConnectionIdEditRoute: typeof LayoutConnectionIdEditRoute
+}
+
+const LayoutConnectionIdRouteChildren: LayoutConnectionIdRouteChildren = {
+  LayoutConnectionIdEditRoute: LayoutConnectionIdEditRoute,
+}
+
+const LayoutConnectionIdRouteWithChildren =
+  LayoutConnectionIdRoute._addFileChildren(LayoutConnectionIdRouteChildren)
+
+interface LayoutApiDevApisIdRouteChildren {
+  LayoutApiDevApisIdEditRoute: typeof LayoutApiDevApisIdEditRoute
+}
+
+const LayoutApiDevApisIdRouteChildren: LayoutApiDevApisIdRouteChildren = {
+  LayoutApiDevApisIdEditRoute: LayoutApiDevApisIdEditRoute,
+}
+
+const LayoutApiDevApisIdRouteWithChildren =
+  LayoutApiDevApisIdRoute._addFileChildren(LayoutApiDevApisIdRouteChildren)
+
 interface LayoutRouteChildren {
+  LayoutAboutRoute: typeof LayoutAboutRoute
   LayoutAdminRoute: typeof LayoutAdminRoute
-  LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutApiRepositoryIdRoute: typeof LayoutApiRepositoryIdRoute
+  LayoutConnectionIdRoute: typeof LayoutConnectionIdRouteWithChildren
+  LayoutConnectionCreateRoute: typeof LayoutConnectionCreateRoute
+  LayoutSystemAlarmRoute: typeof LayoutSystemAlarmRoute
+  LayoutSystemClientsRoute: typeof LayoutSystemClientsRoute
+  LayoutSystemFirewallRoute: typeof LayoutSystemFirewallRoute
+  LayoutSystemGroupsRoute: typeof LayoutSystemGroupsRoute
+  LayoutApiRepositoryIndexRoute: typeof LayoutApiRepositoryIndexRoute
+  LayoutConnectionIndexRoute: typeof LayoutConnectionIndexRoute
+  LayoutApiDevApisIdRoute: typeof LayoutApiDevApisIdRouteWithChildren
+  LayoutApiDevApisCreateRoute: typeof LayoutApiDevApisCreateRoute
+  LayoutApiDevModulesIdRoute: typeof LayoutApiDevModulesIdRoute
+  LayoutApiDevApisIndexRoute: typeof LayoutApiDevApisIndexRoute
+  LayoutApiDevModulesIndexRoute: typeof LayoutApiDevModulesIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutAboutRoute: LayoutAboutRoute,
   LayoutAdminRoute: LayoutAdminRoute,
-  LayoutItemsRoute: LayoutItemsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutApiRepositoryIdRoute: LayoutApiRepositoryIdRoute,
+  LayoutConnectionIdRoute: LayoutConnectionIdRouteWithChildren,
+  LayoutConnectionCreateRoute: LayoutConnectionCreateRoute,
+  LayoutSystemAlarmRoute: LayoutSystemAlarmRoute,
+  LayoutSystemClientsRoute: LayoutSystemClientsRoute,
+  LayoutSystemFirewallRoute: LayoutSystemFirewallRoute,
+  LayoutSystemGroupsRoute: LayoutSystemGroupsRoute,
+  LayoutApiRepositoryIndexRoute: LayoutApiRepositoryIndexRoute,
+  LayoutConnectionIndexRoute: LayoutConnectionIndexRoute,
+  LayoutApiDevApisIdRoute: LayoutApiDevApisIdRouteWithChildren,
+  LayoutApiDevApisCreateRoute: LayoutApiDevApisCreateRoute,
+  LayoutApiDevModulesIdRoute: LayoutApiDevModulesIdRoute,
+  LayoutApiDevApisIndexRoute: LayoutApiDevApisIndexRoute,
+  LayoutApiDevModulesIndexRoute: LayoutApiDevModulesIndexRoute,
 }
 
 const LayoutRouteWithChildren =
