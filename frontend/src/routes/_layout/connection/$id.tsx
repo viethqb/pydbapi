@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, Outlet, useMatchRoute } from "@tanstack/react-router"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Edit, Play, Trash2, ArrowLeft } from "lucide-react"
 import { useState } from "react"
 
@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_layout/connection/$id")({
 function ConnectionDetail() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const matchRoute = useMatchRoute()
@@ -63,6 +64,28 @@ function ConnectionDetail() {
     onSuccess: () => {
       showSuccessToast("DataSource deleted successfully")
       navigate({ to: "/connection" })
+    },
+    onError: (error: Error) => {
+      showErrorToast(error.message)
+    },
+  })
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: async () => {
+      if (!datasource) throw new Error("DataSource not found")
+      return DataSourceService.update({
+        id: datasource.id,
+        is_active: !datasource.is_active,
+      })
+    },
+    onSuccess: (updated) => {
+      if (updated.is_active) {
+        showSuccessToast("DataSource activated successfully")
+      } else {
+        showErrorToast("DataSource has been deactivated", "Deactivated")
+      }
+      queryClient.invalidateQueries({ queryKey: ["datasource", id] })
+      queryClient.invalidateQueries({ queryKey: ["datasources"] })
     },
     onError: (error: Error) => {
       showErrorToast(error.message)
@@ -204,23 +227,36 @@ function ConnectionDetail() {
                 Status
               </label>
               <p className="mt-1">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "size-2 rounded-full",
-                      datasource.is_active
-                        ? "bg-green-500"
-                        : "bg-gray-400",
-                    )}
-                  />
-                  <span
-                    className={
-                      datasource.is_active ? "" : "text-muted-foreground"
-                    }
-                  >
-                    {datasource.is_active ? "Active" : "Inactive"}
-                  </span>
-                </div>
+                <Button
+                  variant="ghost"
+                  className="h-auto p-2 hover:bg-muted"
+                  onClick={() => toggleStatusMutation.mutate()}
+                  disabled={toggleStatusMutation.isPending}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "size-2 rounded-full",
+                        datasource.is_active
+                          ? "bg-green-500"
+                          : "bg-gray-400",
+                      )}
+                    />
+                    <span
+                      className={
+                        datasource.is_active ? "" : "text-muted-foreground"
+                      }
+                    >
+                      {toggleStatusMutation.isPending
+                        ? datasource.is_active
+                          ? "Deactivating..."
+                          : "Activating..."
+                        : datasource.is_active
+                          ? "Active"
+                          : "Inactive"}
+                    </span>
+                  </div>
+                </Button>
               </p>
             </div>
             {datasource.driver_version && (

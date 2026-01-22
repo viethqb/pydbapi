@@ -92,12 +92,38 @@ function ConnectionList() {
     },
   })
 
+  // Toggle status mutation
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: boolean }) => {
+      return DataSourceService.update({
+        id,
+        is_active: !currentStatus,
+      })
+    },
+    onSuccess: (updated) => {
+      if (updated.is_active) {
+        showSuccessToast("DataSource activated successfully")
+      } else {
+        showErrorToast("DataSource has been deactivated", "Deactivated")
+      }
+      queryClient.invalidateQueries({ queryKey: ["datasources"] })
+      queryClient.invalidateQueries({ queryKey: ["datasource", updated.id] })
+    },
+    onError: (error: Error) => {
+      showErrorToast(error.message)
+    },
+  })
+
   const handleTest = (id: string) => {
     testMutation.mutate(id)
   }
 
   const handleDelete = (id: string) => {
     setDeleteId(id)
+  }
+
+  const handleToggleStatus = (id: string, currentStatus: boolean) => {
+    toggleStatusMutation.mutate({ id, currentStatus })
   }
 
   const confirmDelete = () => {
@@ -111,6 +137,7 @@ function ConnectionList() {
       ...ds,
       onTest: handleTest,
       onDelete: handleDelete,
+      onToggleStatus: handleToggleStatus,
     })) || []
 
   return (

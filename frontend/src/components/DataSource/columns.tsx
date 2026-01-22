@@ -33,6 +33,7 @@ export type DataSourcePublic = {
 export type DataSourceTableData = DataSourcePublic & {
   onTest?: (id: string) => void
   onDelete?: (id: string) => void
+  onToggleStatus?: (id: string, currentStatus: boolean) => void
 }
 
 export const columns: ColumnDef<DataSourceTableData>[] = [
@@ -83,21 +84,34 @@ export const columns: ColumnDef<DataSourceTableData>[] = [
   {
     accessorKey: "is_active",
     header: "Status",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "size-2 rounded-full",
-            row.original.is_active ? "bg-green-500" : "bg-gray-400",
-          )}
-        />
-        <span
-          className={row.original.is_active ? "" : "text-muted-foreground"}
+    cell: ({ row }) => {
+      const datasource = row.original
+      return (
+        <Button
+          variant="ghost"
+          className="h-auto p-2 hover:bg-muted"
+          onClick={(e) => {
+            e.stopPropagation()
+            datasource.onToggleStatus?.(datasource.id, datasource.is_active)
+          }}
+          disabled={!datasource.onToggleStatus}
         >
-          {row.original.is_active ? "Active" : "Inactive"}
-        </span>
-      </div>
-    ),
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                datasource.is_active ? "bg-green-500" : "bg-gray-400",
+              )}
+            />
+            <span
+              className={datasource.is_active ? "" : "text-muted-foreground"}
+            >
+              {datasource.is_active ? "Active" : "Inactive"}
+            </span>
+          </div>
+        </Button>
+      )
+    },
   },
   {
     accessorKey: "updated_at",
