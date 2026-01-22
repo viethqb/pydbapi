@@ -2,11 +2,11 @@
 DBAPI migration models (Phase 1).
 
 Entities: DataSource, ApiAssignment, ApiModule, ApiGroup, AppClient,
-FirewallRules, UnifyAlarm, McpTool, McpClient, ApiContext,
-VersionCommit, AccessRecord.
+FirewallRules, UnifyAlarm, ApiContext, VersionCommit, AccessRecord.
 
 Note: SystemUser removed; web login uses app.models.User. VersionCommit
 no longer stores committed_by; can add committed_by_id -> user.id later if needed.
+McpTool and McpClient excluded from product scope.
 """
 
 import uuid
@@ -306,38 +306,6 @@ class UnifyAlarm(SQLModel, table=True):
     alarm_type: str = Field(max_length=64, index=True)
     config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
     is_enabled: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=_utc_now)
-    updated_at: datetime = Field(default_factory=_utc_now)
-
-
-# ---------------------------------------------------------------------------
-# McpTool - MCP Tool config
-# ---------------------------------------------------------------------------
-
-
-class McpTool(SQLModel, table=True):
-    __tablename__ = "mcp_tool"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(max_length=255, index=True)
-    config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
-    is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=_utc_now)
-    updated_at: datetime = Field(default_factory=_utc_now)
-
-
-# ---------------------------------------------------------------------------
-# McpClient - MCP Client config
-# ---------------------------------------------------------------------------
-
-
-class McpClient(SQLModel, table=True):
-    __tablename__ = "mcp_client"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(max_length=255, index=True)
-    config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
-    is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
 

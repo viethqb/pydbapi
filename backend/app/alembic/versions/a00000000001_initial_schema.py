@@ -7,9 +7,9 @@ Create Date: 2025-01-02 00:00:00.000000
 Single migration for pre-go-live: user, item, and all DBAPI Phase 1 tables.
 - user, item (UUID, CASCADE, varchar lengths)
 - datasource, api_module, api_group, api_assignment, api_assignment_group_link,
-  api_context, app_client, firewall_rules, unify_alarm, mcp_tool, mcp_client,
-  version_commit, access_record
+  api_context, app_client, firewall_rules, unify_alarm, version_commit, access_record
 - Enums: producttypeenum, httpmethodenum, executeengineenum, firewallruletypeenum
+- Note: mcp_tool and mcp_client tables exist but are excluded from product scope
 """
 from alembic import op
 import sqlalchemy as sa
@@ -189,28 +189,6 @@ def upgrade():
     op.create_index(op.f("ix_unify_alarm_alarm_type"), "unify_alarm", ["alarm_type"])
 
     op.create_table(
-        "mcp_tool",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("config", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'{}'::jsonb")),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
-    op.create_index(op.f("ix_mcp_tool_name"), "mcp_tool", ["name"])
-
-    op.create_table(
-        "mcp_client",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("config", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'{}'::jsonb")),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    )
-    op.create_index(op.f("ix_mcp_client_name"), "mcp_client", ["name"])
-
-    op.create_table(
         "version_commit",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("api_assignment_id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -243,8 +221,6 @@ def upgrade():
 def downgrade():
     op.drop_table("access_record")
     op.drop_table("version_commit")
-    op.drop_table("mcp_client")
-    op.drop_table("mcp_tool")
     op.drop_table("unify_alarm")
     op.drop_table("firewall_rules")
     op.drop_table("app_client")

@@ -17,8 +17,6 @@ from app.models_dbapi import (
     FirewallRuleTypeEnum,
     FirewallRules,
     HttpMethodEnum,
-    McpClient,
-    McpTool,
     ProductTypeEnum,
     UnifyAlarm,
     VersionCommit,
@@ -36,8 +34,6 @@ def test_models_dbapi_import():
     assert AppClient.__tablename__ == "app_client"
     assert FirewallRules.__tablename__ == "firewall_rules"
     assert UnifyAlarm.__tablename__ == "unify_alarm"
-    assert McpTool.__tablename__ == "mcp_tool"
-    assert McpClient.__tablename__ == "mcp_client"
     assert VersionCommit.__tablename__ == "version_commit"
     assert AccessRecord.__tablename__ == "access_record"
 
