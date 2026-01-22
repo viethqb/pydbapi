@@ -1,38 +1,46 @@
 import { OpenAPI } from "@/client"
 
 // Types matching backend schemas
-export type ApiGroupPublic = {
+export type FirewallRuleTypeEnum = "allow" | "deny"
+
+export type FirewallRulePublic = {
   id: string
-  name: string
+  rule_type: FirewallRuleTypeEnum
+  ip_range: string
   description: string | null
   is_active: boolean
+  sort_order: number
   created_at: string
   updated_at: string
 }
 
-export type ApiGroupListIn = {
+export type FirewallRuleListIn = {
   page?: number
   page_size?: number
-  name__ilike?: string | null
+  rule_type?: FirewallRuleTypeEnum | null
   is_active?: boolean | null
 }
 
-export type ApiGroupListOut = {
-  data: ApiGroupPublic[]
+export type FirewallRuleListOut = {
+  data: FirewallRulePublic[]
   total: number
 }
 
-export type ApiGroupCreate = {
-  name: string
+export type FirewallRuleCreate = {
+  rule_type: FirewallRuleTypeEnum
+  ip_range: string
   description?: string | null
   is_active?: boolean
+  sort_order?: number
 }
 
-export type ApiGroupUpdate = {
+export type FirewallRuleUpdate = {
   id: string
-  name?: string | null
+  rule_type?: FirewallRuleTypeEnum | null
+  ip_range?: string | null
   description?: string | null
   is_active?: boolean | null
+  sort_order?: number | null
 }
 
 const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
@@ -66,42 +74,42 @@ async function request<T>(
   return response.json()
 }
 
-export const GroupsService = {
-  list: async (body: ApiGroupListIn = {}): Promise<ApiGroupListOut> => {
-    const requestBody: ApiGroupListIn = {
+export const FirewallService = {
+  list: async (body: FirewallRuleListIn = {}): Promise<FirewallRuleListOut> => {
+    const requestBody: FirewallRuleListIn = {
       page: body.page ?? 1,
       page_size: body.page_size ?? 20,
-      ...(body.name__ilike !== undefined && body.name__ilike !== null && body.name__ilike !== "" && { name__ilike: body.name__ilike }),
+      ...(body.rule_type !== undefined && body.rule_type !== null && { rule_type: body.rule_type }),
       ...(body.is_active !== undefined && body.is_active !== null && { is_active: body.is_active }),
     }
-    return request<ApiGroupListOut>("/api/v1/groups/list", {
+    return request<FirewallRuleListOut>("/api/v1/firewall/list", {
       method: "POST",
       body: JSON.stringify(requestBody),
     })
   },
 
-  create: async (body: ApiGroupCreate): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>("/api/v1/groups/create", {
+  create: async (body: FirewallRuleCreate): Promise<FirewallRulePublic> => {
+    return request<FirewallRulePublic>("/api/v1/firewall/create", {
       method: "POST",
       body: JSON.stringify(body),
     })
   },
 
-  update: async (body: ApiGroupUpdate): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>("/api/v1/groups/update", {
+  update: async (body: FirewallRuleUpdate): Promise<FirewallRulePublic> => {
+    return request<FirewallRulePublic>("/api/v1/firewall/update", {
       method: "POST",
       body: JSON.stringify(body),
     })
   },
 
   delete: async (id: string): Promise<{ message: string }> => {
-    return request<{ message: string }>(`/api/v1/groups/delete/${id}`, {
+    return request<{ message: string }>(`/api/v1/firewall/delete/${id}`, {
       method: "DELETE",
     })
   },
 
-  get: async (id: string): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>(`/api/v1/groups/${id}`, {
+  get: async (id: string): Promise<FirewallRulePublic> => {
+    return request<FirewallRulePublic>(`/api/v1/firewall/${id}`, {
       method: "GET",
     })
   },

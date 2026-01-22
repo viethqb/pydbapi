@@ -1,38 +1,41 @@
 import { OpenAPI } from "@/client"
 
 // Types matching backend schemas
-export type ApiGroupPublic = {
+export type UnifyAlarmPublic = {
   id: string
   name: string
-  description: string | null
-  is_active: boolean
+  alarm_type: string
+  config: Record<string, any>
+  is_enabled: boolean
   created_at: string
   updated_at: string
 }
 
-export type ApiGroupListIn = {
+export type UnifyAlarmListIn = {
   page?: number
   page_size?: number
-  name__ilike?: string | null
-  is_active?: boolean | null
+  alarm_type?: string | null
+  is_enabled?: boolean | null
 }
 
-export type ApiGroupListOut = {
-  data: ApiGroupPublic[]
+export type UnifyAlarmListOut = {
+  data: UnifyAlarmPublic[]
   total: number
 }
 
-export type ApiGroupCreate = {
+export type UnifyAlarmCreate = {
   name: string
-  description?: string | null
-  is_active?: boolean
+  alarm_type: string
+  config?: Record<string, any>
+  is_enabled?: boolean
 }
 
-export type ApiGroupUpdate = {
+export type UnifyAlarmUpdate = {
   id: string
   name?: string | null
-  description?: string | null
-  is_active?: boolean | null
+  alarm_type?: string | null
+  config?: Record<string, any> | null
+  is_enabled?: boolean | null
 }
 
 const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
@@ -66,42 +69,42 @@ async function request<T>(
   return response.json()
 }
 
-export const GroupsService = {
-  list: async (body: ApiGroupListIn = {}): Promise<ApiGroupListOut> => {
-    const requestBody: ApiGroupListIn = {
+export const AlarmService = {
+  list: async (body: UnifyAlarmListIn = {}): Promise<UnifyAlarmListOut> => {
+    const requestBody: UnifyAlarmListIn = {
       page: body.page ?? 1,
       page_size: body.page_size ?? 20,
-      ...(body.name__ilike !== undefined && body.name__ilike !== null && body.name__ilike !== "" && { name__ilike: body.name__ilike }),
-      ...(body.is_active !== undefined && body.is_active !== null && { is_active: body.is_active }),
+      ...(body.alarm_type !== undefined && body.alarm_type !== null && body.alarm_type !== "" && { alarm_type: body.alarm_type }),
+      ...(body.is_enabled !== undefined && body.is_enabled !== null && { is_enabled: body.is_enabled }),
     }
-    return request<ApiGroupListOut>("/api/v1/groups/list", {
+    return request<UnifyAlarmListOut>("/api/v1/alarm/list", {
       method: "POST",
       body: JSON.stringify(requestBody),
     })
   },
 
-  create: async (body: ApiGroupCreate): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>("/api/v1/groups/create", {
+  create: async (body: UnifyAlarmCreate): Promise<UnifyAlarmPublic> => {
+    return request<UnifyAlarmPublic>("/api/v1/alarm/create", {
       method: "POST",
       body: JSON.stringify(body),
     })
   },
 
-  update: async (body: ApiGroupUpdate): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>("/api/v1/groups/update", {
+  update: async (body: UnifyAlarmUpdate): Promise<UnifyAlarmPublic> => {
+    return request<UnifyAlarmPublic>("/api/v1/alarm/update", {
       method: "POST",
       body: JSON.stringify(body),
     })
   },
 
   delete: async (id: string): Promise<{ message: string }> => {
-    return request<{ message: string }>(`/api/v1/groups/delete/${id}`, {
+    return request<{ message: string }>(`/api/v1/alarm/delete/${id}`, {
       method: "DELETE",
     })
   },
 
-  get: async (id: string): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>(`/api/v1/groups/${id}`, {
+  get: async (id: string): Promise<UnifyAlarmPublic> => {
+    return request<UnifyAlarmPublic>(`/api/v1/alarm/${id}`, {
       method: "GET",
     })
   },

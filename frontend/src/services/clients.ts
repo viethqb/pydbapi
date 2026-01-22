@@ -1,38 +1,45 @@
 import { OpenAPI } from "@/client"
 
 // Types matching backend schemas
-export type ApiGroupPublic = {
+export type AppClientPublic = {
   id: string
   name: string
+  client_id: string
   description: string | null
   is_active: boolean
   created_at: string
   updated_at: string
 }
 
-export type ApiGroupListIn = {
+export type AppClientListIn = {
   page?: number
   page_size?: number
   name__ilike?: string | null
   is_active?: boolean | null
 }
 
-export type ApiGroupListOut = {
-  data: ApiGroupPublic[]
+export type AppClientListOut = {
+  data: AppClientPublic[]
   total: number
 }
 
-export type ApiGroupCreate = {
+export type AppClientCreate = {
   name: string
+  client_secret: string
   description?: string | null
   is_active?: boolean
 }
 
-export type ApiGroupUpdate = {
+export type AppClientUpdate = {
   id: string
   name?: string | null
   description?: string | null
   is_active?: boolean | null
+}
+
+export type AppClientRegenerateSecretOut = {
+  message: string
+  client_secret: string
 }
 
 const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
@@ -66,43 +73,49 @@ async function request<T>(
   return response.json()
 }
 
-export const GroupsService = {
-  list: async (body: ApiGroupListIn = {}): Promise<ApiGroupListOut> => {
-    const requestBody: ApiGroupListIn = {
+export const ClientsService = {
+  list: async (body: AppClientListIn = {}): Promise<AppClientListOut> => {
+    const requestBody: AppClientListIn = {
       page: body.page ?? 1,
       page_size: body.page_size ?? 20,
       ...(body.name__ilike !== undefined && body.name__ilike !== null && body.name__ilike !== "" && { name__ilike: body.name__ilike }),
       ...(body.is_active !== undefined && body.is_active !== null && { is_active: body.is_active }),
     }
-    return request<ApiGroupListOut>("/api/v1/groups/list", {
+    return request<AppClientListOut>("/api/v1/clients/list", {
       method: "POST",
       body: JSON.stringify(requestBody),
     })
   },
 
-  create: async (body: ApiGroupCreate): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>("/api/v1/groups/create", {
+  create: async (body: AppClientCreate): Promise<AppClientPublic> => {
+    return request<AppClientPublic>("/api/v1/clients/create", {
       method: "POST",
       body: JSON.stringify(body),
     })
   },
 
-  update: async (body: ApiGroupUpdate): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>("/api/v1/groups/update", {
+  update: async (body: AppClientUpdate): Promise<AppClientPublic> => {
+    return request<AppClientPublic>("/api/v1/clients/update", {
       method: "POST",
       body: JSON.stringify(body),
     })
   },
 
   delete: async (id: string): Promise<{ message: string }> => {
-    return request<{ message: string }>(`/api/v1/groups/delete/${id}`, {
+    return request<{ message: string }>(`/api/v1/clients/delete/${id}`, {
       method: "DELETE",
     })
   },
 
-  get: async (id: string): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>(`/api/v1/groups/${id}`, {
+  get: async (id: string): Promise<AppClientPublic> => {
+    return request<AppClientPublic>(`/api/v1/clients/${id}`, {
       method: "GET",
+    })
+  },
+
+  regenerateSecret: async (id: string): Promise<AppClientRegenerateSecretOut> => {
+    return request<AppClientRegenerateSecretOut>(`/api/v1/clients/${id}/regenerate-secret`, {
+      method: "POST",
     })
   },
 }
