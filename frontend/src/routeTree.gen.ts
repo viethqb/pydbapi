@@ -29,7 +29,7 @@ import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connect
 import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
 import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
 import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
-import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id.edit'
+import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id/edit'
 import { Route as LayoutApiDevModulesIdRouteImport } from './routes/_layout/api-dev/modules/$id'
 import { Route as LayoutApiDevApisCreateRouteImport } from './routes/_layout/api-dev/apis/create'
 import { Route as LayoutApiDevApisIdRouteImport } from './routes/_layout/api-dev/apis/$id'

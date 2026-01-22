@@ -145,6 +145,19 @@ def update_datasource(
     return _to_public(ds)
 
 
+@router.get("/{id}", response_model=DataSourcePublic)
+def get_datasource(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    id: uuid.UUID,
+) -> Any:
+    """Get a datasource by id."""
+    ds = session.get(DataSource, id)
+    if not ds:
+        raise HTTPException(status_code=404, detail="DataSource not found")
+    return _to_public(ds)
+
+
 @router.delete("/delete/{id}", response_model=Message)
 def delete_datasource(
     session: SessionDep,
