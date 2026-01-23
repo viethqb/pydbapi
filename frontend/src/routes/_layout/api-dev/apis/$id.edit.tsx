@@ -58,7 +58,7 @@ const formSchema = z.object({
   execute_engine: z.enum(["SQL", "SCRIPT"]),
   datasource_id: z.string().optional().nullable(),
   description: z.string().max(512).optional().nullable(),
-  sort_order: z.number().int().default(0),
+  access_type: z.enum(["public", "private"]).default("private"),
   content: z.string().optional().nullable(),
   group_ids: z.array(z.string()).default([]),
   params: z.array(paramSchema).default([]),
@@ -139,7 +139,7 @@ function ApiEdit() {
       execute_engine: "SQL",
       datasource_id: null,
       description: null,
-      sort_order: 0,
+      access_type: "private",
       content: "",
       group_ids: [],
       params: [],
@@ -177,7 +177,7 @@ function ApiEdit() {
         execute_engine: apiDetail.execute_engine,
         datasource_id: datasourceId,
         description: apiDetail.description || null,
-        sort_order: apiDetail.sort_order,
+        access_type: apiDetail.access_type || "private",
         content: apiDetail.api_context?.content || "",
         group_ids: apiDetail.group_ids?.map(id => String(id)) || [],
         params: params,
@@ -351,7 +351,7 @@ function ApiEdit() {
       execute_engine: values.execute_engine,
       datasource_id: values.datasource_id || null,
       description: values.description || null,
-      sort_order: values.sort_order,
+      access_type: values.access_type,
       content: values.content || null,
       group_ids: values.group_ids,
       params: values.params.length > 0 ? values.params : null,
@@ -367,29 +367,35 @@ function ApiEdit() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Edit API</h1>
-        <p className="text-muted-foreground">Edit API assignment</p>
+        <h1 className="text-3xl font-bold tracking-tight">Edit API</h1>
+        <p className="text-muted-foreground mt-1">Edit API assignment configuration</p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Tabs
-            value={mainTab}
-            onValueChange={(v) => {
-              setMainTab(v)
-              if (v === "debug") fillDefaultValues(true)
-            }}
-            className="w-full"
-          >
-            <TabsList>
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="content">Content</TabsTrigger>
-              <TabsTrigger value="debug">Debug</TabsTrigger>
-            </TabsList>
+          <Card>
+            <CardHeader>
+              <CardTitle>API Configuration</CardTitle>
+              <CardDescription>Update the settings for your API</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs
+                value={mainTab}
+                onValueChange={(v) => {
+                  setMainTab(v)
+                  if (v === "debug") fillDefaultValues(true)
+                }}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                  <TabsTrigger value="content">Content</TabsTrigger>
+                  <TabsTrigger value="debug">Debug</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="basic" className="space-y-6">
+                <TabsContent value="basic" className="space-y-6 mt-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -552,17 +558,28 @@ function ApiEdit() {
 
                 <FormField
                   control={form.control}
-                  name="sort_order"
+                  name="access_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sort Order</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                        />
-                      </FormControl>
+                      <FormLabel>Access Type *</FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(v)}
+                        value={field.value || "private"}
+                        key={field.value || "private"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select access type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="public">Public (No auth required)</SelectItem>
+                          <SelectItem value="private">Private (Token required)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Public APIs can be accessed without authentication. Private APIs require a token from /token/generate.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1109,13 +1126,23 @@ function ApiEdit() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate({ to: "/api-dev/apis/$id", params: { id } })}
+            >
+              Cancel
+            </Button>
             <LoadingButton
               type="submit"
               loading={updateMutation.isPending}
+              size="lg"
             >
               Update API
             </LoadingButton>

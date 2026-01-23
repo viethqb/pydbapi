@@ -55,7 +55,7 @@ const formSchema = z.object({
   execute_engine: z.enum(["SQL", "SCRIPT"]),
   datasource_id: z.string().optional().nullable(),
   description: z.string().max(512).optional().nullable(),
-  sort_order: z.number().int().default(0),
+  access_type: z.enum(["public", "private"]).default("private"),
   content: z.string().optional().nullable(),
   group_ids: z.array(z.string()).default([]),
   params: z.array(paramSchema).default([]),
@@ -99,7 +99,7 @@ function ApiCreate() {
       execute_engine: "SQL",
       datasource_id: null,
       description: null,
-      sort_order: 0,
+      access_type: "private",
       content: "",
       group_ids: [],
       params: [],
@@ -189,7 +189,7 @@ function ApiCreate() {
       execute_engine: values.execute_engine,
       datasource_id: values.datasource_id || null,
       description: values.description || null,
-      sort_order: values.sort_order,
+      access_type: values.access_type,
       content: values.content || null,
       group_ids: values.group_ids,
       params: values.params.length > 0 ? values.params : undefined,
@@ -197,24 +197,30 @@ function ApiCreate() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Create API</h1>
-        <p className="text-muted-foreground">Create a new API assignment</p>
+        <h1 className="text-3xl font-bold tracking-tight">Create API</h1>
+        <p className="text-muted-foreground mt-1">Create a new API assignment</p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList>
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="content">Content</TabsTrigger>
-              <TabsTrigger value="debug">Debug</TabsTrigger>
-            </TabsList>
+          <Card>
+            <CardHeader>
+              <CardTitle>API Configuration</CardTitle>
+              <CardDescription>Configure the basic settings for your API</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                  <TabsTrigger value="content">Content</TabsTrigger>
+                  <TabsTrigger value="debug">Debug</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="basic" className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <FormField
+                <TabsContent value="basic" className="space-y-6 mt-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <FormField
                   control={form.control}
                   name="module_id"
                   render={({ field }) => (
@@ -366,26 +372,36 @@ function ApiCreate() {
 
                 <FormField
                   control={form.control}
-                  name="sort_order"
+                  name="access_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sort Order</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                        />
-                      </FormControl>
+                      <FormLabel>Access Type *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="public">Public (No auth required)</SelectItem>
+                          <SelectItem value="private">Private (Token required)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Public APIs can be accessed without authentication. Private APIs require a token from /token/generate.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
-                />
-              </div>
+                    />
+                  </div>
 
-              <FormField
-                control={form.control}
-                name="description"
+                  <FormField
+                    control={form.control}
+                    name="description"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description</FormLabel>
@@ -400,11 +416,11 @@ function ApiCreate() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+                  />
 
-              <FormField
-                control={form.control}
-                name="group_ids"
+                  <FormField
+                    control={form.control}
+                    name="group_ids"
                 render={() => (
                   <FormItem>
                     <div className="mb-4">
@@ -453,11 +469,11 @@ function ApiCreate() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+                  />
 
-              <FormField
-                control={form.control}
-                name="params"
+                  <FormField
+                    control={form.control}
+                    name="params"
                 render={({ field }) => (
                   <FormItem>
                     <div className="mb-4 flex items-center justify-between">
@@ -667,93 +683,104 @@ function ApiCreate() {
                   </FormItem>
                 )}
               />
-            </TabsContent>
+                </TabsContent>
 
-            <TabsContent value="content" className="space-y-4">
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {executeEngine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={
-                          executeEngine === "SQL"
-                            ? "SELECT * FROM users WHERE id = :id"
-                            : 'def execute(params):\n    return {"result": "success"}'
-                        }
-                        className="font-mono min-h-[400px]"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {executeEngine === "SQL"
-                        ? "SQL query with Jinja2 template syntax for parameters"
-                        : "Python script with execute(params) function"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </TabsContent>
-
-            <TabsContent value="debug" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Debug API</CardTitle>
-                  <CardDescription>
-                    Test your API with sample parameters
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label htmlFor="debug-params" className="text-sm font-medium">Parameters (JSON)</label>
-                    <Textarea
-                      id="debug-params"
-                      value={debugParams}
-                      onChange={(e) => setDebugParams(e.target.value)}
-                      className="font-mono min-h-[150px]"
-                      placeholder='{"id": 1, "name": "test"}'
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={handleDebug}
-                    disabled={debugLoading || !form.watch("content")}
-                  >
-                    {debugLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Running...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-2 h-4 w-4" />
-                        Run Debug
-                      </>
+                <TabsContent value="content" className="space-y-4 mt-6">
+                  <FormField
+                    control={form.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {executeEngine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder={
+                              executeEngine === "SQL"
+                                ? "SELECT * FROM users WHERE id = :id"
+                                : 'def execute(params):\n    return {"result": "success"}'
+                            }
+                            className="font-mono min-h-[400px]"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {executeEngine === "SQL"
+                            ? "SQL query with Jinja2 template syntax for parameters"
+                            : "Python script with execute(params) function"}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </Button>
-                  {debugResult && (
-                    <div>
-                      <p className="text-sm font-medium mb-2">Result</p>
-                      <pre className="mt-2 p-4 bg-muted rounded-md overflow-auto max-h-[400px]">
-                        {JSON.stringify(debugResult, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  />
+                </TabsContent>
 
-          <div className="flex gap-4">
+                <TabsContent value="debug" className="space-y-4 mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Debug API</CardTitle>
+                      <CardDescription>
+                        Test your API with sample parameters
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <label htmlFor="debug-params" className="text-sm font-medium mb-2 block">Parameters (JSON)</label>
+                        <Textarea
+                          id="debug-params"
+                          value={debugParams}
+                          onChange={(e) => setDebugParams(e.target.value)}
+                          className="font-mono min-h-[150px]"
+                          placeholder='{"id": 1, "name": "test"}'
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={handleDebug}
+                        disabled={debugLoading || !form.watch("content")}
+                        className="w-full"
+                      >
+                        {debugLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Running...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="mr-2 h-4 w-4" />
+                            Run Debug
+                          </>
+                        )}
+                      </Button>
+                      {debugResult && (
+                        <div>
+                          <p className="text-sm font-medium mb-2">Result</p>
+                          <pre className="mt-2 p-4 bg-muted rounded-md overflow-auto max-h-[400px] font-mono text-sm">
+                            {JSON.stringify(debugResult, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-4 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate({ to: "/api-dev/apis" })}
+            >
+              Cancel
+            </Button>
             <LoadingButton
               type="submit"
               loading={createMutation.isPending}
+              size="lg"
             >
               Create API
             </LoadingButton>

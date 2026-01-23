@@ -48,6 +48,7 @@ def _to_public(a: ApiAssignment) -> ApiAssignmentPublic:
         datasource_id=a.datasource_id,
         description=a.description,
         is_published=a.is_published,
+        access_type=a.access_type,
         sort_order=a.sort_order,
         created_at=a.created_at,
         updated_at=a.updated_at,

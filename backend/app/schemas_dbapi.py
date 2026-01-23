@@ -11,6 +11,7 @@ from pydantic import Field
 from sqlmodel import SQLModel
 
 from app.models_dbapi import (
+    ApiAccessTypeEnum,
     ExecuteEngineEnum,
     FirewallRuleTypeEnum,
     HttpMethodEnum,
@@ -265,6 +266,7 @@ class ApiAssignmentCreate(SQLModel):
     execute_engine: ExecuteEngineEnum
     datasource_id: uuid.UUID | None = None
     description: str | None = Field(default=None, max_length=512)
+    access_type: ApiAccessTypeEnum = Field(default=ApiAccessTypeEnum.PRIVATE, description="public: no auth required, private: requires token")
     sort_order: int = Field(default=0)
     content: str | None = Field(default=None, description="SQL/script → ApiContext (1-1)")
     group_ids: list[uuid.UUID] = Field(default_factory=list, description="ApiGroup IDs to link")
@@ -282,6 +284,7 @@ class ApiAssignmentUpdate(SQLModel):
     execute_engine: ExecuteEngineEnum | None = None
     datasource_id: uuid.UUID | None = None
     description: str | None = None
+    access_type: ApiAccessTypeEnum | None = None
     sort_order: int | None = None
     content: str | None = None
     group_ids: list[uuid.UUID] | None = Field(default=None, description="If set, replace group links")
@@ -311,6 +314,7 @@ class ApiAssignmentPublic(SQLModel):
     datasource_id: uuid.UUID | None
     description: str | None
     is_published: bool
+    access_type: ApiAccessTypeEnum
     sort_order: int
     created_at: datetime
     updated_at: datetime

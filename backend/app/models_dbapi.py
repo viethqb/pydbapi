@@ -60,6 +60,13 @@ class FirewallRuleTypeEnum(str, Enum):
     DENY = "deny"
 
 
+class ApiAccessTypeEnum(str, Enum):
+    """API access type: public (no auth) or private (requires token)."""
+
+    PUBLIC = "public"
+    PRIVATE = "private"
+
+
 # ---------------------------------------------------------------------------
 # DataSource - Connection management
 # ---------------------------------------------------------------------------
@@ -203,6 +210,19 @@ class ApiAssignment(SQLModel, table=True):
     )
     description: str | None = Field(default=None, max_length=512)
     is_published: bool = Field(default=False)
+    access_type: ApiAccessTypeEnum = Field(
+        sa_column=Column(
+            SQLEnum(
+                ApiAccessTypeEnum,
+                name="apiaccesstypeenum",
+                create_type=False,
+                values_callable=lambda x: [e.value for e in x],
+            ),
+            nullable=False,
+            index=True,
+        ),
+        default=ApiAccessTypeEnum.PRIVATE,
+    )
     sort_order: int = Field(default=0)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)

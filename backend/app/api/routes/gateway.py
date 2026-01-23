@@ -19,7 +19,7 @@ from app.core.gateway import (
 )
 from app.core.gateway.resolver import resolve_api_assignment, resolve_module
 from app.core.gateway.runner import run as runner_run
-from app.models_dbapi import ApiContext
+from app.models_dbapi import ApiAccessTypeEnum, ApiContext
 
 router = APIRouter(prefix="", tags=["gateway"])
 
@@ -41,18 +41,12 @@ async def gateway_proxy(
 ) -> JSONResponse:
     """
     Dynamic gateway: resolve {module}/{path} to ApiAssignment, run SQL/Script, return JSON.
-    Requires: auth (Bearer/Basic/X-API-Key), firewall allow, rate limit. 404 if no match.
+    For public APIs: no auth required. For private APIs: requires auth (Bearer/Basic/X-API-Key).
+    Always requires: firewall allow, rate limit. 404 if no match.
     """
     ip = _get_client_ip(request)
     if not check_firewall(ip, session):
         raise HTTPException(status_code=403, detail="Forbidden")
-
-    app_client = verify_gateway_client(request, session)
-    if not app_client:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    if not check_rate_limit(app_client.client_id or ip):
-        raise HTTPException(status_code=429, detail="Too Many Requests")
 
     mod = resolve_module(module, session)
     if not mod:
@@ -62,6 +56,18 @@ async def gateway_proxy(
     if not resolved:
         raise HTTPException(status_code=404, detail="Not Found")
     api, path_params = resolved
+
+    # Check access_type: public APIs don't require authentication
+    app_client = None
+    if api.access_type == ApiAccessTypeEnum.PRIVATE:
+        app_client = verify_gateway_client(request, session)
+        if not app_client:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Rate limit: use client_id if authenticated, otherwise use IP
+    rate_limit_key = app_client.client_id if app_client else ip
+    if not check_rate_limit(rate_limit_key):
+        raise HTTPException(status_code=429, detail="Too Many Requests")
 
     # Load ApiContext to get params definition for header extraction
     ctx = session.exec(
@@ -78,7 +84,7 @@ async def gateway_proxy(
             api,
             params,
             session=session,
-            app_client_id=app_client.id,
+            app_client_id=app_client.id if app_client else None,
             ip=ip,
             http_method=request.method,
             request_path=f"{module}/{path}".rstrip("/"),

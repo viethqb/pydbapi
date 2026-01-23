@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, Loader2 } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/Common/DataTable"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import {
   apiColumns,
   type ApiTableData,
@@ -134,42 +136,42 @@ function ApisList() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">APIs</h2>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-3xl font-bold tracking-tight">APIs</h1>
+          <p className="text-muted-foreground mt-1">
             Search and manage all API assignments across modules
           </p>
         </div>
         <Link to="/api-dev/apis/create">
-          <Button>
+          <Button size="lg">
             <Plus className="mr-2 h-4 w-4" />
             Create API
           </Button>
         </Link>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col gap-4">
-        {/* Search Box - Prominent */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search APIs by name, path, or description..."
-            className="pl-10 h-10"
-            value={filters.name__ilike || ""}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                name__ilike: e.target.value || null,
-                page: 1,
-              })
-            }
-          />
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search APIs by name, path, or description..."
+              className="pl-8"
+              value={filters.name__ilike || ""}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  name__ilike: e.target.value || null,
+                  page: 1,
+                })
+              }
+            />
+          </div>
         </div>
-        
-        {/* Other Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-wrap gap-4">
           <Select
             value={filters.module_id || "all"}
             onValueChange={(value) =>
@@ -192,119 +194,163 @@ function ApisList() {
               ))}
             </SelectContent>
           </Select>
-        <Select
-          value={
-            filters.is_published === null
-              ? "all"
-              : filters.is_published
-                ? "published"
-                : "draft"
-          }
-          onValueChange={(value) =>
-            setFilters({
-              ...filters,
-              is_published:
-                value === "all" ? null : value === "published" ? true : false,
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.http_method || "all"}
-          onValueChange={(value) =>
-            setFilters({
-              ...filters,
-              http_method: value === "all" ? null : (value as HttpMethodEnum),
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Methods" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Methods</SelectItem>
-            <SelectItem value="GET">GET</SelectItem>
-            <SelectItem value="POST">POST</SelectItem>
-            <SelectItem value="PUT">PUT</SelectItem>
-            <SelectItem value="DELETE">DELETE</SelectItem>
-            <SelectItem value="PATCH">PATCH</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.execute_engine || "all"}
-          onValueChange={(value) =>
-            setFilters({
-              ...filters,
-              execute_engine: value === "all" ? null : (value as ExecuteEngineEnum),
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Engines" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Engines</SelectItem>
-            <SelectItem value="SQL">SQL</SelectItem>
-            <SelectItem value="SCRIPT">SCRIPT</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={
+              filters.is_published === null
+                ? "all"
+                : filters.is_published
+                  ? "published"
+                  : "draft"
+            }
+            onValueChange={(value) =>
+              setFilters({
+                ...filters,
+                is_published:
+                  value === "all" ? null : value === "published" ? true : false,
+                page: 1,
+              })
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={filters.http_method || "all"}
+            onValueChange={(value) =>
+              setFilters({
+                ...filters,
+                http_method: value === "all" ? null : (value as HttpMethodEnum),
+                page: 1,
+              })
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Methods" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Methods</SelectItem>
+              <SelectItem value="GET">GET</SelectItem>
+              <SelectItem value="POST">POST</SelectItem>
+              <SelectItem value="PUT">PUT</SelectItem>
+              <SelectItem value="DELETE">DELETE</SelectItem>
+              <SelectItem value="PATCH">PATCH</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={filters.execute_engine || "all"}
+            onValueChange={(value) =>
+              setFilters({
+                ...filters,
+                execute_engine: value === "all" ? null : (value as ExecuteEngineEnum),
+                page: 1,
+              })
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Engines" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Engines</SelectItem>
+              <SelectItem value="SQL">SQL</SelectItem>
+              <SelectItem value="SCRIPT">SCRIPT</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* DataTable */}
-      {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading...
-        </div>
-      ) : (
-        <DataTable columns={apiColumns} data={tableData} />
-      )}
-
-      {/* Pagination */}
-      {data && data.total > 0 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Showing {(filters.page! - 1) * filters.page_size! + 1} to{" "}
-            {Math.min(filters.page! * filters.page_size!, data.total)} of{" "}
-            {data.total} entries
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>API List</CardTitle>
+              <CardDescription>
+                {data && data.total > 0
+                  ? `${data.total} API${data.total > 1 ? "s" : ""} found`
+                  : "No APIs found"}
+              </CardDescription>
+            </div>
+            {data && data.total > 0 && (
+              <Badge variant="outline" className="text-sm">
+                Page {filters.page} of {Math.ceil(data.total / filters.page_size!)}
+              </Badge>
+            )}
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={filters.page === 1}
-              onClick={() =>
-                setFilters({ ...filters, page: (filters.page || 1) - 1 })
-              }
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={
-                filters.page! * filters.page_size! >= data.total
-              }
-              onClick={() =>
-                setFilters({ ...filters, page: (filters.page || 1) + 1 })
-              }
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Loading APIs...</p>
+            </div>
+          ) : data && data.total === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-muted-foreground mb-4">
+                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">No APIs found</p>
+                <p className="text-sm mt-2">
+                  {filters.name__ilike || filters.module_id || filters.is_published !== null
+                    ? "Try adjusting your filters"
+                    : "Get started by creating your first API"}
+                </p>
+              </div>
+              {!filters.name__ilike && !filters.module_id && filters.is_published === null && (
+                <Link to="/api-dev/apis/create">
+                  <Button className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create API
+                  </Button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <>
+              <DataTable columns={apiColumns} data={tableData} />
+              
+              {/* Pagination */}
+              {data && data.total > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    Showing <span className="font-medium">{(filters.page! - 1) * filters.page_size! + 1}</span> to{" "}
+                    <span className="font-medium">{Math.min(filters.page! * filters.page_size!, data.total)}</span> of{" "}
+                    <span className="font-medium">{data.total}</span> entries
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={filters.page === 1}
+                      onClick={() =>
+                        setFilters({ ...filters, page: (filters.page || 1) - 1 })
+                      }
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        filters.page! * filters.page_size! >= data.total
+                      }
+                      onClick={() =>
+                        setFilters({ ...filters, page: (filters.page || 1) + 1 })
+                      }
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>

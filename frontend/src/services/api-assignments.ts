@@ -4,6 +4,8 @@ import { OpenAPI } from "@/client"
 export type HttpMethodEnum = "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
 export type ExecuteEngineEnum = "SQL" | "SCRIPT"
 
+export type ApiAccessTypeEnum = "public" | "private"
+
 export type ApiAssignmentPublic = {
   id: string
   module_id: string
@@ -14,6 +16,7 @@ export type ApiAssignmentPublic = {
   datasource_id: string | null
   description: string | null
   is_published: boolean
+  access_type: ApiAccessTypeEnum
   sort_order: number
   created_at: string
   updated_at: string
@@ -65,6 +68,7 @@ export type ApiAssignmentCreate = {
   execute_engine: ExecuteEngineEnum
   datasource_id?: string | null
   description?: string | null
+  access_type?: ApiAccessTypeEnum
   sort_order?: number
   content?: string | null
   group_ids?: string[]
@@ -80,6 +84,7 @@ export type ApiAssignmentUpdate = {
   execute_engine?: ExecuteEngineEnum | null
   datasource_id?: string | null
   description?: string | null
+  access_type?: ApiAccessTypeEnum | null
   sort_order?: number | null
   content?: string | null
   group_ids?: string[] | null

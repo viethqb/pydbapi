@@ -98,12 +98,24 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
   },
   {
     accessorKey: "is_published",
-    header: "Published",
+    header: "Status",
     cell: ({ row }) => {
       const isPublished = row.original.is_published
       return (
         <Badge variant={isPublished ? "default" : "outline"}>
           {isPublished ? "Published" : "Draft"}
+        </Badge>
+      )
+    },
+  },
+  {
+    accessorKey: "access_type",
+    header: "Access",
+    cell: ({ row }) => {
+      const accessType = row.original.access_type || "private"
+      return (
+        <Badge variant={accessType === "public" ? "default" : "secondary"}>
+          {accessType === "public" ? "Public" : "Private"}
         </Badge>
       )
     },
