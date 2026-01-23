@@ -74,15 +74,17 @@ async def parse_params(
     request: Request,
     path_params: dict[str, Any],
     http_method: str,  # noqa: ARG001 reserved for future (e.g. skip body for GET)
+    params_definition: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], str | None]:
     """
-    Merge path, query, and body into a single params dict for ApiExecutor.
-    Conflict order: path > query > body (path wins).
+    Merge path, query, body, and header into a single params dict for ApiExecutor.
+    Conflict order: path > query > body > header (path wins).
 
     - Path: from resolver path_params.
     - Query: request.query_params (any method).
     - Body: application/json → request.json(); application/x-www-form-urlencoded or
       multipart/form-data → request.form() (fields only).
+    - Header: extract from request.headers based on params_definition with location="header".
 
     Request naming: ?naming=snake (default) or ?naming=camel. If camel, convert
     body and query keys from camelCase to snake_case before merge. Path params are
@@ -101,8 +103,28 @@ async def parse_params(
         body = keys_to_snake(body)
         query = keys_to_snake(query)
 
-    # path > query > body
+    # Extract header params based on params_definition
+    header_params: dict[str, Any] = {}
+    if params_definition:
+        for param_def in params_definition:
+            if isinstance(param_def, dict) and param_def.get("location") == "header":
+                param_name = param_def.get("name")
+                if param_name:
+                    # Try both original name and snake_case version
+                    header_value = request.headers.get(param_name)
+                    if header_value is None:
+                        # Try snake_case to camelCase conversion for header names
+                        # Headers are case-insensitive, but we'll try exact match first
+                        for header_key, header_val in request.headers.items():
+                            if header_key.lower() == param_name.lower():
+                                header_value = header_val
+                                break
+                    if header_value is not None:
+                        header_params[param_name] = header_value
+
+    # path > query > body > header
     out: dict[str, Any] = {}
+    out.update(header_params)
     out.update(body)
     out.update(query)
     out.update(path_params)

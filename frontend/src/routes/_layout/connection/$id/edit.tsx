@@ -94,22 +94,27 @@ function ConnectionEdit() {
   // Reset form when datasource loads
   useEffect(() => {
     if (datasource) {
+      // Ensure product_type is a string (handle enum objects)
+      const productType = typeof datasource.product_type === 'string' 
+        ? datasource.product_type 
+        : (datasource.product_type as any)?.value || datasource.product_type
+      
       form.reset({
         name: datasource.name,
-        product_type: datasource.product_type,
+        product_type: productType as "postgres" | "mysql",
         host: datasource.host,
         port: datasource.port,
         database: datasource.database,
         username: datasource.username,
         password: "", // Don't prefill password
-        driver_version: datasource.driver_version,
-        description: datasource.description,
+        driver_version: datasource.driver_version || null,
+        description: datasource.description || null,
         is_active: datasource.is_active,
       })
       setTestConnectionSuccess(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasource, form])
+  }, [datasource])
 
   // Reset test result when form values change
   useEffect(() => {
@@ -254,7 +259,8 @@ function ConnectionEdit() {
                   <FormLabel>Database Type *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value}
+                    value={field.value || ""}
+                    key={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>

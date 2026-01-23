@@ -49,6 +49,14 @@ def execute_sql(
         if _is_select_like(sql):
             return cursor_to_dicts(cur)
         return cur.rowcount if cur.rowcount is not None else 0
+    except Exception:
+        # If execution fails, rollback transaction before releasing connection
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
     finally:
         if conn is not None:
             if use_pool:

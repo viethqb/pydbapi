@@ -1,8 +1,7 @@
 import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, ArrowLeft, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { Plus, ArrowLeft } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/Common/DataTable"
@@ -10,14 +9,6 @@ import {
   apiColumns,
   type ApiTableData,
 } from "@/components/ApiDev/api-columns"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogClose,
@@ -52,7 +43,7 @@ function ModuleDetail() {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const { handleSubmit } = useForm()
+  const [deleteApiId, setDeleteApiId] = useState<string | null>(null)
   
   // Check if we're on the edit route
   const isEditRoute = matchRoute({ to: "/api-dev/modules/$id/edit" })
@@ -74,19 +65,6 @@ function ModuleDetail() {
     enabled: !isEditRoute, // Don't fetch APIs when on edit route
   })
 
-  // If on edit route, only render Outlet (edit form)
-  if (isEditRoute) {
-    return <Outlet />
-  }
-
-  if (moduleLoading) {
-    return <div className="text-center py-8 text-muted-foreground">Loading...</div>
-  }
-
-  if (!module) {
-    return <div className="text-center py-8 text-muted-foreground">Module not found</div>
-  }
-
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: () => ModulesService.delete(id),
@@ -100,12 +78,7 @@ function ModuleDetail() {
     },
   })
 
-  const handleDelete = () => {
-    deleteMutation.mutate()
-  }
-
   // Delete API mutation
-  const [deleteApiId, setDeleteApiId] = useState<string | null>(null)
   const deleteApiMutation = useMutation({
     mutationFn: (apiId: string) => ApiAssignmentsService.delete(apiId),
     onSuccess: () => {
@@ -132,6 +105,23 @@ function ModuleDetail() {
       showErrorToast(error.message)
     },
   })
+
+  // If on edit route, only render Outlet (edit form)
+  if (isEditRoute) {
+    return <Outlet />
+  }
+
+  if (moduleLoading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading...</div>
+  }
+
+  if (!module) {
+    return <div className="text-center py-8 text-muted-foreground">Module not found</div>
+  }
+
+  const handleDelete = () => {
+    deleteMutation.mutate()
+  }
 
   const handleDeleteApi = (apiId: string) => {
     setDeleteApiId(apiId)
@@ -230,7 +220,7 @@ function ModuleDetail() {
       {/* Delete Module Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleSubmit(handleDelete)}>
+          <form onSubmit={(e) => { e.preventDefault(); handleDelete(); }}>
             <DialogHeader>
               <DialogTitle>Delete Module</DialogTitle>
               <DialogDescription>

@@ -249,6 +249,10 @@ class ApiParameter(SQLModel):
         default=None,
         description="Validation: regex pattern (if validate_type='regex') or Python function code (if validate_type='python')"
     )
+    default_value: str | None = Field(
+        default=None,
+        description="Default value for this parameter (used in debug UI and as fallback)"
+    )
 
 
 class ApiAssignmentCreate(SQLModel):
@@ -290,7 +294,7 @@ class ApiContextPublic(SQLModel):
     id: uuid.UUID
     api_assignment_id: uuid.UUID
     content: str
-    params: list[dict] | None = Field(default=None, description="Parameter definitions: list of {name, location, data_type, is_required, validate_type, validate}")
+    params: list[dict] | None = Field(default=None, description="Parameter definitions: list of {name, location, data_type, is_required, validate_type, validate, default_value}")
     created_at: datetime
     updated_at: datetime
 

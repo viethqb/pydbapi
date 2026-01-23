@@ -27,18 +27,44 @@ class PoolManager:
     def get_connection(self, datasource: DataSource) -> Any:
         """
         Get a connection for the datasource. Reuses from pool or creates via connect().
+        If reusing from pool, rollback any pending transaction to ensure clean state.
         """
         ds_id = datasource.id
         with self._lock:
             pool = self._pools.setdefault(ds_id, [])
             if pool:
-                return pool.pop()
+                conn = pool.pop()
+                # Rollback any pending transaction to ensure clean state
+                # This prevents "current transaction is aborted" errors
+                try:
+                    conn.rollback()
+                except Exception:
+                    # If rollback fails, connection might be broken, create new one
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                    return connect(datasource)
+                return conn
         return connect(datasource)
 
     def release(self, conn: Any, datasource_id: uuid.UUID) -> None:
         """
         Return a connection to the pool. If pool is full, close the connection.
+        Rollback any pending transaction before returning to pool to ensure clean state.
         """
+        # Rollback any pending transaction before returning to pool
+        # This prevents "current transaction is aborted" errors on next use
+        try:
+            conn.rollback()
+        except Exception:
+            # If rollback fails, connection might be broken, close it instead of pooling
+            try:
+                conn.close()
+            except Exception:
+                pass
+            return
+        
         with self._lock:
             pool = self._pools.get(datasource_id, [])
             if len(pool) < self._pool_size:

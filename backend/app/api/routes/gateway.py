@@ -7,6 +7,8 @@ Flow: IP -> firewall -> auth -> rate limit -> resolve -> parse_params -> run -> 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from sqlmodel import select
+
 from app.api.deps import SessionDep
 from app.core.gateway import (
     check_firewall,
@@ -17,6 +19,7 @@ from app.core.gateway import (
 )
 from app.core.gateway.resolver import resolve_api_assignment, resolve_module
 from app.core.gateway.runner import run as runner_run
+from app.models_dbapi import ApiContext
 
 router = APIRouter(prefix="", tags=["gateway"])
 
@@ -60,7 +63,15 @@ async def gateway_proxy(
         raise HTTPException(status_code=404, detail="Not Found")
     api, path_params = resolved
 
-    params, body_for_log = await parse_params(request, path_params, request.method)
+    # Load ApiContext to get params definition for header extraction
+    ctx = session.exec(
+        select(ApiContext).where(ApiContext.api_assignment_id == api.id)
+    ).first()
+    params_definition = ctx.params if ctx and ctx.params else None
+
+    params, body_for_log = await parse_params(
+        request, path_params, request.method, params_definition=params_definition
+    )
 
     try:
         result = runner_run(

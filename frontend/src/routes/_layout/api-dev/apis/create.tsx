@@ -345,7 +345,7 @@ function ApiCreate() {
                           <SelectItem value="none">None</SelectItem>
                           {datasourcesData?.data && datasourcesData.data.length > 0 ? (
                             datasourcesData.data.map((ds) => (
-                              <SelectItem key={ds.id} value={ds.id}>
+                              <SelectItem key={ds.id} value={String(ds.id)}>
                                 {ds.name}
                               </SelectItem>
                             ))

@@ -141,6 +141,7 @@ def create_api_assignment(
                     "is_required": p.is_required,
                     "validate_type": p.validate_type,
                     "validate": p.validate,
+                    "default_value": p.default_value,
                 }
                 for p in body.params
             ]
@@ -200,6 +201,7 @@ def update_api_assignment(
                             "is_required": p.is_required,
                             "validate_type": p.validate_type,
                             "validate": p.validate,
+                            "default_value": p.default_value,
                         }
                         for p in body.params
                     ]
@@ -217,6 +219,7 @@ def update_api_assignment(
                         "is_required": p.is_required,
                         "validate_type": p.validate_type,
                         "validate": p.validate,
+                        "default_value": p.default_value,
                     }
                     for p in body.params
                 ]
@@ -299,6 +302,7 @@ def debug_api_assignment(
     content: str
     engine = body.execute_engine
     datasource_id = body.datasource_id
+    params_definition: list[dict] | None = None
 
     if body.id is not None:
         a = session.get(ApiAssignment, body.id)
@@ -308,6 +312,8 @@ def debug_api_assignment(
             select(ApiContext).where(ApiContext.api_assignment_id == a.id)
         ).first()
         content = (ctx.content if ctx else "") or ""
+        if ctx and ctx.params:
+            params_definition = ctx.params
         if engine is None:
             engine = a.execute_engine
         if datasource_id is None:
@@ -332,6 +338,26 @@ def debug_api_assignment(
                 detail="datasource_id is required for SQL and SCRIPT engines",
             )
 
+    # Validate required parameters if params definition exists
+    if params_definition:
+        provided_params = body.params or {}
+        missing_params = []
+        for param_def in params_definition:
+            if isinstance(param_def, dict):
+                param_name = param_def.get("name")
+                is_required = param_def.get("is_required", False)
+                if is_required and param_name:
+                    # Check if parameter is provided and not empty
+                    param_value = provided_params.get(param_name)
+                    if param_value is None or param_value == "":
+                        missing_params.append(param_name)
+
+        if missing_params:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing required parameters: {', '.join(missing_params)}",
+            )
+
     try:
         out = ApiExecutor().execute(
             engine=engine,
@@ -342,7 +368,15 @@ def debug_api_assignment(
         )
         return out
     except Exception as e:
-        return {"error": str(e)}
+        # Return detailed error for debugging
+        error_msg = str(e)
+        error_type = type(e).__name__
+        return {
+            "error": error_msg,
+            "error_type": error_type,
+            "content": content[:200] if content else None,  # First 200 chars
+            "params": body.params or {},
+        }
 
 
 @router.delete("/delete/{id}", response_model=Message)

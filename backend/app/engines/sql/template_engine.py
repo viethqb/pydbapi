@@ -35,8 +35,15 @@ class SQLTemplateEngine:
         Render template with params to final SQL string.
         """
         env = _get_sql_env()
-        t = env.from_string(template)
-        return t.render(**params)
+        try:
+            t = env.from_string(template)
+            return t.render(**params)
+        except Exception as e:
+            # Provide more context in error message
+            raise ValueError(
+                f"Failed to render SQL template: {str(e)}. "
+                f"Template: {template[:100]}, Params: {list(params.keys())}"
+            ) from e
 
     def parse_parameters(self, template: str) -> list[str]:
         """

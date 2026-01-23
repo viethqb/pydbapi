@@ -53,11 +53,20 @@ class ApiExecutor:
         if engine == ExecuteEngineEnum.SQL:
             if ds is None:
                 raise ValueError("datasource or datasource_id is required for SQL engine")
-            sql = SQLTemplateEngine().render(content, _params)
-            out = execute_sql(ds, sql)
-            if isinstance(out, list):
-                return {"data": out}
-            return {"rowcount": out}
+            try:
+                sql = SQLTemplateEngine().render(content, _params)
+                _log.debug("Rendered SQL: %s", sql)
+            except Exception as e:
+                _log.error("SQL template render failed: %s", e, exc_info=True)
+                raise
+            try:
+                out = execute_sql(ds, sql)
+                if isinstance(out, list):
+                    return {"data": out}
+                return {"rowcount": out}
+            except Exception as e:
+                _log.error("SQL execution failed: %s. SQL: %s", e, sql, exc_info=True)
+                raise ValueError(f"SQL execution failed: {str(e)}") from e
 
         if engine == ExecuteEngineEnum.SCRIPT:
             if ds is None:

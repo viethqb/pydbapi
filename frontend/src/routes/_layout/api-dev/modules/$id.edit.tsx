@@ -84,7 +84,6 @@ function ModuleEdit() {
         is_active: module.is_active,
       })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [module, form])
 
   const updateMutation = useMutation({
