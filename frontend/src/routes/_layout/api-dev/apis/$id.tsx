@@ -424,377 +424,387 @@ function ApiDetail() {
         </div>
       </div>
 
-      {/* API URL & cURL */}
-      {apiDetail.is_published && apiUrl && (
-        <Card>
-          <CardHeader>
-            <CardTitle>API Testing</CardTitle>
-            <CardDescription>Copy URL or cURL command to test the API</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* API URL */}
-            <div>
-              <div className="text-sm font-medium mb-2">API URL</div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
-                  {apiUrl}
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyUrl}
-                  title="Copy URL"
-                >
-                  {copiedUrl ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* cURL Command */}
-            <div>
-              <div className="text-sm font-medium mb-2">cURL Command</div>
-              <div className="flex items-start gap-2">
-                <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-xs overflow-x-auto">
-                  <pre className="whitespace-pre-wrap break-all">{curlCommand}</pre>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyCurl}
-                  title="Copy cURL"
-                  className="shrink-0"
-                >
-                  {copiedCurl ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Terminal className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
-              <div className="text-blue-600 dark:text-blue-400 mt-0.5">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-label="Information" role="img">
-                  <title>Information</title>
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="flex-1 text-xs text-blue-800 dark:text-blue-300">
-                {apiDetail.access_type === "public" ? (
-                  <p>This is a <strong>public API</strong> - no authentication required. You can call it directly.</p>
-                ) : (
-                  <p>This is a <strong>private API</strong> - requires authentication. Replace <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">YOUR_TOKEN_HERE</code> with a token from <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">/token/generate</code> endpoint.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Execute API */}
-            <div className="border-t pt-6 mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Execute API</h3>
-                  <p className="text-sm text-muted-foreground">Test the API with custom parameters</p>
-                </div>
-              </div>
-              <Tabs defaultValue="query" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="query">Query Params</TabsTrigger>
-                  <TabsTrigger value="headers">Headers</TabsTrigger>
-                  <TabsTrigger value="body">Body</TabsTrigger>
-                </TabsList>
-                <TabsContent value="query" className="space-y-2">
-                  <Textarea
-                    value={queryParams}
-                    onChange={(e) => setQueryParams(e.target.value)}
-                    placeholder='{"key": "value"}'
-                    className="font-mono min-h-[120px]"
-                  />
-                  <p className="text-xs text-muted-foreground">JSON object for query parameters</p>
-                </TabsContent>
-                <TabsContent value="headers" className="space-y-2">
-                  <Textarea
-                    value={headers}
-                    onChange={(e) => setHeaders(e.target.value)}
-                    placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
-                    className="font-mono min-h-[120px]"
-                  />
-                  <p className="text-xs text-muted-foreground">JSON object for HTTP headers</p>
-                </TabsContent>
-                <TabsContent value="body" className="space-y-2">
-                  <Textarea
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    placeholder='{"key": "value"}'
-                    className="font-mono min-h-[120px]"
-                    disabled={!["POST", "PUT", "PATCH"].includes(apiDetail.http_method)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {["POST", "PUT", "PATCH"].includes(apiDetail.http_method)
-                      ? "JSON object for request body"
-                      : "Body is not used for GET/DELETE requests"}
-                  </p>
-                </TabsContent>
-              </Tabs>
-
-              <div className="mt-4 flex gap-2">
-                <Button
-                  onClick={handleExecute}
-                  disabled={isExecuting}
-                  className="flex-1"
-                >
-                  {isExecuting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Executing...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Execute API
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Response */}
-              {response && (
-                <div className="mt-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-semibold">Response</h4>
-                    {response.status && (
-                      <Badge variant={response.status >= 200 && response.status < 300 ? "default" : "destructive"}>
-                        {response.status} {response.status >= 200 && response.status < 300 ? "OK" : "Error"}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg border">
-                    {response.error ? (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-destructive">Error</p>
-                        <pre className="text-sm text-destructive font-mono whitespace-pre-wrap break-all">
-                          {response.error}
-                        </pre>
-                      </div>
-                    ) : (
-                      <pre className="text-sm font-mono whitespace-pre-wrap break-all overflow-auto max-h-[500px] leading-relaxed">
-                        {JSON.stringify(response.data, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* API Info */}
+      {/* Main Content with Tabs */}
       <Card>
         <CardHeader>
-          <CardTitle>API Configuration</CardTitle>
-          <CardDescription>Core settings, metadata, and assigned groups</CardDescription>
+          <CardTitle>{apiDetail.name}</CardTitle>
+          <CardDescription>View and test API details</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableHead className="w-[180px]">Module</TableHead>
-                <TableCell>
-                  {module?.name ? (
-                    <Badge variant="outline" className="font-normal">
-                      {module.name}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">Path</TableHead>
-                <TableCell>
-                  <Badge variant="outline" className="font-mono font-normal">
-                    {apiDetail.path}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">HTTP Method</TableHead>
-                <TableCell>
-                  <Badge className={methodColors[apiDetail.http_method] || "bg-gray-500"}>
-                    {apiDetail.http_method}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">Execute Engine</TableHead>
-                <TableCell>
-                  <Badge variant="outline" className="uppercase">
-                    {apiDetail.execute_engine}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">DataSource</TableHead>
-                <TableCell>
-                  {datasource?.name ? (
-                    <Badge variant="outline" className="font-normal">
-                      {datasource.name}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">Assigned Groups</TableHead>
-                <TableCell>
-                  {assignedGroups.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {assignedGroups.map((group) => (
-                        <Badge key={group.id} variant="outline" className="font-normal">
-                          {group.name}
+          <Tabs defaultValue="configuration" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="configuration">API Configuration</TabsTrigger>
+              <TabsTrigger value="content">API Execution Content</TabsTrigger>
+              <TabsTrigger value="testing">API Testing</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="configuration" className="space-y-6 mt-6">
+              <Table>
+                <TableBody>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Module</TableHead>
+                    <TableCell>
+                      {module?.name ? (
+                        <Badge variant="outline" className="font-normal">
+                          {module.name}
                         </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">API URL</TableHead>
-                <TableCell>
-                  {apiUrl ? (
-                    <div className="p-2 bg-muted rounded-md border font-mono text-xs break-all">
-                      {apiUrl}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">Created</TableHead>
-                <TableCell className="text-sm text-muted-foreground">
-                  {new Date(apiDetail.created_at).toLocaleString()}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableHead className="w-[180px]">Last Updated</TableHead>
-                <TableCell className="text-sm text-muted-foreground">
-                  {new Date(apiDetail.updated_at).toLocaleString()}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Path</TableHead>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono font-normal">
+                        {apiDetail.path}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">HTTP Method</TableHead>
+                    <TableCell>
+                      <Badge className={methodColors[apiDetail.http_method] || "bg-gray-500"}>
+                        {apiDetail.http_method}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Execute Engine</TableHead>
+                    <TableCell>
+                      <Badge variant="outline" className="uppercase">
+                        {apiDetail.execute_engine}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">DataSource</TableHead>
+                    <TableCell>
+                      {datasource?.name ? (
+                        <Badge variant="outline" className="font-normal">
+                          {datasource.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Assigned Groups</TableHead>
+                    <TableCell>
+                      {assignedGroups.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {assignedGroups.map((group) => (
+                            <Badge key={group.id} variant="outline" className="font-normal">
+                              {group.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">API URL</TableHead>
+                    <TableCell>
+                      {apiUrl ? (
+                        <div className="p-2 bg-muted rounded-md border font-mono text-xs break-all">
+                          {apiUrl}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Created</TableHead>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(apiDetail.created_at).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Last Updated</TableHead>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(apiDetail.updated_at).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
 
-          <div className="mt-6 border-t pt-6">
-            <div className="mb-4">
-              <div className="text-sm font-medium">Params</div>
-              <div className="text-sm text-muted-foreground">
-                Parameters defined for this API (query/header/body)
-              </div>
-            </div>
+              <div className="mt-6 border-t pt-6">
+                <div className="mb-4">
+                  <div className="text-sm font-medium">Params</div>
+                  <div className="text-sm text-muted-foreground">
+                    Parameters defined for this API (query/header/body)
+                  </div>
+                </div>
 
-            {apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params) && apiDetail.api_context.params.length > 0 ? (
-              <div className="rounded-md border">
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableHead className="w-[220px]">Name</TableHead>
-                      <TableHead className="w-[120px]">Location</TableHead>
-                      <TableHead className="w-[140px]">Type</TableHead>
-                      <TableHead className="w-[110px]">Required</TableHead>
-                      <TableHead>Default</TableHead>
-                    </TableRow>
-                    {apiDetail.api_context.params.map((p: unknown, idx: number) => {
-                      const param = p as {
-                        name?: string
-                        location?: string
-                        data_type?: string
-                        is_required?: boolean
-                        default_value?: unknown
-                      }
-                      return (
-                      <TableRow key={`${p?.name || "param"}-${idx}`}>
-                        <TableCell className="font-mono text-sm">{param.name || "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-normal">
-                            {param.location || "query"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-normal">
-                            {param.data_type || "string"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={param.is_required ? "default" : "secondary"} className="font-normal">
-                            {param.is_required ? "Yes" : "No"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground break-all">
-                          {param.default_value != null && String(param.default_value).trim() !== ""
-                            ? String(param.default_value)
-                            : "-"}
-                        </TableCell>
-                      </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
+                {apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params) && apiDetail.api_context.params.length > 0 ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableHead className="w-[220px]">Name</TableHead>
+                          <TableHead className="w-[120px]">Location</TableHead>
+                          <TableHead className="w-[140px]">Type</TableHead>
+                          <TableHead className="w-[110px]">Required</TableHead>
+                          <TableHead>Default</TableHead>
+                        </TableRow>
+                        {apiDetail.api_context.params.map((p: unknown, idx: number) => {
+                          const param = p as {
+                            name?: string
+                            location?: string
+                            data_type?: string
+                            is_required?: boolean
+                            default_value?: unknown
+                          }
+                          return (
+                          <TableRow key={`${p?.name || "param"}-${idx}`}>
+                            <TableCell className="font-mono text-sm">{param.name || "-"}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-normal">
+                                {param.location || "query"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-normal">
+                                {param.data_type || "string"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={param.is_required ? "default" : "secondary"} className="font-normal">
+                                {param.is_required ? "Yes" : "No"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground break-all">
+                              {param.default_value != null && String(param.default_value).trim() !== ""
+                                ? String(param.default_value)
+                                : "-"}
+                            </TableCell>
+                          </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">-</div>
+                )}
               </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">-</div>
-            )}
-          </div>
+            </TabsContent>
+
+            <TabsContent value="content" className="mt-6">
+              {apiDetail.api_context ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {apiDetail.execute_engine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">API execution content</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(apiDetail.api_context?.content || "")
+                        setCopiedContent(true)
+                        setTimeout(() => setCopiedContent(false), 2000)
+                        showSuccessToast("Content copied to clipboard")
+                      }}
+                      title="Copy content"
+                    >
+                      {copiedContent ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[600px] font-mono text-sm leading-relaxed">
+                      {apiDetail.api_context.content}
+                    </pre>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-8">
+                  No content available
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="testing" className="mt-6">
+              {apiDetail.is_published && apiUrl ? (
+                <div className="space-y-6">
+                  {/* API URL */}
+                  <div>
+                    <div className="text-sm font-medium mb-2">API URL</div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
+                        {apiUrl}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyUrl}
+                        title="Copy URL"
+                      >
+                        {copiedUrl ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* cURL Command */}
+                  <div>
+                    <div className="text-sm font-medium mb-2">cURL Command</div>
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-xs overflow-x-auto">
+                        <pre className="whitespace-pre-wrap break-all">{curlCommand}</pre>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyCurl}
+                        title="Copy cURL"
+                        className="shrink-0"
+                      >
+                        {copiedCurl ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Terminal className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+                    <div className="text-blue-600 dark:text-blue-400 mt-0.5">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-label="Information" role="img">
+                        <title>Information</title>
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 text-xs text-blue-800 dark:text-blue-300">
+                      {apiDetail.access_type === "public" ? (
+                        <p>This is a <strong>public API</strong> - no authentication required. You can call it directly.</p>
+                      ) : (
+                        <p>This is a <strong>private API</strong> - requires authentication. Replace <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">YOUR_TOKEN_HERE</code> with a token from <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">/token/generate</code> endpoint.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Execute API */}
+                  <div className="border-t pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">Execute API</h3>
+                        <p className="text-sm text-muted-foreground">Test the API with custom parameters</p>
+                      </div>
+                    </div>
+                    <Tabs defaultValue="query" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="query">Query Params</TabsTrigger>
+                        <TabsTrigger value="headers">Headers</TabsTrigger>
+                        <TabsTrigger value="body">Body</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="query" className="space-y-2">
+                        <Textarea
+                          value={queryParams}
+                          onChange={(e) => setQueryParams(e.target.value)}
+                          placeholder='{"key": "value"}'
+                          className="font-mono min-h-[120px]"
+                        />
+                        <p className="text-xs text-muted-foreground">JSON object for query parameters</p>
+                      </TabsContent>
+                      <TabsContent value="headers" className="space-y-2">
+                        <Textarea
+                          value={headers}
+                          onChange={(e) => setHeaders(e.target.value)}
+                          placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
+                          className="font-mono min-h-[120px]"
+                        />
+                        <p className="text-xs text-muted-foreground">JSON object for HTTP headers</p>
+                      </TabsContent>
+                      <TabsContent value="body" className="space-y-2">
+                        <Textarea
+                          value={body}
+                          onChange={(e) => setBody(e.target.value)}
+                          placeholder='{"key": "value"}'
+                          className="font-mono min-h-[120px]"
+                          disabled={!["POST", "PUT", "PATCH"].includes(apiDetail.http_method)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {["POST", "PUT", "PATCH"].includes(apiDetail.http_method)
+                            ? "JSON object for request body"
+                            : "Body is not used for GET/DELETE requests"}
+                        </p>
+                      </TabsContent>
+                    </Tabs>
+
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        onClick={handleExecute}
+                        disabled={isExecuting}
+                        className="flex-1"
+                      >
+                        {isExecuting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Executing...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="mr-2 h-4 w-4" />
+                            Execute API
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Response */}
+                    {response && (
+                      <div className="mt-6 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-base font-semibold">Response</h4>
+                          {response.status && (
+                            <Badge variant={response.status >= 200 && response.status < 300 ? "default" : "destructive"}>
+                              {response.status} {response.status >= 200 && response.status < 300 ? "OK" : "Error"}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="p-4 bg-muted rounded-lg border">
+                          {response.error ? (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-destructive">Error</p>
+                              <pre className="text-sm text-destructive font-mono whitespace-pre-wrap break-all">
+                                {response.error}
+                              </pre>
+                            </div>
+                          ) : (
+                            <pre className="text-sm font-mono whitespace-pre-wrap break-all overflow-auto max-h-[500px] leading-relaxed">
+                              {JSON.stringify(response.data, null, 2)}
+                            </pre>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-8">
+                  {!apiDetail.is_published ? "API must be published to test" : "API URL not available"}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
-
-      {/* Content */}
-      {apiDetail.api_context && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>
-                  {apiDetail.execute_engine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
-                </CardTitle>
-                <CardDescription>API execution content</CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  navigator.clipboard.writeText(apiDetail.api_context?.content || "")
-                  setCopiedContent(true)
-                  setTimeout(() => setCopiedContent(false), 2000)
-                  showSuccessToast("Content copied to clipboard")
-                }}
-                title="Copy content"
-              >
-                {copiedContent ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="relative">
-              <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[600px] font-mono text-sm leading-relaxed">
-                {apiDetail.api_context.content}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Render child routes (like edit) */}
       <Outlet />

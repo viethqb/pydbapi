@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Loader2, Play, Plus, Trash2 } from "lucide-react"
+import { Loader2, Play, Plus, Trash2, X, ChevronDown } from "lucide-react"
 import { useState, useEffect, useRef, useCallback } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -28,6 +28,20 @@ import { Textarea } from "@/components/ui/textarea"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   ApiAssignmentsService,
   type ApiAssignmentUpdate,
@@ -396,505 +410,527 @@ function ApiEdit() {
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-6 mt-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="module_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Module *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                        key={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select module" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {modulesData?.map((m) => (
-                            <SelectItem key={m.id} value={String(m.id)}>
-                              {m.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="My API" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="path"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Path *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="users or users/{id}" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Path within module (e.g., "users" or "users/{id}")
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="http_method"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>HTTP Method *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="GET">GET</SelectItem>
-                          <SelectItem value="POST">POST</SelectItem>
-                          <SelectItem value="PUT">PUT</SelectItem>
-                          <SelectItem value="DELETE">DELETE</SelectItem>
-                          <SelectItem value="PATCH">PATCH</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="execute_engine"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Execute Engine *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="SQL">SQL</SelectItem>
-                          <SelectItem value="SCRIPT">SCRIPT</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="datasource_id"
-                  render={({ field }) => {
-                    // Ensure value is string for comparison
-                    const fieldValue = field.value ? String(field.value) : "none"
-                    return (
-                      <FormItem>
-                        <FormLabel>DataSource</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(value === "none" ? null : value)}
-                          value={fieldValue}
-                          key={fieldValue}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select datasource" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {datasourcesData?.data && datasourcesData.data.length > 0 ? (
-                              datasourcesData.data.map((ds) => {
-                                const dsId = String(ds.id)
-                                return (
-                                  <SelectItem key={dsId} value={dsId}>
-                                    {ds.name}
-                                  </SelectItem>
-                                )
-                              })
-                            ) : (
-                              <SelectItem value="no-data" disabled>
-                                No datasources available
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Required for SQL and SCRIPT engines
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="access_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Access Type *</FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v)}
-                        value={field.value || "private"}
-                        key={field.value || "private"}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select access type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="public">Public (No auth required)</SelectItem>
-                          <SelectItem value="private">Private (Token required)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Public APIs can be accessed without authentication. Private APIs require a token from /token/generate.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Optional description"
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="group_ids"
-                render={() => (
-                  <FormItem>
-                    <div className="mb-4">
-                      <FormLabel>Groups</FormLabel>
-                      <FormDescription>
-                        Select groups to assign this API to
-                      </FormDescription>
-                    </div>
-                    {groupsData?.data && groupsData.data.length > 0 ? (
-                      groupsData.data.map((group) => (
-                        <FormField
-                          key={group.id}
-                          control={form.control}
-                          name="group_ids"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={group.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(group.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, group.id])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== group.id
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {group.name}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No groups available</p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="params"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <FormLabel>Parameters</FormLabel>
-                        <FormDescription>
-                          Define API parameters (query, header, or body)
-                        </FormDescription>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          field.onChange([
-                            ...field.value,
-                            { name: "", location: "query" as const, data_type: null, is_required: false, validate_type: null, validate: null, default_value: null },
-                          ])
-                        }}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Param
-                      </Button>
-                    </div>
-                    <div className="space-y-4">
-                      {field.value.map((param, index) => (
-                        <div
-                          key={`param-${index}-${(param as { name?: string }).name ?? ""}`}
-                          className="space-y-4 p-4 border rounded-lg"
-                        >
-                          <div className="flex gap-4 items-end">
-                            <FormField
-                              control={form.control}
-                              name={`params.${index}.name`}
-                              render={({ field: paramField }) => (
-                                <FormItem className="flex-1">
-                                  <FormLabel>Parameter Name</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      placeholder="e.g., id, limit, token"
-                                      {...paramField}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={`params.${index}.location`}
-                              render={({ field: locationField }) => (
-                                <FormItem className="w-40">
-                                  <FormLabel>Location</FormLabel>
-                                  <Select
-                                    onValueChange={locationField.onChange}
-                                    value={locationField.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="query">Query</SelectItem>
-                                      <SelectItem value="header">Header</SelectItem>
-                                      <SelectItem value="body">Body</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={`params.${index}.is_required`}
-                              render={({ field: isRequiredField }) => (
-                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={isRequiredField.value}
-                                      onCheckedChange={isRequiredField.onChange}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel className="text-sm font-normal">
-                                      Required
-                                    </FormLabel>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                field.onChange(
-                                  field.value.filter((_, i) => i !== index)
-                                )
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <FormField
-                              control={form.control}
-                              name={`params.${index}.data_type`}
-                              render={({ field: dataTypeField }) => (
-                                <FormItem>
-                                  <FormLabel>Data Type</FormLabel>
-                                  <Select
-                                    onValueChange={(value) => dataTypeField.onChange(value === "none" ? null : value)}
-                                    value={dataTypeField.value || "none"}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select data type" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="none">None</SelectItem>
-                                      <SelectItem value="string">String</SelectItem>
-                                      <SelectItem value="number">Number</SelectItem>
-                                      <SelectItem value="integer">Integer</SelectItem>
-                                      <SelectItem value="boolean">Boolean</SelectItem>
-                                      <SelectItem value="array">Array</SelectItem>
-                                      <SelectItem value="object">Object</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>
-                                    Expected data type for validation
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={`params.${index}.validate_type`}
-                              render={({ field: validateTypeField }) => (
-                                <FormItem>
-                                  <FormLabel>Validate Type</FormLabel>
-                                  <Select
-                                    onValueChange={(value) => validateTypeField.onChange(value === "none" ? null : value)}
-                                    value={validateTypeField.value || "none"}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select validate type" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="none">None</SelectItem>
-                                      <SelectItem value="regex">Regex</SelectItem>
-                                      <SelectItem value="python">Python</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>
-                                    Validation method type
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          {form.watch(`params.${index}.validate_type`) && (
-                            <FormField
-                              control={form.control}
-                              name={`params.${index}.validate`}
-                              render={({ field: validateField }) => (
-                                <FormItem>
-                                  <FormLabel>
-                                    {form.watch(`params.${index}.validate_type`) === "regex" ? "Regex Pattern" : "Python Function Code"}
-                                  </FormLabel>
-                                  <FormControl>
-                                    <Textarea
-                                      placeholder={
-                                        form.watch(`params.${index}.validate_type`) === "regex"
-                                          ? "e.g., ^[0-9]+$"
-                                          : "def validate_xxx(value):\n    return isinstance(value, int) and value > 0"
-                                      }
-                                      className="font-mono min-h-[100px]"
-                                      {...validateField}
-                                      value={validateField.value || ""}
-                                    />
-                                  </FormControl>
-                                  <FormDescription>
-                                    {form.watch(`params.${index}.validate_type`) === "regex"
-                                      ? "Regular expression pattern for validation"
-                                      : "Python function code that takes 'value' parameter and returns True/False"}
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Module *</TableHead>
+                        <TableCell>
                           <FormField
                             control={form.control}
-                            name={`params.${index}.default_value`}
-                            render={({ field: defaultValueField }) => (
+                            name="module_id"
+                            render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Default Value</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value || ""}
+                                  key={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select module" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {modulesData?.map((m) => (
+                                      <SelectItem key={m.id} value={String(m.id)}>
+                                        {m.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Name *</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
                                 <FormControl>
-                                  <Input
-                                    placeholder="Default value for this parameter"
-                                    {...defaultValueField}
-                                    value={defaultValueField.value || ""}
-                                    onChange={(e) =>
-                                      defaultValueField.onChange(
-                                        e.target.value || null
-                                      )
-                                    }
-                                  />
+                                  <Input placeholder="My API" {...field} />
                                 </FormControl>
-                                <FormDescription>
-                                  Default value to use in debug if not provided
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Path *</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="path"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input placeholder="users or users/{id}" {...field} />
+                                </FormControl>
+                                <FormDescription className="mt-1">
+                                  Path within module (e.g., "users" or "users/{id}")
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                        </div>
-                      ))}
-                      {field.value.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          No parameters defined. Click "New Param" to add one.
-                        </p>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">HTTP Method *</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="http_method"
+                            render={({ field }) => (
+                              <FormItem>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="GET">GET</SelectItem>
+                                    <SelectItem value="POST">POST</SelectItem>
+                                    <SelectItem value="PUT">PUT</SelectItem>
+                                    <SelectItem value="DELETE">DELETE</SelectItem>
+                                    <SelectItem value="PATCH">PATCH</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Execute Engine *</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="execute_engine"
+                            render={({ field }) => (
+                              <FormItem>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="SQL">SQL</SelectItem>
+                                    <SelectItem value="SCRIPT">SCRIPT</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">DataSource</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="datasource_id"
+                            render={({ field }) => {
+                              const fieldValue = field.value ? String(field.value) : "none"
+                              return (
+                                <FormItem>
+                                  <Select
+                                    onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                                    value={fieldValue}
+                                    key={fieldValue}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select datasource" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="none">None</SelectItem>
+                                      {datasourcesData?.data && datasourcesData.data.length > 0 ? (
+                                        datasourcesData.data.map((ds) => {
+                                          const dsId = String(ds.id)
+                                          return (
+                                            <SelectItem key={dsId} value={dsId}>
+                                              {ds.name}
+                                            </SelectItem>
+                                          )
+                                        })
+                                      ) : (
+                                        <SelectItem value="no-data" disabled>
+                                          No datasources available
+                                        </SelectItem>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription className="mt-1">
+                                    Required for SQL and SCRIPT engines
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Access Type *</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="access_type"
+                            render={({ field }) => (
+                              <FormItem>
+                                <Select
+                                  onValueChange={(v) => field.onChange(v)}
+                                  value={field.value || "private"}
+                                  key={field.value || "private"}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select access type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="public">Public (No auth required)</SelectItem>
+                                    <SelectItem value="private">Private (Token required)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormDescription className="mt-1">
+                                  Public APIs can be accessed without authentication. Private APIs require a token from /token/generate.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Description</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Optional description"
+                                    {...field}
+                                    value={field.value || ""}
+                                    onChange={(e) => field.onChange(e.target.value || null)}
+                                    className="min-h-[80px]"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Groups</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="group_ids"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <div className="flex min-h-[40px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer">
+                                        <div className="flex flex-wrap gap-1 flex-1">
+                                          {field.value && field.value.length > 0 ? (
+                                            field.value.map((groupId) => {
+                                              const group = groupsData?.data?.find((g) => g.id === groupId)
+                                              if (!group) return null
+                                              return (
+                                                <Badge
+                                                  key={group.id}
+                                                  variant="secondary"
+                                                  className="mr-1"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    field.onChange(field.value.filter((id) => id !== groupId))
+                                                  }}
+                                                >
+                                                  {group.name}
+                                                  <button
+                                                    type="button"
+                                                    className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                                    onKeyDown={(e) => {
+                                                      if (e.key === "Enter") {
+                                                        field.onChange(field.value.filter((id) => id !== groupId))
+                                                      }
+                                                    }}
+                                                    onMouseDown={(e) => {
+                                                      e.preventDefault()
+                                                      e.stopPropagation()
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.preventDefault()
+                                                      e.stopPropagation()
+                                                      field.onChange(field.value.filter((id) => id !== groupId))
+                                                    }}
+                                                  >
+                                                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                                  </button>
+                                                </Badge>
+                                              )
+                                            })
+                                          ) : (
+                                            <span className="text-muted-foreground">Select groups...</span>
+                                          )}
+                                        </div>
+                                        <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                                      </div>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-auto">
+                                      {groupsData?.data && groupsData.data.length > 0 ? (
+                                        groupsData.data.map((group) => (
+                                          <DropdownMenuItem
+                                            key={group.id}
+                                            onSelect={(e) => {
+                                              e.preventDefault()
+                                              const currentValue = field.value || []
+                                              if (currentValue.includes(group.id)) {
+                                                field.onChange(currentValue.filter((id) => id !== group.id))
+                                              } else {
+                                                field.onChange([...currentValue, group.id])
+                                              }
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-2 w-full">
+                                              <input
+                                                type="checkbox"
+                                                checked={field.value?.includes(group.id) || false}
+                                                onChange={() => {}}
+                                                className="h-4 w-4 rounded border-gray-300"
+                                              />
+                                              <span>{group.name}</span>
+                                            </div>
+                                          </DropdownMenuItem>
+                                        ))
+                                      ) : (
+                                        <DropdownMenuItem disabled>No groups available</DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+
+                  <div className="mt-6 border-t pt-6">
+                    <FormField
+                      control={form.control}
+                      name="params"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="mb-4 flex items-center justify-between">
+                            <div>
+                              <FormLabel>Parameters</FormLabel>
+                              <FormDescription>
+                                Define API parameters (query, header, or body)
+                              </FormDescription>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                field.onChange([
+                                  ...field.value,
+                                  { name: "", location: "query" as const, data_type: null, is_required: false, validate_type: null, validate: null, default_value: null },
+                                ])
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Parameter
+                            </Button>
+                          </div>
+                          {field.value && field.value.length > 0 ? (
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableHead className="w-[200px]">Name</TableHead>
+                                    <TableHead className="w-[120px]">Location</TableHead>
+                                    <TableHead className="w-[140px]">Data Type</TableHead>
+                                    <TableHead className="w-[100px]">Required</TableHead>
+                                    <TableHead className="w-[150px]">Default Value</TableHead>
+                                    <TableHead className="w-[100px]">Actions</TableHead>
+                                  </TableRow>
+                                  {field.value.map((param, index) => {
+                                    const paramName = (param as { name?: string }).name || ""
+                                    return (
+                                    <TableRow key={`param-${index}-${paramName}`}>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.name`}
+                                          render={({ field: paramField }) => (
+                                            <FormItem>
+                                              <FormControl>
+                                                <Input
+                                                  placeholder="e.g., id, limit"
+                                                  {...paramField}
+                                                  className="h-9"
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.location`}
+                                          render={({ field: locationField }) => (
+                                            <FormItem>
+                                              <Select
+                                                onValueChange={locationField.onChange}
+                                                value={locationField.value}
+                                              >
+                                                <FormControl>
+                                                  <SelectTrigger className="h-9">
+                                                    <SelectValue />
+                                                  </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                  <SelectItem value="query">Query</SelectItem>
+                                                  <SelectItem value="header">Header</SelectItem>
+                                                  <SelectItem value="body">Body</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.data_type`}
+                                          render={({ field: dataTypeField }) => (
+                                            <FormItem>
+                                              <Select
+                                                onValueChange={(value) => dataTypeField.onChange(value === "none" ? null : value)}
+                                                value={dataTypeField.value || "none"}
+                                              >
+                                                <FormControl>
+                                                  <SelectTrigger className="h-9">
+                                                    <SelectValue />
+                                                  </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                  <SelectItem value="none">None</SelectItem>
+                                                  <SelectItem value="string">String</SelectItem>
+                                                  <SelectItem value="number">Number</SelectItem>
+                                                  <SelectItem value="integer">Integer</SelectItem>
+                                                  <SelectItem value="boolean">Boolean</SelectItem>
+                                                  <SelectItem value="array">Array</SelectItem>
+                                                  <SelectItem value="object">Object</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.is_required`}
+                                          render={({ field: isRequiredField }) => (
+                                            <FormItem>
+                                              <FormControl>
+                                                <Checkbox
+                                                  checked={isRequiredField.value}
+                                                  onCheckedChange={isRequiredField.onChange}
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.default_value`}
+                                          render={({ field: defaultValueField }) => (
+                                            <FormItem>
+                                              <FormControl>
+                                                <Input
+                                                  placeholder="Default value"
+                                                  {...defaultValueField}
+                                                  value={defaultValueField.value || ""}
+                                                  onChange={(e) =>
+                                                    defaultValueField.onChange(
+                                                      e.target.value || null
+                                                    )
+                                                  }
+                                                  className="h-9"
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => {
+                                            field.onChange(
+                                              field.value.filter((_, i) => i !== index)
+                                            )
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                    )
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                              No parameters defined. Click "Add Parameter" to add one.
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    />
+                  </div>
             </TabsContent>
 
             <TabsContent value="content" className="space-y-4">
@@ -1126,7 +1162,7 @@ function ApiEdit() {
                   )}
                 </CardContent>
               </Card>
-                </TabsContent>
+            </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
