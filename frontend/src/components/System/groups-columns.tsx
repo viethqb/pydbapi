@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { Link } from "@tanstack/react-router"
+import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,7 +25,13 @@ export const groupsColumns: ColumnDef<GroupTableData>[] = [
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.name}</span>
+      <Link
+        to="/system/groups/$id"
+        params={{ id: row.original.id }}
+        className="font-medium text-primary hover:underline"
+      >
+        {row.original.name}
+      </Link>
     ),
   },
   {
@@ -98,6 +104,16 @@ export const groupsColumns: ColumnDef<GroupTableData>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/system/groups/$id"
+                  params={{ id: group.id }}
+                  className="flex cursor-pointer items-center"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View
+                </Link>
+              </DropdownMenuItem>
               {group.onEdit && (
                 <DropdownMenuItem
                   onClick={() => group.onEdit?.(group.id)}

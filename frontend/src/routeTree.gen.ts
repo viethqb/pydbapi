@@ -21,15 +21,16 @@ import { Route as LayoutAboutRouteImport } from './routes/_layout/about'
 import { Route as LayoutConnectionIndexRouteImport } from './routes/_layout/connection/index'
 import { Route as LayoutApiRepositoryIndexRouteImport } from './routes/_layout/api-repository/index'
 import { Route as LayoutApiDevIndexRouteImport } from './routes/_layout/api-dev/index'
-import { Route as LayoutSystemGroupsRouteImport } from './routes/_layout/system/groups'
 import { Route as LayoutSystemFirewallRouteImport } from './routes/_layout/system/firewall'
 import { Route as LayoutSystemClientsRouteImport } from './routes/_layout/system/clients'
 import { Route as LayoutSystemAlarmRouteImport } from './routes/_layout/system/alarm'
 import { Route as LayoutConnectionCreateRouteImport } from './routes/_layout/connection/create'
 import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connection/$id'
 import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
+import { Route as LayoutSystemGroupsIndexRouteImport } from './routes/_layout/system/groups/index'
 import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
 import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
+import { Route as LayoutSystemGroupsIdRouteImport } from './routes/_layout/system/groups/$id'
 import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id/edit'
 import { Route as LayoutApiDevModulesCreateRouteImport } from './routes/_layout/api-dev/modules/create'
 import { Route as LayoutApiDevModulesIdRouteImport } from './routes/_layout/api-dev/modules/$id'
@@ -98,11 +99,6 @@ const LayoutApiDevIndexRoute = LayoutApiDevIndexRouteImport.update({
   path: '/api-dev/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutSystemGroupsRoute = LayoutSystemGroupsRouteImport.update({
-  id: '/system/groups',
-  path: '/system/groups',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutSystemFirewallRoute = LayoutSystemFirewallRouteImport.update({
   id: '/system/firewall',
   path: '/system/firewall',
@@ -133,6 +129,11 @@ const LayoutApiRepositoryIdRoute = LayoutApiRepositoryIdRouteImport.update({
   path: '/api-repository/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutSystemGroupsIndexRoute = LayoutSystemGroupsIndexRouteImport.update({
+  id: '/system/groups/',
+  path: '/system/groups/',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutApiDevModulesIndexRoute =
   LayoutApiDevModulesIndexRouteImport.update({
     id: '/api-dev/modules/',
@@ -142,6 +143,11 @@ const LayoutApiDevModulesIndexRoute =
 const LayoutApiDevApisIndexRoute = LayoutApiDevApisIndexRouteImport.update({
   id: '/api-dev/apis/',
   path: '/api-dev/apis/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSystemGroupsIdRoute = LayoutSystemGroupsIdRouteImport.update({
+  id: '/system/groups/$id',
+  path: '/system/groups/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutConnectionIdEditRoute = LayoutConnectionIdEditRouteImport.update({
@@ -197,7 +203,6 @@ export interface FileRoutesByFullPath {
   '/system/alarm': typeof LayoutSystemAlarmRoute
   '/system/clients': typeof LayoutSystemClientsRoute
   '/system/firewall': typeof LayoutSystemFirewallRoute
-  '/system/groups': typeof LayoutSystemGroupsRoute
   '/api-dev/': typeof LayoutApiDevIndexRoute
   '/api-repository/': typeof LayoutApiRepositoryIndexRoute
   '/connection/': typeof LayoutConnectionIndexRoute
@@ -206,8 +211,10 @@ export interface FileRoutesByFullPath {
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
+  '/system/groups/': typeof LayoutSystemGroupsIndexRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
 }
@@ -226,7 +233,6 @@ export interface FileRoutesByTo {
   '/system/alarm': typeof LayoutSystemAlarmRoute
   '/system/clients': typeof LayoutSystemClientsRoute
   '/system/firewall': typeof LayoutSystemFirewallRoute
-  '/system/groups': typeof LayoutSystemGroupsRoute
   '/api-dev': typeof LayoutApiDevIndexRoute
   '/api-repository': typeof LayoutApiRepositoryIndexRoute
   '/connection': typeof LayoutConnectionIndexRoute
@@ -235,8 +241,10 @@ export interface FileRoutesByTo {
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/api-dev/apis': typeof LayoutApiDevApisIndexRoute
   '/api-dev/modules': typeof LayoutApiDevModulesIndexRoute
+  '/system/groups': typeof LayoutSystemGroupsIndexRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
 }
@@ -257,7 +265,6 @@ export interface FileRoutesById {
   '/_layout/system/alarm': typeof LayoutSystemAlarmRoute
   '/_layout/system/clients': typeof LayoutSystemClientsRoute
   '/_layout/system/firewall': typeof LayoutSystemFirewallRoute
-  '/_layout/system/groups': typeof LayoutSystemGroupsRoute
   '/_layout/api-dev/': typeof LayoutApiDevIndexRoute
   '/_layout/api-repository/': typeof LayoutApiRepositoryIndexRoute
   '/_layout/connection/': typeof LayoutConnectionIndexRoute
@@ -266,8 +273,10 @@ export interface FileRoutesById {
   '/_layout/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/_layout/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/_layout/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/_layout/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/_layout/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/_layout/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
+  '/_layout/system/groups/': typeof LayoutSystemGroupsIndexRoute
   '/_layout/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/_layout/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
 }
@@ -288,7 +297,6 @@ export interface FileRouteTypes {
     | '/system/alarm'
     | '/system/clients'
     | '/system/firewall'
-    | '/system/groups'
     | '/api-dev/'
     | '/api-repository/'
     | '/connection/'
@@ -297,8 +305,10 @@ export interface FileRouteTypes {
     | '/api-dev/modules/$id'
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
+    | '/system/groups/$id'
     | '/api-dev/apis/'
     | '/api-dev/modules/'
+    | '/system/groups/'
     | '/api-dev/apis/$id/edit'
     | '/api-dev/modules/$id/edit'
   fileRoutesByTo: FileRoutesByTo
@@ -317,7 +327,6 @@ export interface FileRouteTypes {
     | '/system/alarm'
     | '/system/clients'
     | '/system/firewall'
-    | '/system/groups'
     | '/api-dev'
     | '/api-repository'
     | '/connection'
@@ -326,8 +335,10 @@ export interface FileRouteTypes {
     | '/api-dev/modules/$id'
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
+    | '/system/groups/$id'
     | '/api-dev/apis'
     | '/api-dev/modules'
+    | '/system/groups'
     | '/api-dev/apis/$id/edit'
     | '/api-dev/modules/$id/edit'
   id:
@@ -347,7 +358,6 @@ export interface FileRouteTypes {
     | '/_layout/system/alarm'
     | '/_layout/system/clients'
     | '/_layout/system/firewall'
-    | '/_layout/system/groups'
     | '/_layout/api-dev/'
     | '/_layout/api-repository/'
     | '/_layout/connection/'
@@ -356,8 +366,10 @@ export interface FileRouteTypes {
     | '/_layout/api-dev/modules/$id'
     | '/_layout/api-dev/modules/create'
     | '/_layout/connection/$id/edit'
+    | '/_layout/system/groups/$id'
     | '/_layout/api-dev/apis/'
     | '/_layout/api-dev/modules/'
+    | '/_layout/system/groups/'
     | '/_layout/api-dev/apis/$id/edit'
     | '/_layout/api-dev/modules/$id/edit'
   fileRoutesById: FileRoutesById
@@ -456,13 +468,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiDevIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/system/groups': {
-      id: '/_layout/system/groups'
-      path: '/system/groups'
-      fullPath: '/system/groups'
-      preLoaderRoute: typeof LayoutSystemGroupsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/system/firewall': {
       id: '/_layout/system/firewall'
       path: '/system/firewall'
@@ -505,6 +510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiRepositoryIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/system/groups/': {
+      id: '/_layout/system/groups/'
+      path: '/system/groups'
+      fullPath: '/system/groups/'
+      preLoaderRoute: typeof LayoutSystemGroupsIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/api-dev/modules/': {
       id: '/_layout/api-dev/modules/'
       path: '/api-dev/modules'
@@ -517,6 +529,13 @@ declare module '@tanstack/react-router' {
       path: '/api-dev/apis'
       fullPath: '/api-dev/apis/'
       preLoaderRoute: typeof LayoutApiDevApisIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/system/groups/$id': {
+      id: '/_layout/system/groups/$id'
+      path: '/system/groups/$id'
+      fullPath: '/system/groups/$id'
+      preLoaderRoute: typeof LayoutSystemGroupsIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/connection/$id/edit': {
@@ -617,7 +636,6 @@ interface LayoutRouteChildren {
   LayoutSystemAlarmRoute: typeof LayoutSystemAlarmRoute
   LayoutSystemClientsRoute: typeof LayoutSystemClientsRoute
   LayoutSystemFirewallRoute: typeof LayoutSystemFirewallRoute
-  LayoutSystemGroupsRoute: typeof LayoutSystemGroupsRoute
   LayoutApiDevIndexRoute: typeof LayoutApiDevIndexRoute
   LayoutApiRepositoryIndexRoute: typeof LayoutApiRepositoryIndexRoute
   LayoutConnectionIndexRoute: typeof LayoutConnectionIndexRoute
@@ -625,8 +643,10 @@ interface LayoutRouteChildren {
   LayoutApiDevApisCreateRoute: typeof LayoutApiDevApisCreateRoute
   LayoutApiDevModulesIdRoute: typeof LayoutApiDevModulesIdRouteWithChildren
   LayoutApiDevModulesCreateRoute: typeof LayoutApiDevModulesCreateRoute
+  LayoutSystemGroupsIdRoute: typeof LayoutSystemGroupsIdRoute
   LayoutApiDevApisIndexRoute: typeof LayoutApiDevApisIndexRoute
   LayoutApiDevModulesIndexRoute: typeof LayoutApiDevModulesIndexRoute
+  LayoutSystemGroupsIndexRoute: typeof LayoutSystemGroupsIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -640,7 +660,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSystemAlarmRoute: LayoutSystemAlarmRoute,
   LayoutSystemClientsRoute: LayoutSystemClientsRoute,
   LayoutSystemFirewallRoute: LayoutSystemFirewallRoute,
-  LayoutSystemGroupsRoute: LayoutSystemGroupsRoute,
   LayoutApiDevIndexRoute: LayoutApiDevIndexRoute,
   LayoutApiRepositoryIndexRoute: LayoutApiRepositoryIndexRoute,
   LayoutConnectionIndexRoute: LayoutConnectionIndexRoute,
@@ -648,8 +667,10 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiDevApisCreateRoute: LayoutApiDevApisCreateRoute,
   LayoutApiDevModulesIdRoute: LayoutApiDevModulesIdRouteWithChildren,
   LayoutApiDevModulesCreateRoute: LayoutApiDevModulesCreateRoute,
+  LayoutSystemGroupsIdRoute: LayoutSystemGroupsIdRoute,
   LayoutApiDevApisIndexRoute: LayoutApiDevApisIndexRoute,
   LayoutApiDevModulesIndexRoute: LayoutApiDevModulesIndexRoute,
+  LayoutSystemGroupsIndexRoute: LayoutSystemGroupsIndexRoute,
 }
 
 const LayoutRouteWithChildren =

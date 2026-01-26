@@ -10,6 +10,10 @@ export type ApiGroupPublic = {
   updated_at: string
 }
 
+export type ApiGroupDetail = ApiGroupPublic & {
+  api_assignment_ids: string[]
+}
+
 export type ApiGroupListIn = {
   page?: number
   page_size?: number
@@ -100,8 +104,8 @@ export const GroupsService = {
     })
   },
 
-  get: async (id: string): Promise<ApiGroupPublic> => {
-    return request<ApiGroupPublic>(`/api/v1/groups/${id}`, {
+  get: async (id: string): Promise<ApiGroupDetail> => {
+    return request<ApiGroupDetail>(`/api/v1/groups/${id}`, {
       method: "GET",
     })
   },

@@ -33,7 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-export const Route = createFileRoute("/_layout/system/groups")({
+export const Route = createFileRoute("/_layout/system/groups/")({
   component: GroupsPage,
   head: () => ({
     meta: [
