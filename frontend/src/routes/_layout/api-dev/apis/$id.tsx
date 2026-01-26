@@ -1,11 +1,12 @@
 import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Globe, Pencil, Trash2, EyeOff, Copy, Check, Terminal, Play, Loader2 } from "lucide-react"
+import { ArrowLeft, Globe, Pencil, Trash2, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X } from "lucide-react"
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import { useState, useEffect, useMemo } from "react"
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -51,13 +53,16 @@ function ApiDetail() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
-  const [copiedCurl, setCopiedCurl] = useState(false)
   const [copiedContent, setCopiedContent] = useState(false)
-  const [queryParams, setQueryParams] = useState("{}")
-  const [headers, setHeaders] = useState("{}")
+  const [queryParams, setQueryParams] = useState<Array<{ key: string; value: string }>>([])
+  const [headers, setHeaders] = useState<Array<{ key: string; value: string }>>([])
   const [body, setBody] = useState("{}")
   const [response, setResponse] = useState<{ status?: number; data?: unknown; error?: string } | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [tokenHeaders, setTokenHeaders] = useState<Array<{ key: string; value: string }>>([{ key: "Content-Type", value: "application/json" }])
+  const [tokenBody, setTokenBody] = useState('{"client_id": "", "client_secret": ""}')
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null)
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false)
   const { handleSubmit } = useForm()
 
   // Check if we're on the edit route
@@ -175,21 +180,81 @@ function ApiDetail() {
   // Initialize form values with defaults (always called)
   useEffect(() => {
     if (apiDetail && defaultValues) {
-      setQueryParams(JSON.stringify(defaultValues.query, null, 2))
+      // Convert query params to key-value array
+      const queryArray = Object.entries(defaultValues.query).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }))
+      setQueryParams(queryArray.length > 0 ? queryArray : [{ key: "", value: "" }])
+
+      // Convert headers to key-value array
       const defaultHeaders = {
         ...defaultValues.header,
         "Content-Type": "application/json",
-        ...(apiDetail.access_type === "private" ? { Authorization: "Bearer YOUR_TOKEN_HERE" } : {}),
+        ...(apiDetail.access_type === "private" && generatedToken ? { Authorization: `Bearer ${generatedToken}` } : {}),
       }
-      setHeaders(JSON.stringify(defaultHeaders, null, 2))
+      const headersArray = Object.entries(defaultHeaders).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }))
+      setHeaders(headersArray.length > 0 ? headersArray : [{ key: "", value: "" }])
+      
       setBody(JSON.stringify(defaultValues.body, null, 2))
     } else if (!apiDetail) {
       // Reset to defaults when apiDetail is not available
-      setQueryParams("{}")
-      setHeaders('{"Content-Type": "application/json"}')
+      setQueryParams([{ key: "", value: "" }])
+      setHeaders([{ key: "Content-Type", value: "application/json" }])
       setBody("{}")
     }
-  }, [apiDetail, defaultValues])
+  }, [apiDetail, defaultValues, generatedToken])
+
+  // Update headers when token is generated
+  useEffect(() => {
+    if (apiDetail?.access_type === "private" && generatedToken) {
+      setHeaders((prev) => {
+        const existing = prev.find((h) => h.key === "Authorization")
+        if (existing) {
+          return prev.map((h) =>
+            h.key === "Authorization" ? { ...h, value: `Bearer ${generatedToken}` } : h
+          )
+        } else {
+          return [...prev, { key: "Authorization", value: `Bearer ${generatedToken}` }]
+        }
+      })
+    }
+  }, [generatedToken, apiDetail?.access_type])
+
+  // Build API URL with query params (must be before early returns)
+  // Gateway pattern: /api/{module}/{path}
+  // module is derived from module.path_prefix (strip leading/trailing slashes) or module name
+  const apiUrl = useMemo(() => {
+    const currentModule = module
+    const currentApiDetail = apiDetail
+    if (!currentModule || !currentApiDetail) return ""
+    const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
+    // Get module segment from path_prefix or use module name as fallback
+    let moduleSegment = ""
+    if (currentModule.path_prefix && currentModule.path_prefix.trim() !== "/") {
+      moduleSegment = currentModule.path_prefix.trim().replace(/^\/+|\/+$/g, "")
+    } else {
+      // Fallback: use module name (lowercase, replace spaces with hyphens)
+      moduleSegment = currentModule.name.toLowerCase().replace(/\s+/g, "-")
+    }
+    const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
+    let url = `${baseUrl}/api/${moduleSegment}/${apiPath}`
+    
+    // Add query params
+    const validParams = queryParams.filter((p) => p.key && p.value)
+    if (validParams.length > 0) {
+      const urlObj = new URL(url)
+      validParams.forEach(({ key, value }) => {
+        urlObj.searchParams.append(key, value)
+      })
+      url = urlObj.toString()
+    }
+    
+    return url
+  }, [module, apiDetail, queryParams])
 
   // If on edit route, only render Outlet (edit form)
   if (isEditRoute) {
@@ -213,81 +278,92 @@ function ApiDetail() {
     PATCH: "bg-purple-500",
   }
 
-  // Build API URL
-  // Gateway pattern: /api/{module}/{path}
-  // module is derived from module.path_prefix (strip leading/trailing slashes) or module name
-  const buildApiUrl = () => {
-    if (!module || !apiDetail) return ""
-    const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-    // Get module segment from path_prefix or use module name as fallback
-    let moduleSegment = ""
-    if (module.path_prefix && module.path_prefix.trim() !== "/") {
-      moduleSegment = module.path_prefix.trim().replace(/^\/+|\/+$/g, "")
-    } else {
-      // Fallback: use module name (lowercase, replace spaces with hyphens)
-      moduleSegment = module.name.toLowerCase().replace(/\s+/g, "-")
+  const handleGenerateToken = async () => {
+    let bodyObj: Record<string, unknown> = {}
+    try {
+      bodyObj = JSON.parse(tokenBody || "{}")
+    } catch {
+      showErrorToast("Invalid JSON in Body")
+      return
     }
-    const apiPath = apiDetail.path.startsWith("/") ? apiDetail.path.slice(1) : apiDetail.path
-    return `${baseUrl}/api/${moduleSegment}/${apiPath}`
+    if (!bodyObj.client_id || !bodyObj.client_secret) {
+      showErrorToast("Please set client_id and client_secret in the Body JSON")
+      return
+    }
+    if (!bodyObj.grant_type) {
+      bodyObj.grant_type = "client_credentials"
+    }
+
+    setIsGeneratingToken(true)
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
+      const tokenUrl = `${baseUrl}/token/generate`
+      
+      // Build headers
+      const headersObj: Record<string, string> = {}
+      tokenHeaders.forEach(({ key, value }) => {
+        if (key && value) {
+          headersObj[key] = value
+        }
+      })
+      if (!headersObj["Content-Type"]) {
+        headersObj["Content-Type"] = "application/json"
+      }
+      
+      const response = await fetch(tokenUrl, {
+        method: "POST",
+        headers: headersObj,
+        body: JSON.stringify(bodyObj),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Failed to generate token" }))
+        const detail = errorData.detail
+        const msg = Array.isArray(detail)
+          ? detail.map((e: { msg?: string }) => e.msg).filter(Boolean).join(", ") || `HTTP ${response.status}`
+          : (typeof detail === "string" ? detail : `HTTP ${response.status}`)
+        throw new Error(msg || `HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      setGeneratedToken(data.access_token)
+      showSuccessToast("Token generated successfully")
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      showErrorToast(`Failed to generate token: ${errorMessage}`)
+    } finally {
+      setIsGeneratingToken(false)
+    }
   }
-
-  const apiUrl = buildApiUrl()
-
-  // Generate cURL command
-  const generateCurlCommand = () => {
-    if (!apiUrl || !apiDetail) return ""
-    
-    const method = apiDetail.http_method
-    const needsAuth = apiDetail.access_type === "private"
-    const hasBody = ["POST", "PUT", "PATCH"].includes(method)
-    
-    let curl = `curl -X ${method} "${apiUrl}"`
-    
-    // Add headers
-    curl += ` \\\n  -H "Content-Type: application/json"`
-    
-    if (needsAuth) {
-      curl += ` \\\n  -H "Authorization: Bearer YOUR_TOKEN_HERE"`
-    }
-    
-    // Add body for POST/PUT/PATCH
-    if (hasBody) {
-      curl += ` \\\n  -d '{}'`
-    }
-    
-    return curl
-  }
-
-  const curlCommand = generateCurlCommand()
 
   const handleExecute = async () => {
     if (!apiUrl || !apiDetail) return
+
+    // For private APIs, ensure we have a token
+    if (apiDetail.access_type === "private" && !generatedToken) {
+      showErrorToast("Please generate a token first for private APIs")
+      return
+    }
 
     setIsExecuting(true)
     setResponse(null)
 
     try {
-      // Parse inputs
-      let queryObj: Record<string, string> = {}
-      let headersObj: Record<string, string> = {}
+      // Build headers from key-value array
+      const headersObj: Record<string, string> = {}
+      headers.forEach(({ key, value }) => {
+        if (key && value) {
+          headersObj[key] = value
+        }
+      })
+
+      // Automatically add token for private APIs
+      if (apiDetail.access_type === "private" && generatedToken) {
+        headersObj.Authorization = `Bearer ${generatedToken}`
+      }
+
+      // Parse body
       let bodyObj: unknown = null
-
-      try {
-        queryObj = JSON.parse(queryParams || "{}")
-      } catch {
-        showErrorToast("Invalid JSON in Query Parameters")
-        setIsExecuting(false)
-        return
-      }
-
-      try {
-        headersObj = JSON.parse(headers || "{}")
-      } catch {
-        showErrorToast("Invalid JSON in Headers")
-        setIsExecuting(false)
-        return
-      }
-
       if (["POST", "PUT", "PATCH"].includes(apiDetail.http_method)) {
         try {
           bodyObj = JSON.parse(body || "{}")
@@ -298,15 +374,7 @@ function ApiDetail() {
         }
       }
 
-      // Build URL with query params
-      const url = new URL(apiUrl)
-      Object.entries(queryObj).forEach(([key, value]) => {
-        if (value !== "" && value !== null && value !== undefined) {
-          url.searchParams.append(key, String(value))
-        }
-      })
-
-      // Make request
+      // Make request (URL already includes query params from buildApiUrl)
       const fetchOptions: RequestInit = {
         method: apiDetail.http_method,
         headers: headersObj,
@@ -316,7 +384,7 @@ function ApiDetail() {
         fetchOptions.body = JSON.stringify(bodyObj)
       }
 
-      const fetchResponse = await fetch(url.toString(), fetchOptions)
+      const fetchResponse = await fetch(apiUrl, fetchOptions)
       const responseData = await fetchResponse.json().catch(() => ({ error: "Invalid JSON response" }))
 
       setResponse({
@@ -351,16 +419,98 @@ function ApiDetail() {
     }
   }
 
-  const handleCopyCurl = async () => {
-    try {
-      await navigator.clipboard.writeText(curlCommand)
-      setCopiedCurl(true)
-      showSuccessToast("cURL command copied to clipboard")
-      setTimeout(() => setCopiedCurl(false), 2000)
-    } catch {
-      showErrorToast("Failed to copy cURL command")
-    }
+  // Key-value table helpers
+  const addKeyValue = (setter: React.Dispatch<React.SetStateAction<Array<{ key: string; value: string }>>>) => {
+    setter((prev) => [...prev, { key: "", value: "" }])
   }
+
+  const updateKeyValue = (
+    setter: React.Dispatch<React.SetStateAction<Array<{ key: string; value: string }>>>,
+    index: number,
+    field: "key" | "value",
+    value: string
+  ) => {
+    setter((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
+
+  const removeKeyValue = (
+    setter: React.Dispatch<React.SetStateAction<Array<{ key: string; value: string }>>>,
+    index: number
+  ) => {
+    setter((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Key-value table component
+  const KeyValueTable = ({
+    data,
+    onAdd,
+    onUpdate,
+    onRemove,
+  }: {
+    data: Array<{ key: string; value: string }>
+    onAdd: () => void
+    onUpdate: (index: number, field: "key" | "value", value: string) => void
+    onRemove: (index: number) => void
+  }) => (
+    <div className="space-y-2">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[200px]">Key</TableHead>
+            <TableHead>Value</TableHead>
+            <TableHead className="w-[50px]"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((item, index) => (
+            <TableRow key={`${index}-${item.key}-${item.value}`}>
+              <TableCell>
+                <Input
+                  value={item.key}
+                  onChange={(e) => onUpdate(index, "key", e.target.value)}
+                  placeholder="Key"
+                />
+              </TableCell>
+              <TableCell>
+                <Input
+                  value={item.value}
+                  onChange={(e) => onUpdate(index, "value", e.target.value)}
+                  placeholder="Value"
+                />
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRemove(index)}
+                  disabled={data.length === 1}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Button variant="outline" size="sm" onClick={onAdd} className="w-full">
+        <Plus className="mr-2 h-4 w-4" />
+        Add Row
+      </Button>
+    </div>
+  )
+
+  const tokenBodyValid = (() => {
+    try {
+      const b = JSON.parse(tokenBody || "{}")
+      return !!(b?.client_id && b?.client_secret)
+    } catch {
+      return false
+    }
+  })()
 
   return (
     <div className="flex flex-col gap-6">
@@ -638,6 +788,64 @@ function ApiDetail() {
             <TabsContent value="testing" className="mt-6">
               {apiDetail.is_published && apiUrl ? (
                 <div className="space-y-6">
+                  {/* Token Generation for Private APIs - First */}
+                  {apiDetail.access_type === "private" && (
+                    <div>
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold mb-2">Generate Token</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Set Headers and Body (JSON with client_id, client_secret) to generate an access token for testing this private API.
+                        </p>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium">Headers</div>
+                            <KeyValueTable
+                              data={tokenHeaders.length > 0 ? tokenHeaders : [{ key: "Content-Type", value: "application/json" }]}
+                              onAdd={() => addKeyValue(setTokenHeaders)}
+                              onUpdate={(index, field, value) => updateKeyValue(setTokenHeaders, index, field, value)}
+                              onRemove={(index) => removeKeyValue(setTokenHeaders, index)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium">Body</div>
+                            <Textarea
+                              value={tokenBody}
+                              onChange={(e) => setTokenBody(e.target.value)}
+                              placeholder='{"client_id": "", "client_secret": ""}'
+                              className="font-mono min-h-[120px]"
+                            />
+                            <p className="text-xs text-muted-foreground">JSON. Include client_id and client_secret. grant_type is added automatically if missing.</p>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={handleGenerateToken}
+                              disabled={isGeneratingToken || !tokenBodyValid}
+                            >
+                              {isGeneratingToken ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Terminal className="mr-2 h-4 w-4" />
+                                  Generate Token
+                                </>
+                              )}
+                            </Button>
+                            {generatedToken && (
+                              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                <Check className="h-4 w-4" />
+                                <span>Token generated successfully</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* API URL */}
                   <div>
                     <div className="text-sm font-medium mb-2">API URL</div>
@@ -660,45 +868,6 @@ function ApiDetail() {
                     </div>
                   </div>
 
-                  {/* cURL Command */}
-                  <div>
-                    <div className="text-sm font-medium mb-2">cURL Command</div>
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-xs overflow-x-auto">
-                        <pre className="whitespace-pre-wrap break-all">{curlCommand}</pre>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyCurl}
-                        title="Copy cURL"
-                        className="shrink-0"
-                      >
-                        {copiedCurl ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Terminal className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
-                    <div className="text-blue-600 dark:text-blue-400 mt-0.5">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-label="Information" role="img">
-                        <title>Information</title>
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 text-xs text-blue-800 dark:text-blue-300">
-                      {apiDetail.access_type === "public" ? (
-                        <p>This is a <strong>public API</strong> - no authentication required. You can call it directly.</p>
-                      ) : (
-                        <p>This is a <strong>private API</strong> - requires authentication. Replace <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">YOUR_TOKEN_HERE</code> with a token from <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">/token/generate</code> endpoint.</p>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Execute API */}
                   <div className="border-t pt-6">
                     <div className="flex items-center justify-between mb-4">
@@ -714,22 +883,20 @@ function ApiDetail() {
                         <TabsTrigger value="body">Body</TabsTrigger>
                       </TabsList>
                       <TabsContent value="query" className="space-y-2">
-                        <Textarea
-                          value={queryParams}
-                          onChange={(e) => setQueryParams(e.target.value)}
-                          placeholder='{"key": "value"}'
-                          className="font-mono min-h-[120px]"
+                        <KeyValueTable
+                          data={queryParams.length > 0 ? queryParams : [{ key: "", value: "" }]}
+                          onAdd={() => addKeyValue(setQueryParams)}
+                          onUpdate={(index, field, value) => updateKeyValue(setQueryParams, index, field, value)}
+                          onRemove={(index) => removeKeyValue(setQueryParams, index)}
                         />
-                        <p className="text-xs text-muted-foreground">JSON object for query parameters</p>
                       </TabsContent>
                       <TabsContent value="headers" className="space-y-2">
-                        <Textarea
-                          value={headers}
-                          onChange={(e) => setHeaders(e.target.value)}
-                          placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
-                          className="font-mono min-h-[120px]"
+                        <KeyValueTable
+                          data={headers.length > 0 ? headers : [{ key: "", value: "" }]}
+                          onAdd={() => addKeyValue(setHeaders)}
+                          onUpdate={(index, field, value) => updateKeyValue(setHeaders, index, field, value)}
+                          onRemove={(index) => removeKeyValue(setHeaders, index)}
                         />
-                        <p className="text-xs text-muted-foreground">JSON object for HTTP headers</p>
                       </TabsContent>
                       <TabsContent value="body" className="space-y-2">
                         <Textarea
