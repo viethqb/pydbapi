@@ -142,6 +142,7 @@ def create_api_assignment(
                     "is_required": p.is_required,
                     "validate_type": p.validate_type,
                     "validate": p.validate,
+                    "validate_message": p.validate_message,
                     "default_value": p.default_value,
                 }
                 for p in body.params
@@ -202,6 +203,7 @@ def update_api_assignment(
                             "is_required": p.is_required,
                             "validate_type": p.validate_type,
                             "validate": p.validate,
+                            "validate_message": p.validate_message,
                             "default_value": p.default_value,
                         }
                         for p in body.params
@@ -220,6 +222,7 @@ def update_api_assignment(
                         "is_required": p.is_required,
                         "validate_type": p.validate_type,
                         "validate": p.validate,
+                        "validate_message": p.validate_message,
                         "default_value": p.default_value,
                     }
                     for p in body.params

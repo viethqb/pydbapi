@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Loader2, Play, Plus, Trash2, X, ChevronDown } from "lucide-react"
+import { Braces, Loader2, Play, Plus, Trash2, X, ChevronDown } from "lucide-react"
 import { useState, useEffect, useRef, useCallback } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,7 @@ const paramSchema = z.object({
   is_required: z.boolean().default(false),
   validate_type: z.enum(["regex", "python"]).optional().nullable(),
   validate: z.string().optional().nullable(),
+  validate_message: z.string().optional().nullable(),
   default_value: z.string().optional().nullable(),
 })
 
@@ -164,16 +165,17 @@ function ApiEdit() {
   useEffect(() => {
     if (apiDetail) {
       // Parse params from api_context if available
-      let params: Array<{ name: string; location: "query" | "header" | "body"; data_type?: string | null; is_required?: boolean; validate_type?: "regex" | "python" | null; validate?: string | null; default_value?: string | null }> = []
+      let params: Array<{ name: string; location: "query" | "header" | "body"; data_type?: string | null; is_required?: boolean; validate_type?: "regex" | "python" | null; validate?: string | null; validate_message?: string | null; default_value?: string | null }> = []
       if (apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params)) {
-        params = apiDetail.api_context.params.map((p: any) => ({
-          name: p.name || "",
-          location: (p.location || "query") as "query" | "header" | "body",
-          data_type: p.data_type || null,
-          is_required: p.is_required ?? false,
-          validate_type: (p.validate_type || null) as "regex" | "python" | null,
-          validate: p.validate || null,
-          default_value: p.default_value || null,
+        params = apiDetail.api_context.params.map((p: Record<string, unknown>) => ({
+          name: (p.name as string) || "",
+          location: ((p.location as string) || "query") as "query" | "header" | "body",
+          data_type: (p.data_type as string | null) || null,
+          is_required: (p.is_required as boolean) ?? false,
+          validate_type: ((p.validate_type as string) || null) as "regex" | "python" | null,
+          validate: (p.validate as string | null) || null,
+          validate_message: (p.validate_message as string | null) ?? null,
+          default_value: (p.default_value as string | null) || null,
         }))
       }
       // Ensure datasource_id is properly converted to string
@@ -368,7 +370,13 @@ function ApiEdit() {
       access_type: values.access_type,
       content: values.content || null,
       group_ids: values.group_ids,
-      params: values.params.length > 0 ? values.params : null,
+      params:
+        values.params.length > 0
+          ? values.params.map((p) => ({
+              ...p,
+              validate_type: (p.validate?.trim() ? "python" : p.validate_type) || null,
+            }))
+          : null,
     })
   }
 
@@ -473,7 +481,7 @@ function ApiEdit() {
                                   <Input placeholder="users or users/{id}" {...field} />
                                 </FormControl>
                                 <FormDescription className="mt-1">
-                                  Path within module (e.g., "users" or "users/{id}")
+                                  {`Path within module (e.g., "users" or "users/{id}")`}
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -509,82 +517,6 @@ function ApiEdit() {
                                 <FormMessage />
                               </FormItem>
                             )}
-                          />
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead className="w-[180px]">Execute Engine *</TableHead>
-                        <TableCell>
-                          <FormField
-                            control={form.control}
-                            name="execute_engine"
-                            render={({ field }) => (
-                              <FormItem>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="SQL">SQL</SelectItem>
-                                    <SelectItem value="SCRIPT">SCRIPT</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead className="w-[180px]">DataSource</TableHead>
-                        <TableCell>
-                          <FormField
-                            control={form.control}
-                            name="datasource_id"
-                            render={({ field }) => {
-                              const fieldValue = field.value ? String(field.value) : "none"
-                              return (
-                                <FormItem>
-                                  <Select
-                                    onValueChange={(value) => field.onChange(value === "none" ? null : value)}
-                                    value={fieldValue}
-                                    key={fieldValue}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select datasource" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="none">None</SelectItem>
-                                      {datasourcesData?.data && datasourcesData.data.length > 0 ? (
-                                        datasourcesData.data.map((ds) => {
-                                          const dsId = String(ds.id)
-                                          return (
-                                            <SelectItem key={dsId} value={dsId}>
-                                              {ds.name}
-                                            </SelectItem>
-                                          )
-                                        })
-                                      ) : (
-                                        <SelectItem value="no-data" disabled>
-                                          No datasources available
-                                        </SelectItem>
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription className="mt-1">
-                                    Required for SQL and SCRIPT engines
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )
-                            }}
                           />
                         </TableCell>
                       </TableRow>
@@ -762,7 +694,7 @@ function ApiEdit() {
                               onClick={() => {
                                 field.onChange([
                                   ...field.value,
-                                  { name: "", location: "query" as const, data_type: null, is_required: false, validate_type: null, validate: null, default_value: null },
+                                  { name: "", location: "query" as const, data_type: null, is_required: false, validate_type: null, validate: null, validate_message: null, default_value: null },
                                 ])
                               }}
                             >
@@ -780,6 +712,8 @@ function ApiEdit() {
                                     <TableHead className="w-[140px]">Data Type</TableHead>
                                     <TableHead className="w-[100px]">Required</TableHead>
                                     <TableHead className="w-[150px]">Default Value</TableHead>
+                                    <TableHead className="w-[200px]">Validation script (Python)</TableHead>
+                                    <TableHead className="w-[180px]">Message when fail</TableHead>
                                     <TableHead className="w-[100px]">Actions</TableHead>
                                   </TableRow>
                                   {field.value.map((param, index) => {
@@ -902,6 +836,50 @@ function ApiEdit() {
                                         />
                                       </TableCell>
                                       <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.validate`}
+                                          render={({ field: validateField }) => (
+                                            <FormItem>
+                                              <FormControl>
+                                                <Textarea
+                                                  placeholder="def validate(value): return True"
+                                                  {...validateField}
+                                                  value={validateField.value || ""}
+                                                  onChange={(e) =>
+                                                    validateField.onChange(e.target.value || null)
+                                                  }
+                                                  className="font-mono min-h-[60px]"
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.validate_message`}
+                                          render={({ field: msgField }) => (
+                                            <FormItem>
+                                              <FormControl>
+                                                <Input
+                                                  placeholder="e.g. Invalid value"
+                                                  {...msgField}
+                                                  value={msgField.value || ""}
+                                                  onChange={(e) =>
+                                                    msgField.onChange(e.target.value || null)
+                                                  }
+                                                  className="h-9"
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
                                         <Button
                                           type="button"
                                           variant="ghost"
@@ -934,6 +912,86 @@ function ApiEdit() {
             </TabsContent>
 
             <TabsContent value="content" className="space-y-4">
+              <Table>
+                <TableBody>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Execute Engine *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="execute_engine"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="SQL">SQL</SelectItem>
+                                <SelectItem value="SCRIPT">SCRIPT</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">DataSource</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="datasource_id"
+                        render={({ field }) => {
+                          const fieldValue = field.value ? String(field.value) : "none"
+                          return (
+                            <FormItem>
+                              <Select
+                                onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                                value={fieldValue}
+                                key={fieldValue}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select datasource" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  {datasourcesData?.data && datasourcesData.data.length > 0 ? (
+                                    datasourcesData.data.map((ds) => {
+                                      const dsId = String(ds.id)
+                                      return (
+                                        <SelectItem key={dsId} value={dsId}>
+                                          {ds.name}
+                                        </SelectItem>
+                                      )
+                                    })
+                                  ) : (
+                                    <SelectItem value="no-data" disabled>
+                                      No datasources available
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription className="mt-1">
+                                Required for SQL and SCRIPT engines
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
               <FormField
                 control={form.control}
                 name="content"
@@ -966,41 +1024,52 @@ function ApiEdit() {
             </TabsContent>
 
             <TabsContent value="debug" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Debug API</CardTitle>
-                  <CardDescription>
-                    Test your API with sample parameters (JSON or form)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Tabs
-                    value={debugInputMode}
-                    onValueChange={(v) => setDebugInputMode(v as "json" | "form")}
-                    className="w-full"
-                  >
-                    <TabsList className="grid w-full max-w-[200px] grid-cols-2">
-                      <TabsTrigger value="form">Form</TabsTrigger>
-                      <TabsTrigger value="json">JSON</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="json" className="mt-4 space-y-4">
-                      <div>
-                        <label
-                          htmlFor="debug-params-json"
-                          className="text-sm font-medium"
-                        >
-                          Parameters (JSON)
-                        </label>
-                        <Textarea
-                          id="debug-params-json"
-                          value={debugParams}
-                          onChange={(e) => setDebugParams(e.target.value)}
-                          className="mt-1 font-mono min-h-[150px]"
-                          placeholder='{"id": 1, "name": "test"}'
-                        />
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="form" className="mt-4 space-y-4">
+              <Tabs
+                value={debugInputMode}
+                onValueChange={(v) => setDebugInputMode(v as "json" | "form")}
+                className="w-full"
+              >
+                <TabsList className="grid w-full max-w-[200px] grid-cols-2">
+                  <TabsTrigger value="form">Form</TabsTrigger>
+                  <TabsTrigger value="json">JSON</TabsTrigger>
+                </TabsList>
+                <TabsContent value="json" className="mt-4 space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <label
+                        htmlFor="debug-params-json"
+                        className="text-sm font-medium"
+                      >
+                        Parameters (JSON)
+                      </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          try {
+                            const parsed = JSON.parse(debugParams || "{}")
+                            setDebugParams(JSON.stringify(parsed, null, 2))
+                            showSuccessToast("JSON formatted")
+                          } catch {
+                            showErrorToast("Invalid JSON")
+                          }
+                        }}
+                      >
+                        <Braces className="mr-2 h-4 w-4" />
+                        Format
+                      </Button>
+                    </div>
+                    <Textarea
+                      id="debug-params-json"
+                      value={debugParams}
+                      onChange={(e) => setDebugParams(e.target.value)}
+                      className="mt-1 font-mono min-h-[150px]"
+                      placeholder='{"id": 1, "name": "test"}'
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="form" className="mt-4 space-y-4">
                       {(() => {
                         const paramsDef = form.watch("params") ?? []
                         const withName = paramsDef.filter(
@@ -1127,41 +1196,39 @@ function ApiEdit() {
                       })()}
                     </TabsContent>
                   </Tabs>
-                  <Button
-                    type="button"
-                    onClick={handleDebug}
-                    disabled={debugLoading || !form.watch("content")}
+              <Button
+                type="button"
+                onClick={handleDebug}
+                disabled={debugLoading || !form.watch("content")}
+              >
+                {debugLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Run Debug
+                  </>
+                )}
+              </Button>
+              {debugResult && (
+                <div>
+                  <label
+                    htmlFor="debug-result-pre"
+                    className="text-sm font-medium"
                   >
-                    {debugLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Running...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-2 h-4 w-4" />
-                        Run Debug
-                      </>
-                    )}
-                  </Button>
-                  {debugResult && (
-                    <div>
-                      <label
-                        htmlFor="debug-result-pre"
-                        className="text-sm font-medium"
-                      >
-                        Result
-                      </label>
-                      <pre
-                        id="debug-result-pre"
-                        className="mt-2 p-4 bg-muted rounded-md overflow-auto max-h-[400px]"
-                      >
-                        {JSON.stringify(debugResult, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    Result
+                  </label>
+                  <pre
+                    id="debug-result-pre"
+                    className="mt-2 p-4 bg-muted rounded-md overflow-auto max-h-[400px]"
+                  >
+                    {JSON.stringify(debugResult, null, 2)}
+                  </pre>
+                </div>
+              )}
             </TabsContent>
               </Tabs>
             </CardContent>

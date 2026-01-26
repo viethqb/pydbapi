@@ -250,6 +250,11 @@ class ApiParameter(SQLModel):
         default=None,
         description="Validation: regex pattern (if validate_type='regex') or Python function code (if validate_type='python')"
     )
+    validate_message: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Error message shown when validation fails"
+    )
     default_value: str | None = Field(
         default=None,
         description="Default value for this parameter (used in debug UI and as fallback)"

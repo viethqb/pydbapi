@@ -58,6 +58,7 @@ export type ApiParameter = {
   is_required?: boolean
   validate_type?: "regex" | "python" | null
   validate?: string | null
+  validate_message?: string | null
 }
 
 export type ApiAssignmentCreate = {
