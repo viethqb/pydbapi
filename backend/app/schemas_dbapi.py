@@ -5,7 +5,7 @@ DataSource, ApiAssignment, ApiModule, ApiGroup, AppClient, etc.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import Field
 from sqlmodel import SQLModel
@@ -491,6 +491,32 @@ class RecentCommitsOut(SQLModel):
     """Response for GET /overview/recent-commits."""
 
     data: list[VersionCommitPublic]
+
+
+class RequestsByDayPoint(SQLModel):
+    """Point for GET /overview/requests-by-day."""
+
+    day: date
+    count: int
+
+
+class RequestsByDayOut(SQLModel):
+    """Response for GET /overview/requests-by-day."""
+
+    data: list[RequestsByDayPoint]
+
+
+class TopPathPoint(SQLModel):
+    """Point for GET /overview/top-paths."""
+
+    path: str
+    count: int
+
+
+class TopPathsOut(SQLModel):
+    """Response for GET /overview/top-paths."""
+
+    data: list[TopPathPoint]
 
 
 # ---------------------------------------------------------------------------

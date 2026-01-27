@@ -21,9 +21,7 @@ import { Route as LayoutAboutRouteImport } from './routes/_layout/about'
 import { Route as LayoutConnectionIndexRouteImport } from './routes/_layout/connection/index'
 import { Route as LayoutApiRepositoryIndexRouteImport } from './routes/_layout/api-repository/index'
 import { Route as LayoutApiDevIndexRouteImport } from './routes/_layout/api-dev/index'
-import { Route as LayoutSystemFirewallRouteImport } from './routes/_layout/system/firewall'
 import { Route as LayoutSystemClientsRouteImport } from './routes/_layout/system/clients'
-import { Route as LayoutSystemAlarmRouteImport } from './routes/_layout/system/alarm'
 import { Route as LayoutConnectionCreateRouteImport } from './routes/_layout/connection/create'
 import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connection/$id'
 import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
@@ -99,19 +97,9 @@ const LayoutApiDevIndexRoute = LayoutApiDevIndexRouteImport.update({
   path: '/api-dev/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutSystemFirewallRoute = LayoutSystemFirewallRouteImport.update({
-  id: '/system/firewall',
-  path: '/system/firewall',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutSystemClientsRoute = LayoutSystemClientsRouteImport.update({
   id: '/system/clients',
   path: '/system/clients',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutSystemAlarmRoute = LayoutSystemAlarmRouteImport.update({
-  id: '/system/alarm',
-  path: '/system/alarm',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutConnectionCreateRoute = LayoutConnectionCreateRouteImport.update({
@@ -200,9 +188,7 @@ export interface FileRoutesByFullPath {
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
-  '/system/alarm': typeof LayoutSystemAlarmRoute
   '/system/clients': typeof LayoutSystemClientsRoute
-  '/system/firewall': typeof LayoutSystemFirewallRoute
   '/api-dev/': typeof LayoutApiDevIndexRoute
   '/api-repository/': typeof LayoutApiRepositoryIndexRoute
   '/connection/': typeof LayoutConnectionIndexRoute
@@ -230,9 +216,7 @@ export interface FileRoutesByTo {
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
-  '/system/alarm': typeof LayoutSystemAlarmRoute
   '/system/clients': typeof LayoutSystemClientsRoute
-  '/system/firewall': typeof LayoutSystemFirewallRoute
   '/api-dev': typeof LayoutApiDevIndexRoute
   '/api-repository': typeof LayoutApiRepositoryIndexRoute
   '/connection': typeof LayoutConnectionIndexRoute
@@ -262,9 +246,7 @@ export interface FileRoutesById {
   '/_layout/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/_layout/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/_layout/connection/create': typeof LayoutConnectionCreateRoute
-  '/_layout/system/alarm': typeof LayoutSystemAlarmRoute
   '/_layout/system/clients': typeof LayoutSystemClientsRoute
-  '/_layout/system/firewall': typeof LayoutSystemFirewallRoute
   '/_layout/api-dev/': typeof LayoutApiDevIndexRoute
   '/_layout/api-repository/': typeof LayoutApiRepositoryIndexRoute
   '/_layout/connection/': typeof LayoutConnectionIndexRoute
@@ -294,9 +276,7 @@ export interface FileRouteTypes {
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
-    | '/system/alarm'
     | '/system/clients'
-    | '/system/firewall'
     | '/api-dev/'
     | '/api-repository/'
     | '/connection/'
@@ -324,9 +304,7 @@ export interface FileRouteTypes {
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
-    | '/system/alarm'
     | '/system/clients'
-    | '/system/firewall'
     | '/api-dev'
     | '/api-repository'
     | '/connection'
@@ -355,9 +333,7 @@ export interface FileRouteTypes {
     | '/_layout/api-repository/$id'
     | '/_layout/connection/$id'
     | '/_layout/connection/create'
-    | '/_layout/system/alarm'
     | '/_layout/system/clients'
-    | '/_layout/system/firewall'
     | '/_layout/api-dev/'
     | '/_layout/api-repository/'
     | '/_layout/connection/'
@@ -468,25 +444,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiDevIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/system/firewall': {
-      id: '/_layout/system/firewall'
-      path: '/system/firewall'
-      fullPath: '/system/firewall'
-      preLoaderRoute: typeof LayoutSystemFirewallRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/system/clients': {
       id: '/_layout/system/clients'
       path: '/system/clients'
       fullPath: '/system/clients'
       preLoaderRoute: typeof LayoutSystemClientsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/system/alarm': {
-      id: '/_layout/system/alarm'
-      path: '/system/alarm'
-      fullPath: '/system/alarm'
-      preLoaderRoute: typeof LayoutSystemAlarmRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/connection/create': {
@@ -633,9 +595,7 @@ interface LayoutRouteChildren {
   LayoutApiRepositoryIdRoute: typeof LayoutApiRepositoryIdRoute
   LayoutConnectionIdRoute: typeof LayoutConnectionIdRouteWithChildren
   LayoutConnectionCreateRoute: typeof LayoutConnectionCreateRoute
-  LayoutSystemAlarmRoute: typeof LayoutSystemAlarmRoute
   LayoutSystemClientsRoute: typeof LayoutSystemClientsRoute
-  LayoutSystemFirewallRoute: typeof LayoutSystemFirewallRoute
   LayoutApiDevIndexRoute: typeof LayoutApiDevIndexRoute
   LayoutApiRepositoryIndexRoute: typeof LayoutApiRepositoryIndexRoute
   LayoutConnectionIndexRoute: typeof LayoutConnectionIndexRoute
@@ -657,9 +617,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiRepositoryIdRoute: LayoutApiRepositoryIdRoute,
   LayoutConnectionIdRoute: LayoutConnectionIdRouteWithChildren,
   LayoutConnectionCreateRoute: LayoutConnectionCreateRoute,
-  LayoutSystemAlarmRoute: LayoutSystemAlarmRoute,
   LayoutSystemClientsRoute: LayoutSystemClientsRoute,
-  LayoutSystemFirewallRoute: LayoutSystemFirewallRoute,
   LayoutApiDevIndexRoute: LayoutApiDevIndexRoute,
   LayoutApiRepositoryIndexRoute: LayoutApiRepositoryIndexRoute,
   LayoutConnectionIndexRoute: LayoutConnectionIndexRoute,

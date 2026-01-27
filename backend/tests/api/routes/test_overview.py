@@ -4,11 +4,9 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.config import settings
-from tests.utils.alarm import create_random_alarm
 from tests.utils.api_assignment import create_random_assignment
 from tests.utils.client import create_random_client
 from tests.utils.datasource import create_random_datasource
-from tests.utils.firewall import create_random_firewall_rule
 from tests.utils.group import create_random_group
 from tests.utils.module import create_random_module
 from tests.utils.overview import create_random_access_record, create_random_version_commit
@@ -25,8 +23,6 @@ STATS_KEYS = [
     "apis_total",
     "apis_published",
     "clients",
-    "firewall_rules",
-    "alarms",
 ]
 
 
@@ -56,8 +52,6 @@ def test_get_overview_stats_with_data(
     create_random_assignment(db, is_published=True)
     create_random_assignment(db, is_published=False)
     create_random_client(db)
-    create_random_firewall_rule(db)
-    create_random_alarm(db)
 
     response = client.get(f"{_base()}/stats", headers=superuser_token_headers)
     assert response.status_code == 200
@@ -68,8 +62,6 @@ def test_get_overview_stats_with_data(
     assert data["apis_total"] >= 2
     assert data["apis_published"] >= 1
     assert data["clients"] >= 1
-    assert data["firewall_rules"] >= 1
-    assert data["alarms"] >= 1
 
 
 def test_get_overview_stats_unauthorized(client: TestClient) -> None:
@@ -204,4 +196,84 @@ def test_get_recent_commits_limit_param(
 def test_get_recent_commits_unauthorized(client: TestClient) -> None:
     """GET /overview/recent-commits without auth returns 401."""
     response = client.get(f"{_base()}/recent-commits")
+    assert response.status_code == 401
+
+
+# --- /overview/requests-by-day ---
+
+
+def test_get_requests_by_day_empty(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """GET /overview/requests-by-day returns 200 and data list."""
+    response = client.get(
+        f"{_base()}/requests-by-day", headers=superuser_token_headers, params={"days": 14}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "data" in data
+    assert isinstance(data["data"], list)
+
+
+def test_get_requests_by_day_with_data(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    """With AccessRecord entries, requests-by-day includes today's bucket."""
+    create_random_access_record(db, path="/chart-a")
+    create_random_access_record(db, path="/chart-b")
+    create_random_access_record(db, path="/chart-a")
+
+    response = client.get(
+        f"{_base()}/requests-by-day", headers=superuser_token_headers, params={"days": 7}
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["data"]) >= 1
+    # At least 3 requests total in the returned window
+    assert sum(p["count"] for p in payload["data"]) >= 3
+    # Basic shape
+    assert "day" in payload["data"][0]
+    assert "count" in payload["data"][0]
+
+
+def test_get_requests_by_day_unauthorized(client: TestClient) -> None:
+    response = client.get(f"{_base()}/requests-by-day")
+    assert response.status_code == 401
+
+
+# --- /overview/top-paths ---
+
+
+def test_get_top_paths_empty(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    response = client.get(
+        f"{_base()}/top-paths", headers=superuser_token_headers, params={"days": 7, "limit": 10}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "data" in data
+    assert isinstance(data["data"], list)
+
+
+def test_get_top_paths_with_data_and_limit(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    create_random_access_record(db, path="/top/a")
+    create_random_access_record(db, path="/top/a")
+    create_random_access_record(db, path="/top/a")
+    create_random_access_record(db, path="/top/b")
+
+    response = client.get(
+        f"{_base()}/top-paths", headers=superuser_token_headers, params={"days": 7, "limit": 1}
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["data"]) <= 1
+    assert payload["data"][0]["path"] == "/top/a"
+    assert payload["data"][0]["count"] >= 3
+
+
+def test_get_top_paths_unauthorized(client: TestClient) -> None:
+    response = client.get(f"{_base()}/top-paths")
     assert response.status_code == 401

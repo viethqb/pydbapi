@@ -4,6 +4,8 @@ Overview / Dashboard (Phase 2, Task 2.7).
 Endpoints: stats, recent-access, recent-commits.
 """
 
+from datetime import date, datetime, timedelta, timezone
+
 from fastapi import APIRouter
 from sqlmodel import func, select
 
@@ -22,6 +24,10 @@ from app.schemas_dbapi import (
     OverviewStats,
     RecentAccessOut,
     RecentCommitsOut,
+    RequestsByDayOut,
+    RequestsByDayPoint,
+    TopPathPoint,
+    TopPathsOut,
     VersionCommitPublic,
 )
 
@@ -29,6 +35,7 @@ router = APIRouter(prefix="/overview", tags=["overview"])
 
 # Default limit for recent-access and recent-commits
 RECENT_LIMIT = 20
+CHART_DAYS_DEFAULT = 14
 
 
 def _count(session, model, where=None):
@@ -52,6 +59,66 @@ def get_overview_stats(
         apis_total=_count(session, ApiAssignment),
         apis_published=_count(session, ApiAssignment, ApiAssignment.is_published == True),
         clients=_count(session, AppClient),
+    )
+
+
+@router.get("/requests-by-day", response_model=RequestsByDayOut)
+def get_requests_by_day(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    days: int = CHART_DAYS_DEFAULT,
+) -> RequestsByDayOut:
+    """Requests grouped by day from AccessRecord.created_at."""
+    days = max(1, min(365, days))
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    day_expr = func.date(AccessRecord.created_at).label("day")
+    count_expr = func.count().label("count")
+    stmt = (
+        select(day_expr, count_expr)
+        .where(AccessRecord.created_at >= cutoff)
+        .group_by(day_expr)
+        .order_by(day_expr.asc())
+    )
+    rows = session.exec(stmt).all()
+
+    points: list[RequestsByDayPoint] = []
+    for day_value, count_value in rows:
+        if isinstance(day_value, datetime):
+            day_value = day_value.date()
+        elif isinstance(day_value, str):
+            # SQLite returns YYYY-MM-DD strings for date(...)
+            day_value = date.fromisoformat(day_value.split("T")[0])
+        points.append(
+            RequestsByDayPoint(day=day_value, count=int(count_value or 0))
+        )
+
+    return RequestsByDayOut(data=points)
+
+
+@router.get("/top-paths", response_model=TopPathsOut)
+def get_top_paths(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    days: int = 7,
+    limit: int = 10,
+) -> TopPathsOut:
+    """Top accessed paths within the last N days."""
+    days = max(1, min(365, days))
+    limit = max(1, min(100, limit))
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    count_expr = func.count().label("count")
+    stmt = (
+        select(AccessRecord.path, count_expr)
+        .where(AccessRecord.created_at >= cutoff)
+        .group_by(AccessRecord.path)
+        .order_by(count_expr.desc())
+        .limit(limit)
+    )
+    rows = session.exec(stmt).all()
+    return TopPathsOut(
+        data=[TopPathPoint(path=path, count=int(count or 0)) for path, count in rows]
     )
 
 
