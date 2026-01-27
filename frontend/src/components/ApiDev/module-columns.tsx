@@ -47,13 +47,6 @@ export const moduleColumns: ColumnDef<ModuleTableData>[] = [
     ),
   },
   {
-    accessorKey: "sort_order",
-    header: "Sort Order",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.sort_order}</span>
-    ),
-  },
-  {
     accessorKey: "is_active",
     header: "Status",
     cell: ({ row }) => {

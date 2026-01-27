@@ -156,8 +156,8 @@ function ModuleDetail() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{module.name}</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl font-bold tracking-tight">{module.name}</h1>
+            <p className="text-muted-foreground mt-1">
               {module.description || "No description"}
             </p>
           </div>
@@ -177,14 +177,10 @@ function ModuleDetail() {
           <CardDescription>Details about this API module</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex items-center gap-12 flex-wrap">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Path Prefix</p>
               <p className="font-mono text-sm">{module.path_prefix}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Sort Order</p>
-              <p>{module.sort_order}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Status</p>

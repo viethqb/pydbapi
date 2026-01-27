@@ -122,8 +122,8 @@ function ModulesList() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Modules</h2>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-2xl font-bold">Modules</h1>
+          <p className="text-muted-foreground">
             Organize APIs into modules
           </p>
         </div>

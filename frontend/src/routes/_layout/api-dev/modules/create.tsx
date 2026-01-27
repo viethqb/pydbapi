@@ -18,6 +18,14 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table"
 import {
   ModulesService,
   type ApiModuleCreate,
@@ -28,7 +36,6 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().max(512).optional().nullable(),
   path_prefix: z.string().max(255).default("/"),
-  sort_order: z.number().int().default(0),
   is_active: z.boolean().default(true),
 })
 
@@ -56,7 +63,6 @@ function ModuleCreate() {
       name: "",
       description: null,
       path_prefix: "/",
-      sort_order: 0,
       is_active: true,
     },
   })
@@ -77,115 +83,115 @@ function ModuleCreate() {
       name: values.name,
       description: values.description || null,
       path_prefix: values.path_prefix,
-      sort_order: values.sort_order,
       is_active: values.is_active,
     })
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Create Module</h1>
-        <p className="text-muted-foreground">Create a new API module</p>
+        <h1 className="text-3xl font-bold tracking-tight">Create Module</h1>
+        <p className="text-muted-foreground mt-1">Create a new API module</p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="My Module" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Card>
+            <CardHeader>
+              <CardTitle>Module Configuration</CardTitle>
+              <CardDescription>Configure the module settings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableBody>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Name *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="My Module" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Path Prefix</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="path_prefix"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="/api/v1" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              URL prefix for all APIs in this module
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Description</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Optional description"
+                                {...field}
+                                value={field.value || ""}
+                                onChange={(e) => field.onChange(e.target.value || null)}
+                                className="min-h-[80px]"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Active</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="is_active"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Enable this module for use</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-            <FormField
-              control={form.control}
-              name="path_prefix"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Path Prefix</FormLabel>
-                  <FormControl>
-                    <Input placeholder="/api/v1" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    URL prefix for all APIs in this module
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="sort_order"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sort Order</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Sort order for displaying modules (lower numbers appear first)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Optional description"
-                    {...field}
-                    value={field.value || ""}
-                    onChange={(e) => field.onChange(e.target.value || null)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="is_active"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Active</FormLabel>
-                  <FormDescription>
-                    Enable this module for use
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
-
-          <div className="flex gap-4">
+          <div className="flex items-center justify-end gap-4">
             <LoadingButton
               type="submit"
               loading={createMutation.isPending}
