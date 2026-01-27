@@ -41,8 +41,6 @@ const baseItems: Item[] = [
     submenu: [
       { title: "Groups", path: "/system/groups" },
       { title: "Clients", path: "/system/clients" },
-      { title: "Firewall", path: "/system/firewall" },
-      { title: "Alarm", path: "/system/alarm" },
     ],
   },
 ]

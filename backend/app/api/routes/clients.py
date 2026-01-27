@@ -2,6 +2,7 @@
 AppClient management (Phase 2, Task 2.4).
 
 Endpoints: list (POST), create, update, delete, detail, regenerate-secret.
+Client-group link (group_ids): client can only call APIs in assigned groups.
 """
 
 import secrets
@@ -9,14 +10,16 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import delete
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.security import get_password_hash
 from app.models import Message
-from app.models_dbapi import AppClient
+from app.models_dbapi import AppClient, AppClientApiLink, AppClientGroupLink
 from app.schemas_dbapi import (
     AppClientCreate,
+    AppClientDetail,
     AppClientListIn,
     AppClientListOut,
     AppClientPublic,
@@ -73,7 +76,7 @@ def create_client(
     current_user: CurrentUser,  # noqa: ARG001
     body: AppClientCreate,
 ) -> Any:
-    """Create a new client; generate client_id and hash client_secret."""
+    """Create a new client; generate client_id and hash client_secret. Optionally assign group_ids."""
     client_id = secrets.token_urlsafe(16)
     hashed_secret = get_password_hash(body.client_secret)
     c = AppClient(
@@ -86,6 +89,12 @@ def create_client(
     session.add(c)
     session.commit()
     session.refresh(c)
+    for gid in body.group_ids or []:
+        session.add(AppClientGroupLink(app_client_id=c.id, api_group_id=gid))
+    for aid in body.api_assignment_ids or []:
+        session.add(AppClientApiLink(app_client_id=c.id, api_assignment_id=aid))
+    if body.group_ids or body.api_assignment_ids:
+        session.commit()
     return _to_public(c)
 
 
@@ -95,13 +104,21 @@ def update_client(
     current_user: CurrentUser,  # noqa: ARG001
     body: AppClientUpdate,
 ) -> Any:
-    """Update an existing client (client_id and client_secret not changed here)."""
+    """Update an existing client (client_id and client_secret not changed here). If group_ids is set, replace links."""
     c = session.get(AppClient, body.id)
     if not c:
         raise HTTPException(status_code=404, detail="AppClient not found")
-    update = body.model_dump(exclude_unset=True, exclude={"id"})
+    update = body.model_dump(exclude_unset=True, exclude={"id", "group_ids", "api_assignment_ids"})
     c.sqlmodel_update(update)
     session.add(c)
+    if "group_ids" in body.model_fields_set:
+        session.exec(delete(AppClientGroupLink).where(AppClientGroupLink.app_client_id == c.id))
+        for gid in body.group_ids or []:
+            session.add(AppClientGroupLink(app_client_id=c.id, api_group_id=gid))
+    if "api_assignment_ids" in body.model_fields_set:
+        session.exec(delete(AppClientApiLink).where(AppClientApiLink.app_client_id == c.id))
+        for aid in body.api_assignment_ids or []:
+            session.add(AppClientApiLink(app_client_id=c.id, api_assignment_id=aid))
     session.commit()
     session.refresh(c)
     return _to_public(c)
@@ -139,14 +156,31 @@ def regenerate_client_secret(
     return AppClientRegenerateSecretOut(client_secret=new_secret)
 
 
-@router.get("/{id}", response_model=AppClientPublic)
+def _to_detail(c: AppClient) -> AppClientDetail:
+    """Build AppClientDetail with group_ids and api_assignment_ids."""
+    group_ids = [link.api_group_id for link in (c.group_links or [])]
+    api_assignment_ids = [link.api_assignment_id for link in (c.api_links or [])]
+    return AppClientDetail(
+        id=c.id,
+        name=c.name,
+        client_id=c.client_id,
+        description=c.description,
+        is_active=c.is_active,
+        created_at=c.created_at,
+        updated_at=c.updated_at,
+        group_ids=group_ids,
+        api_assignment_ids=api_assignment_ids,
+    )
+
+
+@router.get("/{id}", response_model=AppClientDetail)
 def get_client(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
     id: uuid.UUID,
 ) -> Any:
-    """Get client detail by id (client_secret omitted)."""
+    """Get client detail by id (client_secret omitted; includes group_ids for API access)."""
     c = session.get(AppClient, id)
     if not c:
         raise HTTPException(status_code=404, detail="AppClient not found")
-    return _to_public(c)
+    return _to_detail(c)

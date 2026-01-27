@@ -2,10 +2,8 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     api_assignments,
-    alarm,
     clients,
     datasources,
-    firewall,
     groups,
     login,
     modules,
@@ -25,8 +23,6 @@ api_router.include_router(modules.router)
 api_router.include_router(groups.router)
 api_router.include_router(api_assignments.router)
 api_router.include_router(clients.router)
-api_router.include_router(firewall.router)
-api_router.include_router(alarm.router)
 api_router.include_router(overview.router)
 
 

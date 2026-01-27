@@ -13,6 +13,7 @@ from app.api.deps import SessionDep
 from app.core.gateway import (
     check_firewall,
     check_rate_limit,
+    client_can_access_api,
     format_response,
     parse_params,
     verify_gateway_client,
@@ -63,6 +64,9 @@ async def gateway_proxy(
         app_client = verify_gateway_client(request, session)
         if not app_client:
             raise HTTPException(status_code=401, detail="Unauthorized")
+        # Client can only call APIs in assigned groups (or direct API links)
+        if not client_can_access_api(session, app_client.id, api.id):
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     # Rate limit: use client_id if authenticated, otherwise use IP
     rate_limit_key = app_client.client_id if app_client else ip

@@ -15,8 +15,6 @@ from app.models_dbapi import (
     ApiModule,
     AppClient,
     DataSource,
-    FirewallRules,
-    UnifyAlarm,
     VersionCommit,
 )
 from app.schemas_dbapi import (
@@ -46,7 +44,7 @@ def get_overview_stats(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
 ) -> OverviewStats:
-    """Counts: datasources, modules, groups, apis (published/total), clients, firewall rules, alarms."""
+    """Counts: datasources, modules, groups, apis (published/total), clients."""
     return OverviewStats(
         datasources=_count(session, DataSource),
         modules=_count(session, ApiModule),
@@ -54,8 +52,6 @@ def get_overview_stats(
         apis_total=_count(session, ApiAssignment),
         apis_published=_count(session, ApiAssignment, ApiAssignment.is_published == True),
         clients=_count(session, AppClient),
-        firewall_rules=_count(session, FirewallRules),
-        alarms=_count(session, UnifyAlarm),
     )
 
 

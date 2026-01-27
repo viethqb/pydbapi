@@ -2,7 +2,7 @@
 DBAPI migration models (Phase 1).
 
 Entities: DataSource, ApiAssignment, ApiModule, ApiGroup, AppClient,
-FirewallRules, UnifyAlarm, ApiContext, VersionCommit, AccessRecord.
+ApiContext, VersionCommit, AccessRecord.
 
 Note: SystemUser removed; web login uses app.models.User. VersionCommit
 no longer stores committed_by; can add committed_by_id -> user.id later if needed.
@@ -51,13 +51,6 @@ class ExecuteEngineEnum(str, Enum):
 
     SQL = "SQL"
     SCRIPT = "SCRIPT"
-
-
-class FirewallRuleTypeEnum(str, Enum):
-    """Firewall rule: allow or deny."""
-
-    ALLOW = "allow"
-    DENY = "deny"
 
 
 class ApiAccessTypeEnum(str, Enum):
@@ -141,6 +134,9 @@ class ApiGroup(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utc_now)
 
     api_assignments: list["ApiAssignmentGroupLink"] = Relationship(
+        back_populates="api_group"
+    )
+    client_links: list["AppClientGroupLink"] = Relationship(
         back_populates="api_group"
     )
 
@@ -239,6 +235,9 @@ class ApiAssignment(SQLModel, table=True):
     )
     version_commits: list["VersionCommit"] = Relationship(back_populates="api_assignment")
     access_records: list["AccessRecord"] = Relationship(back_populates="api_assignment")
+    client_direct_links: list["AppClientApiLink"] = Relationship(
+        back_populates="api_assignment"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -270,6 +269,44 @@ class ApiContext(SQLModel, table=True):
 
 
 # ---------------------------------------------------------------------------
+# AppClientGroupLink - M2M between AppClient and ApiGroup (for API access control)
+# ---------------------------------------------------------------------------
+
+
+class AppClientGroupLink(SQLModel, table=True):
+    __tablename__ = "app_client_group_link"
+
+    app_client_id: uuid.UUID = Field(
+        foreign_key="app_client.id", primary_key=True, ondelete="CASCADE"
+    )
+    api_group_id: uuid.UUID = Field(
+        foreign_key="api_group.id", primary_key=True, ondelete="CASCADE"
+    )
+
+    app_client: "AppClient" = Relationship(back_populates="group_links")
+    api_group: "ApiGroup" = Relationship(back_populates="client_links")
+
+
+# ---------------------------------------------------------------------------
+# AppClientApiLink - M2M AppClient <-> ApiAssignment (direct API permission, outside groups)
+# ---------------------------------------------------------------------------
+
+
+class AppClientApiLink(SQLModel, table=True):
+    __tablename__ = "app_client_api_link"
+
+    app_client_id: uuid.UUID = Field(
+        foreign_key="app_client.id", primary_key=True, ondelete="CASCADE"
+    )
+    api_assignment_id: uuid.UUID = Field(
+        foreign_key="api_assignment.id", primary_key=True, ondelete="CASCADE"
+    )
+
+    app_client: "AppClient" = Relationship(back_populates="api_links")
+    api_assignment: "ApiAssignment" = Relationship(back_populates="client_direct_links")
+
+
+# ---------------------------------------------------------------------------
 # AppClient - Client application (OAuth / API key)
 # ---------------------------------------------------------------------------
 
@@ -286,53 +323,13 @@ class AppClient(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
 
-    access_records: list["AccessRecord"] = Relationship(back_populates="app_client")
-
-
-# ---------------------------------------------------------------------------
-# FirewallRules - Firewall rules (IP allow/deny)
-# ---------------------------------------------------------------------------
-
-
-class FirewallRules(SQLModel, table=True):
-    __tablename__ = "firewall_rules"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    rule_type: FirewallRuleTypeEnum = Field(
-        sa_column=Column(
-            SQLEnum(
-                FirewallRuleTypeEnum,
-                name="firewallruletypeenum",
-                create_type=False,
-                values_callable=lambda x: [e.value for e in x],
-            ),
-            nullable=False,
-            index=True,
-        )
+    group_links: list["AppClientGroupLink"] = Relationship(
+        back_populates="app_client", cascade_delete=True
     )
-    ip_range: str = Field(max_length=128)  # CIDR or single IP
-    description: str | None = Field(default=None, max_length=512)
-    is_active: bool = Field(default=True)
-    sort_order: int = Field(default=0)
-    created_at: datetime = Field(default_factory=_utc_now)
-    updated_at: datetime = Field(default_factory=_utc_now)
-
-
-# ---------------------------------------------------------------------------
-# UnifyAlarm - Alarm configuration
-# ---------------------------------------------------------------------------
-
-
-class UnifyAlarm(SQLModel, table=True):
-    __tablename__ = "unify_alarm"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(max_length=255, index=True)
-    alarm_type: str = Field(max_length=64, index=True)
-    config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
-    is_enabled: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=_utc_now)
-    updated_at: datetime = Field(default_factory=_utc_now)
+    api_links: list["AppClientApiLink"] = Relationship(
+        back_populates="app_client", cascade_delete=True
+    )
+    access_records: list["AccessRecord"] = Relationship(back_populates="app_client")
 
 
 # ---------------------------------------------------------------------------

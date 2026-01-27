@@ -11,6 +11,11 @@ export type AppClientPublic = {
   updated_at: string
 }
 
+export type AppClientDetail = AppClientPublic & {
+  group_ids: string[]
+  api_assignment_ids: string[]
+}
+
 export type AppClientListIn = {
   page?: number
   page_size?: number
@@ -28,6 +33,8 @@ export type AppClientCreate = {
   client_secret: string
   description?: string | null
   is_active?: boolean
+  group_ids?: string[] | null
+  api_assignment_ids?: string[] | null
 }
 
 export type AppClientUpdate = {
@@ -35,6 +42,8 @@ export type AppClientUpdate = {
   name?: string | null
   description?: string | null
   is_active?: boolean | null
+  group_ids?: string[] | null
+  api_assignment_ids?: string[] | null
 }
 
 export type AppClientRegenerateSecretOut = {
@@ -107,8 +116,8 @@ export const ClientsService = {
     })
   },
 
-  get: async (id: string): Promise<AppClientPublic> => {
-    return request<AppClientPublic>(`/api/v1/clients/${id}`, {
+  get: async (id: string): Promise<AppClientDetail> => {
+    return request<AppClientDetail>(`/api/v1/clients/${id}`, {
       method: "GET",
     })
   },

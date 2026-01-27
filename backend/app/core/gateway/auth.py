@@ -2,10 +2,15 @@
 Gateway auth (Phase 4, Task 4.2a): verify_gateway_client.
 
 Supports: Bearer JWT, Basic (client_id:client_secret), X-API-Key (base64(client_id:client_secret)).
+
+Also: client_can_access_api — client can only call private APIs that belong to at least one
+ApiGroup assigned to the client (app_client_group_link + api_assignment_group_link), or that are
+assigned directly (app_client_api_link).
 """
 
 import base64
 import binascii
+from uuid import UUID
 
 import jwt
 from fastapi import Request
@@ -14,7 +19,7 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.core.security import ALGORITHM, verify_password
-from app.models_dbapi import AppClient
+from app.models_dbapi import ApiAssignmentGroupLink, AppClient, AppClientApiLink, AppClientGroupLink
 
 
 def _decode_basic_or_apikey(value: str) -> tuple[str, str] | None:
@@ -96,3 +101,39 @@ def verify_gateway_client(request: Request, session: Session) -> AppClient | Non
         return client
 
     return None
+
+
+def client_can_access_api(
+    session: Session,
+    app_client_id: UUID,
+    api_assignment_id: UUID,
+) -> bool:
+    """
+    True if the client is allowed to call the API, via:
+    (1) Group: API belongs to at least one ApiGroup assigned to the client;
+    (2) Direct API: API is in app_client_api_link (client assigned directly).
+    """
+    # (2) Direct API: check app_client_api_link
+    direct = session.exec(
+        select(AppClientApiLink).where(
+            AppClientApiLink.app_client_id == app_client_id,
+            AppClientApiLink.api_assignment_id == api_assignment_id,
+        )
+    ).first()
+    if direct is not None:
+        return True
+
+    # (1) Group: client's groups intersect with API's groups
+    client_group_ids_stmt = select(AppClientGroupLink.api_group_id).where(
+        AppClientGroupLink.app_client_id == app_client_id
+    )
+    client_group_ids = set(session.exec(client_group_ids_stmt).all())
+    if not client_group_ids:
+        return False
+    overlap = session.exec(
+        select(ApiAssignmentGroupLink.api_group_id).where(
+            ApiAssignmentGroupLink.api_assignment_id == api_assignment_id,
+            ApiAssignmentGroupLink.api_group_id.in_(client_group_ids),
+        )
+    ).first()
+    return overlap is not None

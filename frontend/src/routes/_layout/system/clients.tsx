@@ -20,8 +20,8 @@ import {
 import { ClientFormDialog } from "@/components/System/ClientFormDialog"
 import {
   ClientsService,
+  type AppClientDetail,
   type AppClientListIn,
-  type AppClientPublic,
 } from "@/services/clients"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
@@ -60,7 +60,7 @@ function ClientsPage() {
 
   // Form dialog state
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingClient, setEditingClient] = useState<AppClientPublic | null>(
+  const [editingClient, setEditingClient] = useState<AppClientDetail | null>(
     null,
   )
 
@@ -140,11 +140,12 @@ function ClientsPage() {
   }
 
   const handleEdit = (id: string) => {
-    const client = data?.data.find((c) => c.id === id)
-    if (client) {
-      setEditingClient(client)
-      setIsFormOpen(true)
-    }
+    ClientsService.get(id)
+      .then((detail) => {
+        setEditingClient(detail)
+        setIsFormOpen(true)
+      })
+      .catch((e: Error) => showErrorToast(e.message))
   }
 
   const handleDelete = (id: string) => {
