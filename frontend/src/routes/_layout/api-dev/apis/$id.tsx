@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Globe, Pencil, Trash2, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X } from "lucide-react"
+import { ArrowLeft, Globe, Pencil, Trash2, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -63,6 +63,7 @@ function ApiDetail() {
   const [tokenBody, setTokenBody] = useState('{"client_id": "", "client_secret": ""}')
   const [generatedToken, setGeneratedToken] = useState<string | null>(null)
   const [isGeneratingToken, setIsGeneratingToken] = useState(false)
+  const [tokenResponse, setTokenResponse] = useState<{ status?: number; data?: unknown; error?: string } | null>(null)
   const { handleSubmit } = useForm()
 
   // Check if we're on the edit route
@@ -269,7 +270,9 @@ function ApiDetail() {
     return <div className="text-center py-8 text-muted-foreground">API not found</div>
   }
 
-  const assignedGroups = groupsData?.data.filter(g => apiDetail.group_ids.includes(g.id)) || []
+  const assignedGroups = (Array.isArray(groupsData?.data) && apiDetail?.group_ids 
+    ? groupsData.data.filter(g => apiDetail.group_ids.includes(g.id)) 
+    : [])
   const methodColors: Record<string, string> = {
     GET: "bg-blue-500",
     POST: "bg-green-500",
@@ -295,6 +298,7 @@ function ApiDetail() {
     }
 
     setIsGeneratingToken(true)
+    setTokenResponse(null)
     try {
       const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
       const tokenUrl = `${baseUrl}/token/generate`
@@ -316,20 +320,32 @@ function ApiDetail() {
         body: JSON.stringify(bodyObj),
       })
 
+      const responseData = await response.json().catch(() => ({ error: "Invalid JSON response" }))
+
+      setTokenResponse({
+        status: response.status,
+        data: responseData,
+      })
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Failed to generate token" }))
-        const detail = errorData.detail
+        const detail = responseData.detail
         const msg = Array.isArray(detail)
           ? detail.map((e: { msg?: string }) => e.msg).filter(Boolean).join(", ") || `HTTP ${response.status}`
           : (typeof detail === "string" ? detail : `HTTP ${response.status}`)
-        throw new Error(msg || `HTTP ${response.status}`)
+        setTokenResponse({
+          status: response.status,
+          error: msg || `HTTP ${response.status}`,
+        })
+        showErrorToast(`Failed to generate token: ${msg || `HTTP ${response.status}`}`)
+      } else {
+        setGeneratedToken(responseData.access_token)
+        showSuccessToast("Token generated successfully")
       }
-
-      const data = await response.json()
-      setGeneratedToken(data.access_token)
-      showSuccessToast("Token generated successfully")
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
+      setTokenResponse({
+        error: errorMessage,
+      })
       showErrorToast(`Failed to generate token: ${errorMessage}`)
     } finally {
       setIsGeneratingToken(false)
@@ -339,28 +355,26 @@ function ApiDetail() {
   const handleExecute = async () => {
     if (!apiUrl || !apiDetail) return
 
-    // For private APIs, ensure we have a token
-    if (apiDetail.access_type === "private" && !generatedToken) {
-      showErrorToast("Please generate a token first for private APIs")
-      return
+    // For private APIs, check if Authorization header exists in headers (user may have edited/removed it)
+    if (apiDetail.access_type === "private") {
+      const hasAuthHeader = headers.some((h) => h.key.toLowerCase() === "authorization" && h.value.trim())
+      if (!hasAuthHeader) {
+        showErrorToast("Please add Authorization header with Bearer token for private APIs")
+        return
+      }
     }
 
     setIsExecuting(true)
     setResponse(null)
 
     try {
-      // Build headers from key-value array
+      // Build headers from key-value array (use headers as-is, user can edit/remove token)
       const headersObj: Record<string, string> = {}
       headers.forEach(({ key, value }) => {
         if (key && value) {
           headersObj[key] = value
         }
       })
-
-      // Automatically add token for private APIs
-      if (apiDetail.access_type === "private" && generatedToken) {
-        headersObj.Authorization = `Bearer ${generatedToken}`
-      }
 
       // Parse body
       let bodyObj: unknown = null
@@ -455,7 +469,9 @@ function ApiDetail() {
     onAdd: () => void
     onUpdate: (index: number, field: "key" | "value", value: string) => void
     onRemove: (index: number) => void
-  }) => (
+  }) => {
+    const safeData = Array.isArray(data) ? data : []
+    return (
     <div className="space-y-2">
       <Table>
         <TableHeader>
@@ -466,7 +482,7 @@ function ApiDetail() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((item, index) => (
+          {safeData.map((item, index) => (
             <TableRow key={`${index}-${item.key}-${item.value}`}>
               <TableCell>
                 <Input
@@ -487,7 +503,7 @@ function ApiDetail() {
                   variant="ghost"
                   size="icon"
                   onClick={() => onRemove(index)}
-                  disabled={data.length === 1}
+                  disabled={safeData.length === 1}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -501,7 +517,8 @@ function ApiDetail() {
         Add Row
       </Button>
     </div>
-  )
+    )
+  }
 
   const tokenBodyValid = (() => {
     try {
@@ -797,6 +814,31 @@ function ApiDetail() {
                           Set Headers and Body (JSON with client_id, client_secret) to generate an access token for testing this private API.
                         </p>
                         <div className="space-y-4">
+                          {/* Token API URL */}
+                          <div>
+                            <div className="text-sm font-medium mb-2">Token API URL</div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
+                                {(() => {
+                                  const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
+                                  return `${baseUrl}/token/generate`
+                                })()}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                  const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
+                                  const tokenUrl = `${baseUrl}/token/generate`
+                                  navigator.clipboard.writeText(tokenUrl)
+                                  showSuccessToast("Token URL copied to clipboard")
+                                }}
+                                title="Copy Token URL"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
                           <div className="space-y-2">
                             <div className="text-sm font-medium">Headers</div>
                             <KeyValueTable
@@ -808,12 +850,31 @@ function ApiDetail() {
                           </div>
                           <div className="space-y-2">
                             <div className="text-sm font-medium">Body</div>
-                            <Textarea
-                              value={tokenBody}
-                              onChange={(e) => setTokenBody(e.target.value)}
-                              placeholder='{"client_id": "", "client_secret": ""}'
-                              className="font-mono min-h-[120px]"
-                            />
+                            <div className="relative">
+                              <Textarea
+                                value={tokenBody}
+                                onChange={(e) => setTokenBody(e.target.value)}
+                                placeholder='{"client_id": "", "client_secret": ""}'
+                                className="font-mono min-h-[120px] pr-10"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 h-8 w-8"
+                                onClick={() => {
+                                  try {
+                                    const parsed = JSON.parse(tokenBody || "{}")
+                                    setTokenBody(JSON.stringify(parsed, null, 2))
+                                    showSuccessToast("JSON formatted")
+                                  } catch {
+                                    showErrorToast("Invalid JSON format")
+                                  }
+                                }}
+                                title="Format JSON"
+                              >
+                                <Braces className="h-4 w-4" />
+                              </Button>
+                            </div>
                             <p className="text-xs text-muted-foreground">JSON. Include client_id and client_secret. grant_type is added automatically if missing.</p>
                           </div>
                           
@@ -843,76 +904,178 @@ function ApiDetail() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Token Response */}
+                      {tokenResponse && (
+                        <div className="mt-6 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-base font-semibold">Token Response</h4>
+                            <div className="flex items-center gap-2">
+                              {tokenResponse.status && (
+                                <Badge variant={tokenResponse.status >= 200 && tokenResponse.status < 300 ? "default" : "destructive"}>
+                                  {tokenResponse.status} {tokenResponse.status >= 200 && tokenResponse.status < 300 ? "OK" : "Error"}
+                                </Badge>
+                              )}
+                              {!tokenResponse.error && tokenResponse.data && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => {
+                                      try {
+                                        const formatted = JSON.stringify(tokenResponse.data, null, 2)
+                                        navigator.clipboard.writeText(formatted)
+                                        showSuccessToast("Response copied to clipboard")
+                                      } catch {
+                                        showErrorToast("Failed to copy response")
+                                      }
+                                    }}
+                                    title="Copy response"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => {
+                                      try {
+                                        const formatted = JSON.stringify(tokenResponse.data, null, 2)
+                                        setTokenResponse({ ...tokenResponse, data: JSON.parse(formatted) })
+                                        showSuccessToast("Response formatted")
+                                      } catch {
+                                        showErrorToast("Invalid JSON in response")
+                                      }
+                                    }}
+                                    title="Format JSON"
+                                  >
+                                    <Braces className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="p-4 bg-muted rounded-lg border">
+                            {tokenResponse.error ? (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-destructive">Error</p>
+                                <pre className="text-sm text-destructive font-mono whitespace-pre-wrap break-all">
+                                  {tokenResponse.error}
+                                </pre>
+                              </div>
+                            ) : (
+                              <pre className="text-sm font-mono whitespace-pre-wrap break-all overflow-auto max-h-[500px] leading-relaxed">
+                                {JSON.stringify(tokenResponse.data, null, 2)}
+                              </pre>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* API URL */}
-                  <div>
-                    <div className="text-sm font-medium mb-2">API URL</div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
-                        {apiUrl}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyUrl}
-                        title="Copy URL"
-                      >
-                        {copiedUrl ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                  {/* Divider between Generate Token and Execute API */}
+                  {apiDetail.access_type === "private" && (
+                    <div className="border-t pt-6"></div>
+                  )}
 
                   {/* Execute API */}
-                  <div className="border-t pt-6">
+                  <div className={apiDetail.access_type === "private" ? "" : ""}>
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-semibold">Execute API</h3>
                         <p className="text-sm text-muted-foreground">Test the API with custom parameters</p>
                       </div>
                     </div>
-                    <Tabs defaultValue="query" className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="query">Query Params</TabsTrigger>
-                        <TabsTrigger value="headers">Headers</TabsTrigger>
-                        <TabsTrigger value="body">Body</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="query" className="space-y-2">
+                    
+                    {/* API URL */}
+                    <div className="mb-4">
+                      <div className="text-sm font-medium mb-2">API URL</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
+                          {apiUrl}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handleCopyUrl}
+                          title="Copy URL"
+                        >
+                          {copiedUrl ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Query Params, Headers, Body - No Tabs */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Query Params</div>
                         <KeyValueTable
                           data={queryParams.length > 0 ? queryParams : [{ key: "", value: "" }]}
                           onAdd={() => addKeyValue(setQueryParams)}
                           onUpdate={(index, field, value) => updateKeyValue(setQueryParams, index, field, value)}
                           onRemove={(index) => removeKeyValue(setQueryParams, index)}
                         />
-                      </TabsContent>
-                      <TabsContent value="headers" className="space-y-2">
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Headers</div>
                         <KeyValueTable
                           data={headers.length > 0 ? headers : [{ key: "", value: "" }]}
                           onAdd={() => addKeyValue(setHeaders)}
                           onUpdate={(index, field, value) => updateKeyValue(setHeaders, index, field, value)}
                           onRemove={(index) => removeKeyValue(setHeaders, index)}
                         />
-                      </TabsContent>
-                      <TabsContent value="body" className="space-y-2">
-                        <Textarea
-                          value={body}
-                          onChange={(e) => setBody(e.target.value)}
-                          placeholder='{"key": "value"}'
-                          className="font-mono min-h-[120px]"
-                          disabled={!["POST", "PUT", "PATCH"].includes(apiDetail.http_method)}
-                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Body</div>
+                        <div className="relative">
+                          <Textarea
+                            value={body}
+                            onChange={(e) => setBody(e.target.value)}
+                            placeholder='{"key": "value"}'
+                            className="font-mono min-h-[120px] pr-10"
+                            disabled={!["POST", "PUT", "PATCH"].includes(apiDetail.http_method)}
+                          />
+                          {["POST", "PUT", "PATCH"].includes(apiDetail.http_method) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 h-8 w-8"
+                              onClick={() => {
+                                try {
+                                  const parsed = JSON.parse(body || "{}")
+                                  setBody(JSON.stringify(parsed, null, 2))
+                                  showSuccessToast("JSON formatted")
+                                } catch {
+                                  showErrorToast("Invalid JSON format")
+                                }
+                              }}
+                              title="Format JSON"
+                            >
+                              <Braces className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {["POST", "PUT", "PATCH"].includes(apiDetail.http_method)
                             ? "JSON object for request body"
                             : "Body is not used for GET/DELETE requests"}
                         </p>
-                      </TabsContent>
-                    </Tabs>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">Execute API</h3>
+                        <p className="text-sm text-muted-foreground">Test the API with custom parameters</p>
+                      </div>
+                    </div>
 
                     <div className="mt-4 flex gap-2">
                       <Button
@@ -939,11 +1102,51 @@ function ApiDetail() {
                       <div className="mt-6 space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-base font-semibold">Response</h4>
-                          {response.status && (
-                            <Badge variant={response.status >= 200 && response.status < 300 ? "default" : "destructive"}>
-                              {response.status} {response.status >= 200 && response.status < 300 ? "OK" : "Error"}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {response.status && (
+                              <Badge variant={response.status >= 200 && response.status < 300 ? "default" : "destructive"}>
+                                {response.status} {response.status >= 200 && response.status < 300 ? "OK" : "Error"}
+                              </Badge>
+                            )}
+                            {!response.error && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    try {
+                                      const formatted = JSON.stringify(response.data, null, 2)
+                                      navigator.clipboard.writeText(formatted)
+                                      showSuccessToast("Response copied to clipboard")
+                                    } catch {
+                                      showErrorToast("Failed to copy response")
+                                    }
+                                  }}
+                                  title="Copy response"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    try {
+                                      const formatted = JSON.stringify(response.data, null, 2)
+                                      setResponse({ ...response, data: JSON.parse(formatted) })
+                                      showSuccessToast("Response formatted")
+                                    } catch {
+                                      showErrorToast("Invalid JSON in response")
+                                    }
+                                  }}
+                                  title="Format JSON"
+                                >
+                                  <Braces className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                         <div className="p-4 bg-muted rounded-lg border">
                           {response.error ? (

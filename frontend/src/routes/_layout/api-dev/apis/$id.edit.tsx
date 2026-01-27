@@ -439,7 +439,7 @@ function ApiEdit() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {modulesData?.map((m) => (
+                                    {Array.isArray(modulesData) && modulesData.map((m) => (
                                       <SelectItem key={m.id} value={String(m.id)}>
                                         {m.name}
                                       </SelectItem>
@@ -634,7 +634,7 @@ function ApiEdit() {
                                       </div>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-auto">
-                                      {groupsData?.data && groupsData.data.length > 0 ? (
+                                      {Array.isArray(groupsData?.data) && groupsData.data.length > 0 ? (
                                         groupsData.data.map((group) => (
                                           <DropdownMenuItem
                                             key={group.id}
@@ -964,7 +964,7 @@ function ApiEdit() {
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="none">None</SelectItem>
-                                  {datasourcesData?.data && datasourcesData.data.length > 0 ? (
+                                  {Array.isArray(datasourcesData?.data) && datasourcesData.data.length > 0 ? (
                                     datasourcesData.data.map((ds) => {
                                       const dsId = String(ds.id)
                                       return (

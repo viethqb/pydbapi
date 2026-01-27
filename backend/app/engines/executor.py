@@ -50,6 +50,10 @@ class ApiExecutor:
             if ds is None:
                 raise ValueError("DataSource not found")
 
+        # Check if datasource is active (if datasource is required)
+        if ds is not None and not ds.is_active:
+            raise ValueError("DataSource is inactive and cannot be used")
+
         if engine == ExecuteEngineEnum.SQL:
             if ds is None:
                 raise ValueError("datasource or datasource_id is required for SQL engine")

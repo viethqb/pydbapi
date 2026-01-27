@@ -112,11 +112,11 @@ function ModulesList() {
   }
 
   const tableData: ModuleTableData[] =
-    data?.data.map((m) => ({
+    (Array.isArray(data?.data) ? data.data : []).map((m) => ({
       ...m,
       onDelete: handleDelete,
       onToggleStatus: handleToggleStatus,
-    })) || []
+    }))
 
   return (
     <div className="flex flex-col gap-6">

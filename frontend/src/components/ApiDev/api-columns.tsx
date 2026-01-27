@@ -16,6 +16,7 @@ import type { ApiAssignmentPublic } from "@/services/api-assignments"
 
 export type ApiTableData = ApiAssignmentPublic & {
   module_name?: string
+  module_path_prefix?: string
   datasource_name?: string
   onDelete?: (id: string) => void
   onPublish?: (id: string) => void
@@ -55,6 +56,30 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
         {row.original.path}
       </span>
     ),
+  },
+  {
+    accessorKey: "full_path",
+    header: "Full Path",
+    cell: ({ row }) => {
+      const api = row.original
+      let moduleSegment = ""
+      
+      if (api.module_path_prefix && api.module_path_prefix.trim() !== "/") {
+        moduleSegment = api.module_path_prefix.trim().replace(/^\/+|\/+$/g, "")
+      } else if (api.module_name) {
+        // Fallback: use module name (lowercase, replace spaces with hyphens)
+        moduleSegment = api.module_name.toLowerCase().replace(/\s+/g, "-")
+      }
+      
+      const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
+      const fullPath = `/api/${moduleSegment}/${apiPath}`
+      
+      return (
+        <span className="font-mono text-sm">
+          {fullPath}
+        </span>
+      )
+    },
   },
   {
     accessorKey: "http_method",

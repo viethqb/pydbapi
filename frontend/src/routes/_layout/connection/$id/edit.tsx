@@ -1,10 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Loader2, ArrowLeft } from "lucide-react"
-import { Link } from "@tanstack/react-router"
+import { Loader2, ArrowLeft, Play } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -28,6 +27,14 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { LoadingButton } from "@/components/ui/loading-button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table"
 import {
   DataSourceService,
   type DataSourceUpdate,
@@ -42,7 +49,6 @@ const formSchema = z.object({
   database: z.string().min(1, "Database is required").max(255),
   username: z.string().min(1, "Username is required").max(255),
   password: z.string().max(512).optional(),
-  driver_version: z.string().max(64).optional().nullable(),
   description: z.string().max(512).optional().nullable(),
   is_active: z.boolean().default(true),
 })
@@ -85,7 +91,6 @@ function ConnectionEdit() {
       database: "",
       username: "",
       password: "",
-      driver_version: null,
       description: null,
       is_active: true,
     },
@@ -107,7 +112,6 @@ function ConnectionEdit() {
         database: datasource.database,
         username: datasource.username,
         password: "", // Don't prefill password
-        driver_version: datasource.driver_version || null,
         description: datasource.description || null,
         is_active: datasource.is_active,
       })
@@ -165,7 +169,7 @@ function ConnectionEdit() {
 
   const onSubmit = (values: FormValues) => {
     // Require test if password is provided (user wants to change password)
-    // If connection fields changed but no password, allow saving (backend uses existing password)
+    // If no password is provided, backend will use existing password, so test is not required
     const hasPassword = !!values.password
     
     // Require test if password is provided
@@ -183,7 +187,6 @@ function ConnectionEdit() {
       database: values.database,
       username: values.username,
       ...(values.password ? { password: values.password } : {}),
-      driver_version: values.driver_version,
       description: values.description,
       is_active: values.is_active,
     }
@@ -192,8 +195,7 @@ function ConnectionEdit() {
 
   const handleTest = () => {
     const values = form.getValues()
-    // If password is not provided, we need to get it from the original datasource
-    // For security, we'll require password to be entered for testing
+    // For testing, password is required to verify the connection
     if (!values.password) {
       showErrorToast("Please enter password to test connection")
       return
@@ -221,209 +223,225 @@ function ConnectionEdit() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-4">
         <Link to="/connection/$id" params={{ id }}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Edit Data Source</h1>
-          <p className="text-muted-foreground">Update database connection</p>
+          <h1 className="text-3xl font-bold tracking-tight">Edit Data Source</h1>
+          <p className="text-muted-foreground mt-1">Update database connection settings</p>
         </div>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="My Database" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Card>
+            <CardHeader>
+              <CardTitle>Connection Configuration</CardTitle>
+              <CardDescription>Configure the database connection settings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableBody>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Name *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="My Database" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Database Type *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="product_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value || ""}
+                              key={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="postgres">PostgreSQL</SelectItem>
+                                <SelectItem value="mysql">MySQL</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Host *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="host"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="localhost" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Port *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="port"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="5432"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Database *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="database"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="mydb" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Username *</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="postgres" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Password</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder="Leave empty to keep current"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormDescription className="mt-1">
+                              Leave empty to keep current password
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Description</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Optional description"
+                                {...field}
+                                value={field.value || ""}
+                                onChange={(e) => field.onChange(e.target.value || null)}
+                                className="min-h-[80px]"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Active</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="is_active"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Enable this data source for use</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-            <FormField
-              control={form.control}
-              name="product_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Database Type *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
-                    key={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="postgres">PostgreSQL</SelectItem>
-                      <SelectItem value="mysql">MySQL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="host"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Host *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="localhost" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="port"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Port *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="5432"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="database"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Database *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="mydb" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="postgres" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Leave empty to keep current"
-                      {...field}
-                      value={field.value || ""}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Leave empty to keep current password
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="driver_version"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Driver Version</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="default"
-                      {...field}
-                      value={field.value || ""}
-                      onChange={(e) =>
-                        field.onChange(e.target.value || null)
-                      }
-                    />
-                  </FormControl>
-                  <FormDescription>Leave empty for default</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Optional description"
-                    {...field}
-                    value={field.value || ""}
-                    onChange={(e) => field.onChange(e.target.value || null)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="is_active"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Active</FormLabel>
-                  <FormDescription>
-                    Enable this data source for use
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
-
-          <div className="flex gap-4">
+          <div className="flex items-center justify-end gap-4">
             <Button
               type="button"
               variant="outline"
@@ -436,18 +454,21 @@ function ConnectionEdit() {
                   Testing...
                 </>
               ) : (
-                "Test Connection"
+                <>
+                  <Play className="mr-2 h-4 w-4" />
+                  Test Connection
+                </>
               )}
             </Button>
             {testConnectionSuccess && (
-              <span className="flex items-center text-sm text-green-500">
+              <span className="flex items-center text-sm text-green-600 dark:text-green-400">
                 ✓ Connection test successful
               </span>
             )}
             <LoadingButton
               type="submit"
               loading={updateMutation.isPending}
-              disabled={testMutation.isPending || !testConnectionSuccess}
+              disabled={testMutation.isPending}
             >
               Update Data Source
             </LoadingButton>

@@ -69,6 +69,21 @@ def run(
         )
         raise RuntimeError("ApiContext not found for ApiAssignment")
 
+    # Check if datasource is active (if API uses a datasource)
+    if api.datasource_id and api.datasource:
+        if not api.datasource.is_active:
+            _write_access_record(
+                session,
+                api_assignment_id=api.id,
+                app_client_id=app_client_id,
+                ip_address=ip or "0.0.0.0",
+                http_method=http_method,
+                path=request_path,
+                status_code=400,
+                request_body=request_body,
+            )
+            raise RuntimeError("DataSource is inactive and cannot be used")
+
     try:
         result = ApiExecutor().execute(
             engine=api.execute_engine,

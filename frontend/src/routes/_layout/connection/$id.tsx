@@ -4,8 +4,16 @@ import { Edit, Play, Trash2, ArrowLeft } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -117,46 +125,34 @@ function ConnectionDetail() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/connection">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{datasource.name}</h1>
-            <p className="text-muted-foreground">Data Source Details</p>
+            <h1 className="text-3xl font-bold tracking-tight">{datasource.name}</h1>
+            <p className="text-muted-foreground mt-1">Data Source Details</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              console.log("Edit button clicked, id:", id)
-              console.log("id type:", typeof id)
-              console.log("id value:", id)
-              if (!id) {
-                console.error("ID is undefined or empty!")
-                return
-              }
-              const editPath = `/connection/${id}/edit`
-              console.log("Navigating to:", editPath)
-              // Direct navigation using window.location to avoid route issues
-              window.location.href = editPath
-            }}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
+          <Link to="/connection/$id/edit" params={{ id }}>
+            <Button variant="outline">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </Link>
           <Button
             variant="outline"
             onClick={() => testMutation.mutate()}
             disabled={testMutation.isPending}
           >
             <Play className="mr-2 h-4 w-4" />
-            {testMutation.isPending ? "Testing..." : "Test"}
+            {testMutation.isPending ? "Testing..." : "Test Connection"}
           </Button>
           <Button
             variant="destructive"
@@ -171,127 +167,100 @@ function ConnectionDetail() {
       <Card>
         <CardHeader>
           <CardTitle>Connection Information</CardTitle>
+          <CardDescription>View connection details and status</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Name
-              </label>
-              <p className="mt-1">{datasource.name}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Type
-              </label>
-              <p className="mt-1">
-                <Badge variant="outline" className="uppercase">
-                  {datasource.product_type}
-                </Badge>
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Host
-              </label>
-              <p className="mt-1">{datasource.host}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Port
-              </label>
-              <p className="mt-1">{datasource.port}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Database
-              </label>
-              <p className="mt-1">{datasource.database}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Username
-              </label>
-              <p className="mt-1">{datasource.username}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Password
-              </label>
-              <p className="mt-1 font-mono text-muted-foreground">
-                ••••••••••••
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Status
-              </label>
-              <p className="mt-1">
-                <Button
-                  variant="ghost"
-                  className="h-auto p-2 hover:bg-muted"
-                  onClick={() => toggleStatusMutation.mutate()}
-                  disabled={toggleStatusMutation.isPending}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "size-2 rounded-full",
-                        datasource.is_active
-                          ? "bg-green-500"
-                          : "bg-gray-400",
-                      )}
-                    />
-                    <span
-                      className={
-                        datasource.is_active ? "" : "text-muted-foreground"
-                      }
-                    >
-                      {toggleStatusMutation.isPending
-                        ? datasource.is_active
-                          ? "Deactivating..."
-                          : "Activating..."
-                        : datasource.is_active
-                          ? "Active"
-                          : "Inactive"}
-                    </span>
-                  </div>
-                </Button>
-              </p>
-            </div>
-            {datasource.driver_version && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">
-                  Driver Version
-                </label>
-                <p className="mt-1">{datasource.driver_version}</p>
-              </div>
-            )}
-            {datasource.description && (
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Description
-                </label>
-                <p className="mt-1">{datasource.description}</p>
-              </div>
-            )}
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Created At
-              </label>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {new Date(datasource.created_at).toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                Updated At
-              </label>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {new Date(datasource.updated_at).toLocaleString()}
-              </p>
-            </div>
-          </div>
+        <CardContent>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableHead className="w-[180px]">Name</TableHead>
+                <TableCell>{datasource.name}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Database Type</TableHead>
+                <TableCell>
+                  <Badge variant="outline" className="uppercase">
+                    {datasource.product_type}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Host</TableHead>
+                <TableCell className="font-mono">{datasource.host}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Port</TableHead>
+                <TableCell>{datasource.port}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Database</TableHead>
+                <TableCell className="font-mono">{datasource.database}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Username</TableHead>
+                <TableCell className="font-mono">{datasource.username}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Password</TableHead>
+                <TableCell className="font-mono text-muted-foreground">
+                  ••••••••••••
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Status</TableHead>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    className="h-auto p-0 hover:bg-transparent"
+                    onClick={() => toggleStatusMutation.mutate()}
+                    disabled={toggleStatusMutation.isPending}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "size-2 rounded-full",
+                          datasource.is_active
+                            ? "bg-green-500"
+                            : "bg-gray-400",
+                        )}
+                      />
+                      <span
+                        className={
+                          datasource.is_active ? "" : "text-muted-foreground"
+                        }
+                      >
+                        {toggleStatusMutation.isPending
+                          ? datasource.is_active
+                            ? "Deactivating..."
+                            : "Activating..."
+                          : datasource.is_active
+                            ? "Active"
+                            : "Inactive"}
+                      </span>
+                    </div>
+                  </Button>
+                </TableCell>
+              </TableRow>
+              {datasource.description && (
+                <TableRow>
+                  <TableHead className="w-[180px]">Description</TableHead>
+                  <TableCell>{datasource.description}</TableCell>
+                </TableRow>
+              )}
+              <TableRow>
+                <TableHead className="w-[180px]">Created</TableHead>
+                <TableCell className="text-sm text-muted-foreground">
+                  {new Date(datasource.created_at).toLocaleString()}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="w-[180px]">Last Updated</TableHead>
+                <TableCell className="text-sm text-muted-foreground">
+                  {new Date(datasource.updated_at).toLocaleString()}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

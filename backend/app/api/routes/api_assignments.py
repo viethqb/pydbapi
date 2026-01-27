@@ -341,6 +341,19 @@ def debug_api_assignment(
                 status_code=400,
                 detail="datasource_id is required for SQL and SCRIPT engines",
             )
+        # Check if datasource is active
+        from app.models_dbapi import DataSource
+        datasource = session.get(DataSource, datasource_id)
+        if not datasource:
+            raise HTTPException(
+                status_code=404,
+                detail="DataSource not found",
+            )
+        if not datasource.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail="DataSource is inactive and cannot be used",
+            )
 
     # Validate required parameters if params definition exists
     if params_definition:

@@ -138,12 +138,12 @@ function ModuleDetail() {
   }
 
   const tableData: ApiTableData[] =
-    apisData?.data.map((api) => ({
+    (Array.isArray(apisData?.data) ? apisData.data : []).map((api) => ({
       ...api,
       module_name: module.name,
       onDelete: handleDeleteApi,
       onPublish: handlePublishApi,
-    })) || []
+    }))
 
   return (
     <div className="flex flex-col gap-6">

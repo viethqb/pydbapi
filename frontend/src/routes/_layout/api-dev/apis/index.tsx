@@ -81,8 +81,9 @@ function ApisList() {
   })
 
   // Create maps for lookup
-  const moduleMap = new Map(modulesData?.map(m => [m.id, m.name]) || [])
-  const datasourceMap = new Map(datasourcesData?.data.map(ds => [ds.id, ds.name]) || [])
+  const moduleMap = new Map(Array.isArray(modulesData) ? modulesData.map(m => [m.id, m.name]) : [])
+  const modulePathPrefixMap = new Map(Array.isArray(modulesData) ? modulesData.map(m => [m.id, m.path_prefix]) : [])
+  const datasourceMap = new Map(Array.isArray(datasourcesData?.data) ? datasourcesData.data.map(ds => [ds.id, ds.name]) : [])
 
   // Delete mutation
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -126,13 +127,14 @@ function ApisList() {
   }
 
   const tableData: ApiTableData[] =
-    data?.data.map((api) => ({
+    (Array.isArray(data?.data) ? data.data : []).map((api) => ({
       ...api,
       module_name: moduleMap.get(api.module_id),
+      module_path_prefix: modulePathPrefixMap.get(api.module_id),
       datasource_name: api.datasource_id ? datasourceMap.get(api.datasource_id) : undefined,
       onDelete: handleDelete,
       onPublish: handlePublish,
-    })) || []
+    }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -187,7 +189,7 @@ function ApisList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Modules</SelectItem>
-              {modulesData?.map((m) => (
+              {Array.isArray(modulesData) && modulesData.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.name}
                 </SelectItem>
