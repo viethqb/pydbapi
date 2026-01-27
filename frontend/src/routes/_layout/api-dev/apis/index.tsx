@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/Common/DataTable"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   apiColumns,
@@ -135,6 +134,10 @@ function ApisList() {
       onDelete: handleDelete,
       onPublish: handlePublish,
     }))
+
+  const page = filters.page ?? 1
+  const pageSize = filters.page_size ?? 20
+  const total = data?.total ?? 0
 
   return (
     <div className="flex flex-col gap-6">
@@ -266,93 +269,81 @@ function ApisList() {
         </div>
       </div>
 
-      {/* DataTable */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>API List</CardTitle>
-              <CardDescription>
-                {data && data.total > 0
-                  ? `${data.total} API${data.total > 1 ? "s" : ""} found`
-                  : "No APIs found"}
-              </CardDescription>
-            </div>
-            {data && data.total > 0 && (
-              <Badge variant="outline" className="text-sm">
-                Page {filters.page} of {Math.ceil(data.total / filters.page_size!)}
-              </Badge>
-            )}
+      {/* Results */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {total > 0
+            ? `${total} API${total > 1 ? "s" : ""} found`
+            : "No APIs found"}
+        </div>
+        {total > 0 && (
+          <Badge variant="outline" className="text-sm">
+            Page {page} of {Math.ceil(total / pageSize)}
+          </Badge>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Loading APIs...</p>
+        </div>
+      ) : total === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground mb-4">
+            <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium">No APIs found</p>
+            <p className="text-sm mt-2">
+              {filters.name__ilike || filters.module_id || filters.is_published !== null
+                ? "Try adjusting your filters"
+                : "Get started by creating your first API"}
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Loading APIs...</p>
-            </div>
-          ) : data && data.total === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-muted-foreground mb-4">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No APIs found</p>
-                <p className="text-sm mt-2">
-                  {filters.name__ilike || filters.module_id || filters.is_published !== null
-                    ? "Try adjusting your filters"
-                    : "Get started by creating your first API"}
-                </p>
-              </div>
-              {!filters.name__ilike && !filters.module_id && filters.is_published === null && (
-                <Link to="/api-dev/apis/create">
-                  <Button className="mt-4">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create API
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <>
-              <DataTable columns={apiColumns} data={tableData} />
-              
-              {/* Pagination */}
-              {data && data.total > 0 && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <div className="text-sm text-muted-foreground">
-                    Showing <span className="font-medium">{(filters.page! - 1) * filters.page_size! + 1}</span> to{" "}
-                    <span className="font-medium">{Math.min(filters.page! * filters.page_size!, data.total)}</span> of{" "}
-                    <span className="font-medium">{data.total}</span> entries
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={filters.page === 1}
-                      onClick={() =>
-                        setFilters({ ...filters, page: (filters.page || 1) - 1 })
-                      }
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={
-                        filters.page! * filters.page_size! >= data.total
-                      }
-                      onClick={() =>
-                        setFilters({ ...filters, page: (filters.page || 1) + 1 })
-                      }
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          {!filters.name__ilike && !filters.module_id && filters.is_published === null && (
+            <Link to="/api-dev/apis/create">
+              <Button className="mt-4">
+                <Plus className="mr-2 h-4 w-4" />
+                Create API
+              </Button>
+            </Link>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <>
+          <DataTable columns={apiColumns} data={tableData} />
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Showing{" "}
+                <span className="font-medium">{(page - 1) * pageSize + 1}</span>{" "}
+                to{" "}
+                <span className="font-medium">{Math.min(page * pageSize, total)}</span>{" "}
+                of <span className="font-medium">{total}</span> entries
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setFilters({ ...filters, page: page - 1 })}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page * pageSize >= total}
+                  onClick={() => setFilters({ ...filters, page: page + 1 })}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
