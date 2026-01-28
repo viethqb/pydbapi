@@ -16,10 +16,12 @@ from sqlmodel import func, select
 from app.api.deps import CurrentUser, SessionDep
 from app.engines import ApiExecutor
 from app.models import Message
+from app.models import User
 from app.models_dbapi import (
     ApiAssignment,
     ApiAssignmentGroupLink,
     ApiContext,
+    VersionCommit,
 )
 from app.schemas_dbapi import (
     ApiAssignmentCreate,
@@ -31,6 +33,10 @@ from app.schemas_dbapi import (
     ApiAssignmentPublishIn,
     ApiAssignmentUpdate,
     ApiContextPublic,
+    VersionCommitCreate,
+    VersionCommitDetail,
+    VersionCommitListOut,
+    VersionCommitPublic,
 )
 
 router = APIRouter(prefix="/api-assignments", tags=["api-assignments"])
@@ -48,6 +54,7 @@ def _to_public(a: ApiAssignment) -> ApiAssignmentPublic:
         datasource_id=a.datasource_id,
         description=a.description,
         is_published=a.is_published,
+        published_version_id=a.published_version_id,
         access_type=a.access_type,
         sort_order=a.sort_order,
         created_at=a.created_at,
@@ -257,13 +264,25 @@ def update_api_assignment(
 @router.post("/publish", response_model=ApiAssignmentPublic)
 def publish_api_assignment(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     body: ApiAssignmentPublishIn,
 ) -> Any:
-    """Set is_published=True for the given API assignment."""
+    """Set is_published=True for the given API assignment. Must provide version_id."""
     a = session.get(ApiAssignment, body.id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    
+    # version_id is required for publish
+    if not body.version_id:
+        raise HTTPException(status_code=400, detail="version_id is required to publish")
+    
+    version = session.get(VersionCommit, body.version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    if version.api_assignment_id != a.id:
+        raise HTTPException(status_code=400, detail="Version does not belong to this API")
+    
+    a.published_version_id = body.version_id
     a.is_published = True
     a.updated_at = datetime.now(timezone.utc)
     session.add(a)
@@ -283,6 +302,7 @@ def unpublish_api_assignment(
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
     a.is_published = False
+    # Keep published_version_id when unpublishing (don't clear it)
     a.updated_at = datetime.now(timezone.utc)
     session.add(a)
     session.commit()
@@ -422,3 +442,152 @@ def get_api_assignment(
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
     return _to_detail(a)
+
+
+@router.post("/{id}/versions/create", response_model=VersionCommitDetail)
+def create_version(
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    body: VersionCommitCreate,
+) -> Any:
+    """Create a new version of API content. Captures current ApiContext content."""
+    a = session.get(ApiAssignment, id)
+    if not a:
+        raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    
+    # Get current content from ApiContext
+    ctx = session.exec(
+        select(ApiContext).where(ApiContext.api_assignment_id == a.id)
+    ).first()
+    
+    if not ctx or not ctx.content:
+        raise HTTPException(
+            status_code=400,
+            detail="API has no content to version. Please add content first."
+        )
+    
+    # Get the next version number
+    max_version = session.exec(
+        select(func.max(VersionCommit.version))
+        .where(VersionCommit.api_assignment_id == a.id)
+    ).one() or 0
+    
+    # Create new version
+    version = VersionCommit(
+        api_assignment_id=a.id,
+        version=max_version + 1,
+        content_snapshot=ctx.content,
+        commit_message=body.commit_message,
+        committed_by_id=current_user.id,
+    )
+    session.add(version)
+    session.commit()
+    session.refresh(version)
+    
+    return VersionCommitDetail(
+        id=version.id,
+        api_assignment_id=version.api_assignment_id,
+        version=version.version,
+        content_snapshot=version.content_snapshot,
+        commit_message=version.commit_message,
+        committed_by_id=version.committed_by_id,
+        committed_by_email=current_user.email,
+        committed_at=version.committed_at,
+    )
+
+
+@router.get("/{id}/versions", response_model=VersionCommitListOut)
+def list_versions(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    id: uuid.UUID,
+) -> Any:
+    """List all versions for an API assignment."""
+    a = session.get(ApiAssignment, id)
+    if not a:
+        raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    
+    versions = session.exec(
+        select(VersionCommit)
+        .where(VersionCommit.api_assignment_id == id)
+        .order_by(VersionCommit.version.desc())
+    ).all()
+    
+    # Get user emails for all committed_by_ids
+    user_ids = {v.committed_by_id for v in versions if v.committed_by_id}
+    users = {}
+    if user_ids:
+        user_rows = session.exec(
+            select(User).where(User.id.in_(user_ids))
+        ).all()
+        users = {user.id: user.email for user in user_rows}
+    
+    return VersionCommitListOut(
+        data=[
+            VersionCommitPublic(
+                id=v.id,
+                api_assignment_id=v.api_assignment_id,
+                version=v.version,
+                commit_message=v.commit_message,
+                committed_by_id=v.committed_by_id,
+                committed_by_email=users.get(v.committed_by_id) if v.committed_by_id else None,
+                committed_at=v.committed_at,
+            )
+            for v in versions
+        ]
+    )
+
+
+@router.get("/versions/{version_id}", response_model=VersionCommitDetail)
+def get_version(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    version_id: uuid.UUID,
+) -> Any:
+    """Get a specific version detail including content."""
+    version = session.get(VersionCommit, version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    
+    # Get user email if committed_by_id exists
+    committed_by_email = None
+    if version.committed_by_id:
+        user = session.get(User, version.committed_by_id)
+        if user:
+            committed_by_email = user.email
+    
+    return VersionCommitDetail(
+        id=version.id,
+        api_assignment_id=version.api_assignment_id,
+        version=version.version,
+        content_snapshot=version.content_snapshot,
+        commit_message=version.commit_message,
+        committed_by_id=version.committed_by_id,
+        committed_by_email=committed_by_email,
+        committed_at=version.committed_at,
+    )
+
+
+@router.delete("/versions/{version_id}", response_model=Message)
+def delete_version(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    version_id: uuid.UUID,
+) -> Any:
+    """Delete a version. Cannot delete if it's the published version."""
+    version = session.get(VersionCommit, version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    
+    # Check if this version is published
+    api_assignment = session.get(ApiAssignment, version.api_assignment_id)
+    if api_assignment and api_assignment.published_version_id == version_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete published version. Please unpublish or publish another version first."
+        )
+    
+    session.delete(version)
+    session.commit()
+    return Message(message="Version deleted successfully")

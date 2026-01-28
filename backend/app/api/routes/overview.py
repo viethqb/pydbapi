@@ -158,6 +158,7 @@ def _to_version_commit_public(v: VersionCommit) -> VersionCommitPublic:
         api_assignment_id=v.api_assignment_id,
         version=v.version,
         commit_message=v.commit_message,
+        committed_by_id=v.committed_by_id,
         committed_at=v.committed_at,
     )
 

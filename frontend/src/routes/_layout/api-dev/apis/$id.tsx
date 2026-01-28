@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Globe, Pencil, Trash2, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces } from "lucide-react"
+import { ArrowLeft, Globe, Pencil, Trash2, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces, GitBranch, User } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -27,8 +27,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { LoadingButton } from "@/components/ui/loading-button"
-import { ApiAssignmentsService } from "@/services/api-assignments"
+import { ApiAssignmentsService, type VersionCommitPublic, type VersionCommitDetail } from "@/services/api-assignments"
 import { ModulesService } from "@/services/modules"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
@@ -64,6 +72,14 @@ function ApiDetail() {
   const [generatedToken, setGeneratedToken] = useState<string | null>(null)
   const [isGeneratingToken, setIsGeneratingToken] = useState(false)
   const [tokenResponse, setTokenResponse] = useState<{ status?: number; data?: unknown; error?: string } | null>(null)
+  const [versions, setVersions] = useState<VersionCommitPublic[]>([])
+  const [selectedVersion, setSelectedVersion] = useState<VersionCommitDetail | null>(null)
+  const [createVersionDialogOpen, setCreateVersionDialogOpen] = useState(false)
+  const [commitMessage, setCommitMessage] = useState("")
+  const [publishVersionDialogOpen, setPublishVersionDialogOpen] = useState(false)
+  const [selectedVersionForPublish, setSelectedVersionForPublish] = useState<string | null>(null)
+  const [deleteVersionDialogOpen, setDeleteVersionDialogOpen] = useState(false)
+  const [versionToDelete, setVersionToDelete] = useState<string | null>(null)
   const { handleSubmit } = useForm()
 
   // Check if we're on the edit route
@@ -75,6 +91,19 @@ function ApiDetail() {
     queryFn: () => ApiAssignmentsService.get(id),
     enabled: !isEditRoute, // Don't fetch when on edit route
   })
+
+  // Fetch versions
+  const { data: versionsData, refetch: refetchVersions } = useQuery({
+    queryKey: ["api-versions", id],
+    queryFn: () => ApiAssignmentsService.listVersions(id),
+    enabled: !!id,
+  })
+
+  useEffect(() => {
+    if (versionsData?.data) {
+      setVersions(versionsData.data)
+    }
+  }, [versionsData])
 
   // Fetch related data
   const { data: module } = useQuery({
@@ -94,13 +123,55 @@ function ApiDetail() {
     queryFn: () => GroupsService.list(),
   })
 
+  // Create version mutation
+  const createVersionMutation = useMutation({
+    mutationFn: () => ApiAssignmentsService.createVersion(id, { commit_message: commitMessage || null }),
+    onSuccess: () => {
+      showSuccessToast("Version created successfully")
+      setCreateVersionDialogOpen(false)
+      setCommitMessage("")
+      refetchVersions()
+      queryClient.invalidateQueries({ queryKey: ["api-assignment", id] })
+    },
+    onError: (error: Error) => {
+      showErrorToast(error.message)
+    },
+  })
+
+  // Delete version mutation
+  const deleteVersionMutation = useMutation({
+    mutationFn: () => {
+      if (!versionToDelete) throw new Error("No version selected")
+      return ApiAssignmentsService.deleteVersion(versionToDelete)
+    },
+    onSuccess: () => {
+      showSuccessToast("Version deleted successfully")
+      setDeleteVersionDialogOpen(false)
+      setVersionToDelete(null)
+      refetchVersions()
+      queryClient.invalidateQueries({ queryKey: ["api-assignment", id] })
+    },
+    onError: (error: Error) => {
+      showErrorToast(error.message)
+    },
+  })
+
   // Publish mutation
   const publishMutation = useMutation({
-    mutationFn: () => ApiAssignmentsService.publish({ id }),
+    mutationFn: () => {
+      if (!selectedVersionForPublish) throw new Error("Please select a version to publish")
+      return ApiAssignmentsService.publish({ 
+        id, 
+        version_id: selectedVersionForPublish
+      })
+    },
     onSuccess: () => {
       showSuccessToast("API published successfully")
+      setPublishVersionDialogOpen(false)
+      // Don't reset selectedVersionForPublish here - keep it for next time
       queryClient.invalidateQueries({ queryKey: ["api-assignment", id] })
       queryClient.invalidateQueries({ queryKey: ["api-assignments"] })
+      refetchVersions()
     },
     onError: (error: Error) => {
       showErrorToast(error.message)
@@ -114,6 +185,7 @@ function ApiDetail() {
       showSuccessToast("API unpublished successfully")
       queryClient.invalidateQueries({ queryKey: ["api-assignment", id] })
       queryClient.invalidateQueries({ queryKey: ["api-assignments"] })
+      refetchVersions()
     },
     onError: (error: Error) => {
       showErrorToast(error.message)
@@ -134,6 +206,46 @@ function ApiDetail() {
   })
 
   const handlePublish = () => {
+    if (versions.length === 0) {
+      showErrorToast("Please create at least one version before publishing")
+      return
+    }
+    // Pre-select current published version if exists
+    if (apiDetail?.published_version_id) {
+      setSelectedVersionForPublish(apiDetail.published_version_id)
+    } else {
+      // If no published version, select the latest version
+      setSelectedVersionForPublish(versions[0]?.id || null)
+    }
+    setPublishVersionDialogOpen(true)
+  }
+
+  const handleDeleteVersion = (versionId: string) => {
+    if (apiDetail?.published_version_id === versionId) {
+      showErrorToast("Cannot delete published version. Please unpublish or publish another version first.")
+      return
+    }
+    setVersionToDelete(versionId)
+    setDeleteVersionDialogOpen(true)
+  }
+
+  const handleConfirmDeleteVersion = () => {
+    deleteVersionMutation.mutate()
+  }
+
+  const handleCreateVersion = () => {
+    if (!apiDetail?.api_context?.content) {
+      showErrorToast("API has no content to version. Please add content first.")
+      return
+    }
+    setCreateVersionDialogOpen(true)
+  }
+
+  const handleConfirmCreateVersion = () => {
+    createVersionMutation.mutate()
+  }
+
+  const handleConfirmPublish = () => {
     publishMutation.mutate()
   }
 
@@ -599,9 +711,10 @@ function ApiDetail() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="configuration" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="configuration">API Configuration</TabsTrigger>
               <TabsTrigger value="content">API Execution Content</TabsTrigger>
+              <TabsTrigger value="versions">Versions</TabsTrigger>
               <TabsTrigger value="testing">API Testing</TabsTrigger>
             </TabsList>
 
@@ -727,7 +840,7 @@ function ApiDetail() {
                             default_value?: unknown
                           }
                           return (
-                          <TableRow key={`${p?.name || "param"}-${idx}`}>
+                          <TableRow key={`param-${idx}-${param.name || ""}`}>
                             <TableCell className="font-mono text-sm">{param.name || "-"}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className="font-normal">
@@ -800,6 +913,108 @@ function ApiDetail() {
                   No content available
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="versions" className="mt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">Content Versions</h3>
+                    <p className="text-sm text-muted-foreground">Manage versions of API content</p>
+                  </div>
+                  <Button
+                    onClick={handleCreateVersion}
+                    disabled={!apiDetail?.api_context?.content}
+                  >
+                    <GitBranch className="mr-2 h-4 w-4" />
+                    Create Version
+                  </Button>
+                </div>
+
+                {versions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No versions created yet. Create a version to track changes to your API content.
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Version</TableHead>
+                          <TableHead>Commit Message</TableHead>
+                          <TableHead>Created By</TableHead>
+                          <TableHead>Committed At</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {versions.map((version) => (
+                          <TableRow key={version.id}>
+                            <TableCell className="font-mono font-semibold">
+                              v{version.version}
+                            </TableCell>
+                            <TableCell>
+                              {version.commit_message || (
+                                <span className="text-muted-foreground italic">No message</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {version.committed_by_email ? (
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm">
+                                    {version.committed_by_email}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(version.committed_at).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              {apiDetail?.published_version_id === version.id ? (
+                                <Badge variant="default">Published</Badge>
+                              ) : (
+                                <Badge variant="outline">Draft</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      const versionDetail = await ApiAssignmentsService.getVersion(version.id)
+                                      setSelectedVersion(versionDetail)
+                                    } catch (error) {
+                                      showErrorToast(error instanceof Error ? error.message : "Failed to load version")
+                                    }
+                                  }}
+                                >
+                                  View
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteVersion(version.id)}
+                                  disabled={apiDetail?.published_version_id === version.id}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="testing" className="mt-6">
@@ -916,7 +1131,7 @@ function ApiDetail() {
                                   {tokenResponse.status} {tokenResponse.status >= 200 && tokenResponse.status < 300 ? "OK" : "Error"}
                                 </Badge>
                               )}
-                              {!tokenResponse.error && tokenResponse.data && (
+                              {!tokenResponse.error && tokenResponse.data != null && (
                                 <>
                                   <Button
                                     variant="ghost"
@@ -1178,6 +1393,156 @@ function ApiDetail() {
 
       {/* Render child routes (like edit) */}
       <Outlet />
+
+      {/* Create Version Dialog */}
+      <Dialog open={createVersionDialogOpen} onOpenChange={setCreateVersionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Version</DialogTitle>
+            <DialogDescription>
+              Create a new version of the current API content. This will snapshot the current content.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="commit-message">Commit Message (Optional)</Label>
+              <Textarea
+                id="commit-message"
+                value={commitMessage}
+                onChange={(e) => setCommitMessage(e.target.value)}
+                placeholder="Describe the changes in this version..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={createVersionMutation.isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <LoadingButton
+              onClick={handleConfirmCreateVersion}
+              loading={createVersionMutation.isPending}
+            >
+              Create Version
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Publish Version Selection Dialog */}
+      <Dialog 
+        open={publishVersionDialogOpen} 
+        onOpenChange={(open) => {
+          setPublishVersionDialogOpen(open)
+          if (!open) {
+            // Reset selection when dialog closes
+            setSelectedVersionForPublish(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Publish API</DialogTitle>
+            <DialogDescription>
+              Select a version to publish. You must select a version to publish.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="version-select">Select Version *</Label>
+              <Select
+                value={selectedVersionForPublish || ""}
+                onValueChange={(value) => setSelectedVersionForPublish(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a version" />
+                </SelectTrigger>
+                <SelectContent>
+                  {versions.map((version) => (
+                    <SelectItem key={version.id} value={version.id}>
+                      v{version.version} - {version.commit_message || "No message"}
+                      {apiDetail?.published_version_id === version.id && " (Current)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={publishMutation.isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <LoadingButton
+              onClick={handleConfirmPublish}
+              loading={publishMutation.isPending}
+              disabled={!selectedVersionForPublish}
+            >
+              Publish
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Version Dialog */}
+      <Dialog open={deleteVersionDialogOpen} onOpenChange={setDeleteVersionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this version? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={deleteVersionMutation.isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <LoadingButton
+              variant="destructive"
+              onClick={handleConfirmDeleteVersion}
+              loading={deleteVersionMutation.isPending}
+            >
+              Delete
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Version Dialog */}
+      <Dialog open={!!selectedVersion} onOpenChange={() => setSelectedVersion(null)}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Version {selectedVersion?.version}</DialogTitle>
+            <DialogDescription>
+              {selectedVersion?.commit_message || "No commit message"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Content Snapshot</Label>
+              <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[400px] font-mono text-sm">
+                {selectedVersion?.content_snapshot}
+              </pre>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Committed at: {selectedVersion ? new Date(selectedVersion.committed_at).toLocaleString() : ""}</p>
+              {selectedVersion?.committed_by_email && (
+                <p>Created by: {selectedVersion.committed_by_email}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

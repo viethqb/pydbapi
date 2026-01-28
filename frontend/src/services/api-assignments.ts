@@ -16,6 +16,7 @@ export type ApiAssignmentPublic = {
   datasource_id: string | null
   description: string | null
   is_published: boolean
+  published_version_id: string | null
   access_type: ApiAccessTypeEnum
   sort_order: number
   created_at: string
@@ -34,6 +35,7 @@ export type ApiContextPublic = {
 export type ApiAssignmentDetail = ApiAssignmentPublic & {
   api_context: ApiContextPublic | null
   group_ids: string[]
+  published_version_id: string | null
 }
 
 export type ApiAssignmentListIn = {
@@ -94,6 +96,29 @@ export type ApiAssignmentUpdate = {
 
 export type ApiAssignmentPublishIn = {
   id: string
+  version_id?: string | null
+}
+
+export type VersionCommitPublic = {
+  id: string
+  api_assignment_id: string
+  version: number
+  commit_message: string | null
+  committed_by_id: string | null
+  committed_by_email: string | null
+  committed_at: string
+}
+
+export type VersionCommitDetail = VersionCommitPublic & {
+  content_snapshot: string
+}
+
+export type VersionCommitCreate = {
+  commit_message?: string | null
+}
+
+export type VersionCommitListOut = {
+  data: VersionCommitPublic[]
 }
 
 export type ApiAssignmentDebugIn = {
@@ -182,7 +207,7 @@ export const ApiAssignmentsService = {
     })
   },
 
-  unpublish: async (body: ApiAssignmentPublishIn): Promise<ApiAssignmentPublic> => {
+  unpublish: async (body: { id: string }): Promise<ApiAssignmentPublic> => {
     return request<ApiAssignmentPublic>("/api/v1/api-assignments/unpublish", {
       method: "POST",
       body: JSON.stringify(body),
@@ -193,6 +218,31 @@ export const ApiAssignmentsService = {
     return request<ApiAssignmentDebugOut>("/api/v1/api-assignments/debug", {
       method: "POST",
       body: JSON.stringify(body),
+    })
+  },
+
+  createVersion: async (id: string, body: VersionCommitCreate): Promise<VersionCommitDetail> => {
+    return request<VersionCommitDetail>(`/api/v1/api-assignments/${id}/versions/create`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    })
+  },
+
+  listVersions: async (id: string): Promise<VersionCommitListOut> => {
+    return request<VersionCommitListOut>(`/api/v1/api-assignments/${id}/versions`, {
+      method: "GET",
+    })
+  },
+
+  getVersion: async (versionId: string): Promise<VersionCommitDetail> => {
+    return request<VersionCommitDetail>(`/api/v1/api-assignments/versions/${versionId}`, {
+      method: "GET",
+    })
+  },
+
+  deleteVersion: async (versionId: string): Promise<{ message: string }> => {
+    return request<{ message: string }>(`/api/v1/api-assignments/versions/${versionId}`, {
+      method: "DELETE",
     })
   },
 }

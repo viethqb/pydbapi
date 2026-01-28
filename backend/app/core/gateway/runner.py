@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.engines import ApiExecutor
-from app.models_dbapi import AccessRecord, ApiAssignment, ApiContext
+from app.models_dbapi import AccessRecord, ApiAssignment, ApiContext, VersionCommit
 
 
 def _write_access_record(
@@ -69,6 +69,27 @@ def run(
         )
         raise RuntimeError("ApiContext not found for ApiAssignment")
 
+    # Prefer published version content (content_snapshot) when available.
+    # Backward-compatible fallback: if no published_version_id, use current ApiContext.content.
+    content_to_run = ctx.content
+    if api.published_version_id:
+        vc = session.exec(
+            select(VersionCommit).where(VersionCommit.id == api.published_version_id)
+        ).first()
+        if not vc:
+            _write_access_record(
+                session,
+                api_assignment_id=api.id,
+                app_client_id=app_client_id,
+                ip_address=ip or "0.0.0.0",
+                http_method=http_method,
+                path=request_path,
+                status_code=500,
+                request_body=request_body,
+            )
+            raise RuntimeError("Published VersionCommit not found for ApiAssignment")
+        content_to_run = vc.content_snapshot
+
     # Check if datasource is active (if API uses a datasource)
     if api.datasource_id and api.datasource:
         if not api.datasource.is_active:
@@ -87,7 +108,7 @@ def run(
     try:
         result = ApiExecutor().execute(
             engine=api.execute_engine,
-            content=ctx.content,
+            content=content_to_run,
             params=params,
             datasource_id=api.datasource_id,
             datasource=api.datasource,

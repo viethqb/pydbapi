@@ -12,9 +12,9 @@ McpTool and McpClient excluded from product scope.
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
-from sqlalchemy import Column, Enum as SQLEnum, Text
+from sqlalchemy import Column, Enum as SQLEnum, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -206,6 +206,13 @@ class ApiAssignment(SQLModel, table=True):
     )
     description: str | None = Field(default=None, max_length=512)
     is_published: bool = Field(default=False)
+    published_version_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="version_commit.id",
+        index=True,
+        ondelete="SET NULL",
+        description="Version that is currently published"
+    )
     access_type: ApiAccessTypeEnum = Field(
         sa_column=Column(
             SQLEnum(
@@ -233,7 +240,16 @@ class ApiAssignment(SQLModel, table=True):
         sa_relationship_kwargs={"uselist": False},
         cascade_delete=True,
     )
-    version_commits: list["VersionCommit"] = Relationship(back_populates="api_assignment")
+    version_commits: list["VersionCommit"] = Relationship(
+        back_populates="api_assignment",
+        sa_relationship_kwargs={"foreign_keys": "VersionCommit.api_assignment_id"},
+    )
+    published_version: Optional["VersionCommit"] = Relationship(
+        sa_relationship_kwargs={
+            "foreign_keys": "ApiAssignment.published_version_id",
+            "uselist": False,
+        },
+    )
     access_records: list["AccessRecord"] = Relationship(back_populates="api_assignment")
     client_direct_links: list["AppClientApiLink"] = Relationship(
         back_populates="api_assignment"
@@ -347,9 +363,19 @@ class VersionCommit(SQLModel, table=True):
     version: int = Field(default=1)
     content_snapshot: str = Field(sa_column=Column(Text, nullable=False))
     commit_message: str | None = Field(default=None, max_length=512)
+    committed_by_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        index=True,
+        ondelete="SET NULL",
+        description="User who created this version"
+    )
     committed_at: datetime = Field(default_factory=_utc_now)
 
-    api_assignment: "ApiAssignment" = Relationship(back_populates="version_commits")
+    api_assignment: "ApiAssignment" = Relationship(
+        back_populates="version_commits",
+        sa_relationship_kwargs={"foreign_keys": "VersionCommit.api_assignment_id"},
+    )
 
 
 # ---------------------------------------------------------------------------

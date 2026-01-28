@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ApiAssignmentsService } from "@/services/api-assignments"
+import { ApiAssignmentsService, type VersionCommitDetail } from "@/services/api-assignments"
 import { ModulesService } from "@/services/modules"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
@@ -49,12 +49,30 @@ function ApiRepositoryDetail() {
   const [generatedToken, setGeneratedToken] = useState<string | null>(null)
   const [isGeneratingToken, setIsGeneratingToken] = useState(false)
   const [tokenResponse, setTokenResponse] = useState<{ status?: number; data?: unknown; error?: string } | null>(null)
+  const [publishedVersion, setPublishedVersion] = useState<VersionCommitDetail | null>(null)
 
   // Fetch API detail
   const { data: apiDetail, isLoading } = useQuery({
     queryKey: ["api-assignment", id],
     queryFn: () => ApiAssignmentsService.get(id),
   })
+
+  // Fetch published version if exists
+  const { data: versionData } = useQuery({
+    queryKey: ["api-version", apiDetail?.published_version_id],
+    queryFn: () => apiDetail?.published_version_id 
+      ? ApiAssignmentsService.getVersion(apiDetail.published_version_id) 
+      : null,
+    enabled: !!apiDetail?.published_version_id,
+  })
+
+  useEffect(() => {
+    if (versionData) {
+      setPublishedVersion(versionData)
+    } else {
+      setPublishedVersion(null)
+    }
+  }, [versionData])
 
   // Fetch related data
   const { data: module } = useQuery({
@@ -598,8 +616,48 @@ function ApiRepositoryDetail() {
                       )}
                     </TableCell>
                   </TableRow>
+                  {publishedVersion && (
+                    <>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Published Version</TableHead>
+                        <TableCell>
+                          <Badge variant="default" className="font-mono">
+                            v{publishedVersion.version}
+                          </Badge>
+                          {publishedVersion.commit_message && (
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              - {publishedVersion.commit_message}
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Version Committed At</TableHead>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(publishedVersion.committed_at).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    </>
+                  )}
                 </TableBody>
               </Table>
+
+              {/* Published Version Content */}
+              {publishedVersion && (
+                <div className="mt-6 border-t pt-6">
+                  <div className="mb-4">
+                    <div className="text-sm font-medium">Published Version Content</div>
+                    <div className="text-sm text-muted-foreground">
+                      Content snapshot of the published version (v{publishedVersion.version})
+                    </div>
+                  </div>
+                  <div className="rounded-md border bg-muted/50">
+                    <pre className="p-4 overflow-auto max-h-[400px] font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                      {publishedVersion.content_snapshot}
+                    </pre>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-6 border-t pt-6">
                 <div className="mb-4">

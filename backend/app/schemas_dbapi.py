@@ -318,6 +318,7 @@ class ApiAssignmentPublic(SQLModel):
     datasource_id: uuid.UUID | None
     description: str | None
     is_published: bool
+    published_version_id: uuid.UUID | None
     access_type: ApiAccessTypeEnum
     sort_order: int
     created_at: datetime
@@ -354,6 +355,7 @@ class ApiAssignmentPublishIn(SQLModel):
     """Body for POST /api-assignments/publish."""
 
     id: uuid.UUID
+    version_id: uuid.UUID | None = Field(default=None, description="Version to publish. Required for publish, optional for unpublish.")
 
 
 class ApiAssignmentDebugIn(SQLModel):
@@ -478,7 +480,34 @@ class VersionCommitPublic(SQLModel):
     api_assignment_id: uuid.UUID
     version: int
     commit_message: str | None
+    committed_by_id: uuid.UUID | None
+    committed_by_email: str | None = Field(default=None, description="Email of user who created this version")
     committed_at: datetime
+
+
+class VersionCommitDetail(SQLModel):
+    """Full schema for VersionCommit including content_snapshot."""
+
+    id: uuid.UUID
+    api_assignment_id: uuid.UUID
+    version: int
+    content_snapshot: str
+    commit_message: str | None
+    committed_by_id: uuid.UUID | None
+    committed_by_email: str | None = Field(default=None, description="Email of user who created this version")
+    committed_at: datetime
+
+
+class VersionCommitCreate(SQLModel):
+    """Body for POST /api-assignments/{id}/versions/create."""
+
+    commit_message: str | None = Field(default=None, max_length=512)
+
+
+class VersionCommitListOut(SQLModel):
+    """Response for GET /api-assignments/{id}/versions."""
+
+    data: list[VersionCommitPublic]
 
 
 class RecentAccessOut(SQLModel):
