@@ -66,11 +66,22 @@ def build_restricted_globals(context_dict: dict[str, Any]) -> dict[str, Any]:
     Build the globals dict for exec(compiled, globals): safe builtins, guards,
     extra (json, datetime), and context (db, http, cache, env, log, req, tx, ds).
     """
+    safe = _make_safe_builtins()
     g: dict[str, Any] = {
-        "__builtins__": _make_safe_builtins(),
+        "__builtins__": safe,
         "__name__": "script",
     }
     g.update(_make_guard_globals())
     g.update(_make_extra_globals())
+    # Expose common builtins as top-level names for convenience.
+    # Even if they are not present in safe_builtins, we can safely expose
+    # the Python builtins here because RestrictedPython still guards writes
+    # and attribute access; these are standard container/utility types.
+    import builtins  # local import to avoid polluting globals
+
+    for name in ("list", "dict", "set", "tuple", "len", "range", "min", "max", "sum", "abs", "sorted"):
+        obj = safe.get(name, getattr(builtins, name, None))
+        if obj is not None:
+            g[name] = obj
     g.update(context_dict)
     return g

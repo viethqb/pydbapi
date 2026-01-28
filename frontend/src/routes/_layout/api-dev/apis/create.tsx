@@ -59,10 +59,13 @@ const paramSchema = z.object({
   location: z.enum(["query", "header", "body"]),
   data_type: z.string().optional().nullable(),
   is_required: z.boolean().default(false),
-  validate_type: z.enum(["regex", "python"]).optional().nullable(),
-  validate: z.string().optional().nullable(),
-  validate_message: z.string().optional().nullable(),
   default_value: z.string().optional().nullable(),
+})
+
+const paramValidateSchema = z.object({
+  name: z.string().min(1, "Parameter name is required"),
+  validation_script: z.string().optional().nullable(),
+  message_when_fail: z.string().optional().nullable(),
 })
 
 const formSchema = z.object({
@@ -75,8 +78,10 @@ const formSchema = z.object({
   description: z.string().max(512).optional().nullable(),
   access_type: z.enum(["public", "private"]).default("private"),
   content: z.string().optional().nullable(),
+  result_transform: z.string().optional().nullable(),
   group_ids: z.array(z.string()).default([]),
   params: z.array(paramSchema).default([]),
+  param_validates: z.array(paramValidateSchema).default([]),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -157,6 +162,8 @@ function ApiCreate() {
       content: "",
       group_ids: [],
       params: [],
+      result_transform: "",
+      param_validates: [],
     },
   })
 
@@ -314,14 +321,10 @@ function ApiCreate() {
       description: values.description || null,
       access_type: values.access_type,
       content: values.content || null,
+      result_transform: values.result_transform || null,
       group_ids: values.group_ids,
-      params:
-        values.params.length > 0
-          ? values.params.map((p) => ({
-              ...p,
-              validate_type: (p.validate?.trim() ? "python" : p.validate_type) || null,
-            }))
-          : undefined,
+      params: values.params.length > 0 ? values.params : undefined,
+      param_validates: values.param_validates.length > 0 ? values.param_validates : undefined,
     })
   }
 
@@ -631,7 +634,7 @@ function ApiCreate() {
                               onClick={() => {
                                 field.onChange([
                                   ...field.value,
-                                  { name: "", location: "query" as const, data_type: null, is_required: false, validate_type: null, validate: null, validate_message: null, default_value: null },
+                                  { name: "", location: "query" as const, data_type: null, is_required: false, default_value: null },
                                 ])
                               }}
                             >
@@ -649,8 +652,6 @@ function ApiCreate() {
                                     <TableHead className="w-[140px]">Data Type</TableHead>
                                     <TableHead className="w-[100px]">Required</TableHead>
                                     <TableHead className="w-[150px]">Default Value</TableHead>
-                                    <TableHead className="w-[200px]">Validation script (Python)</TableHead>
-                                    <TableHead className="w-[180px]">Message when fail</TableHead>
                                     <TableHead className="w-[100px]">Actions</TableHead>
                                   </TableRow>
                                   {field.value.map((param, index) => {
@@ -763,50 +764,6 @@ function ApiCreate() {
                                                     defaultValueField.onChange(
                                                       e.target.value || null
                                                     )
-                                                  }
-                                                  className="h-9"
-                                                />
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.validate`}
-                                          render={({ field: validateField }) => (
-                                            <FormItem>
-                                              <FormControl>
-                                                <Textarea
-                                                  placeholder="def validate(value): return True"
-                                                  {...validateField}
-                                                  value={validateField.value || ""}
-                                                  onChange={(e) =>
-                                                    validateField.onChange(e.target.value || null)
-                                                  }
-                                                  className="font-mono min-h-[60px]"
-                                                />
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.validate_message`}
-                                          render={({ field: msgField }) => (
-                                            <FormItem>
-                                              <FormControl>
-                                                <Input
-                                                  placeholder="e.g. Invalid value"
-                                                  {...msgField}
-                                                  value={msgField.value || ""}
-                                                  onChange={(e) =>
-                                                    msgField.onChange(e.target.value || null)
                                                   }
                                                   className="h-9"
                                                 />
@@ -959,6 +916,35 @@ function ApiCreate() {
                             ? "SQL query with Jinja2 template syntax for parameters"
                             : "Python script with execute(params) function"}
                         </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="result_transform"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Result transform (Python)</FormLabel>
+                        <FormDescription>
+                          Optional Python function to transform the raw executor result before returning.
+                        </FormDescription>
+                        <FormControl>
+                          <ApiContentEditor
+                            executeEngine="SCRIPT"
+                            value={field.value || ""}
+                            onChange={(next) => field.onChange(next)}
+                            onBlur={field.onBlur}
+                            placeholder={
+                              'def transform(result, params=None):\n'
+                              + '    """Return transformed result. result is the raw executor output."""\n'
+                              + "    return result\n"
+                            }
+                            paramNames={[]}
+                            height={260}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

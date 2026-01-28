@@ -103,31 +103,59 @@ async def parse_params(
         body = keys_to_snake(body)
         query = keys_to_snake(query)
 
-    # Extract header params based on params_definition
-    header_params: dict[str, Any] = {}
-    if params_definition:
-        for param_def in params_definition:
-            if isinstance(param_def, dict) and param_def.get("location") == "header":
-                param_name = param_def.get("name")
-                if param_name:
-                    # Try both original name and snake_case version
-                    header_value = request.headers.get(param_name)
-                    if header_value is None:
-                        # Try snake_case to camelCase conversion for header names
-                        # Headers are case-insensitive, but we'll try exact match first
-                        for header_key, header_val in request.headers.items():
-                            if header_key.lower() == param_name.lower():
-                                header_value = header_val
-                                break
-                    if header_value is not None:
-                        header_params[param_name] = header_value
+    # Build params honoring configured locations when params_definition is provided.
+    #
+    # Important: when params_definition exists, we DO NOT merge freely across sources.
+    # A param configured as "header" must come from headers (not query/body).
+    # Path params are always included (resolved by router).
+    out: dict[str, Any] = dict(path_params)
 
-    # path > query > body > header
-    out: dict[str, Any] = {}
-    out.update(header_params)
-    out.update(body)
-    out.update(query)
-    out.update(path_params)
+    if params_definition:
+        # Case-insensitive header lookup map
+        headers_ci: dict[str, str] = {k.lower(): v for k, v in request.headers.items()}
+
+        def _get_header_value(name: str) -> str | None:
+            if not name:
+                return None
+            v = request.headers.get(name)
+            if v is not None:
+                return v
+            return headers_ci.get(name.lower())
+
+        for param_def in params_definition:
+            if not isinstance(param_def, dict):
+                continue
+            name = param_def.get("name")
+            if not isinstance(name, str) or not name.strip():
+                continue
+            name = name.strip()
+            loc = (param_def.get("location") or "query")
+            if isinstance(loc, str):
+                loc = loc.strip().lower()
+            else:
+                loc = "query"
+
+            if loc == "header":
+                hv = _get_header_value(name)
+                if hv is not None:
+                    out[name] = hv
+                continue
+
+            if loc == "body":
+                if name in body:
+                    out[name] = body.get(name)
+                continue
+
+            # default: query
+            if name in query:
+                out[name] = query.get(name)
+        # Note: unknown params (not in definition) are ignored (except path params).
+    else:
+        # Backward-compatible: merge path > query > body; and include extracted header params.
+        # Header extraction only applies when params_definition exists, so here it's just body/query/path.
+        out.update(body)
+        out.update(query)
+        out.update(path_params)
 
     body_for_log: str | None = None
     if body:

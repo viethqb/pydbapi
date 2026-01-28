@@ -278,6 +278,16 @@ class ApiContext(SQLModel, table=True):
         sa_column=Column(JSONB, nullable=True),
         description="Parameter definitions for validation: list of {name, location}",
     )
+    param_validates: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+        description="Parameter validation scripts: list of {name, validation_script, message_when_fail}",
+    )
+    result_transform: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+        description="Python script to transform the raw executor result before returning it",
+    )
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
 

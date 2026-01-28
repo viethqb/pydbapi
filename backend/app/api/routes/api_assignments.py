@@ -23,6 +23,7 @@ from app.models_dbapi import (
     ApiContext,
     VersionCommit,
 )
+from app.core.param_validate import ParamValidateError, run_param_validates
 from app.schemas_dbapi import (
     ApiAssignmentCreate,
     ApiAssignmentDebugIn,
@@ -38,6 +39,7 @@ from app.schemas_dbapi import (
     VersionCommitListOut,
     VersionCommitPublic,
 )
+from app.core.result_transform import ResultTransformError, run_result_transform
 
 router = APIRouter(prefix="/api-assignments", tags=["api-assignments"])
 
@@ -72,6 +74,8 @@ def _to_detail(a: ApiAssignment) -> ApiAssignmentDetail:
             api_assignment_id=a.api_context.api_assignment_id,
             content=a.api_context.content,
             params=a.api_context.params,
+            param_validates=a.api_context.param_validates,
+            result_transform=a.api_context.result_transform,
             created_at=a.api_context.created_at,
             updated_at=a.api_context.updated_at,
         )
@@ -131,13 +135,13 @@ def create_api_assignment(
     body: ApiAssignmentCreate,
 ) -> Any:
     """Create API assignment; if content provided, create ApiContext (1-1). Optionally link groups."""
-    assign_data = body.model_dump(exclude={"content", "group_ids", "params"})
+    assign_data = body.model_dump(exclude={"content", "group_ids", "params", "param_validates", "result_transform"})
     a = ApiAssignment(**assign_data)
     session.add(a)
     session.flush()
 
-    # Create ApiContext if content or params provided
-    if body.content is not None or body.params:
+    # Create ApiContext if content, params, validators or result_transform provided
+    if body.content is not None or body.params or body.param_validates or body.result_transform:
         # Store params as JSON in ApiContext if provided
         params_dict = None
         if body.params:
@@ -154,10 +158,22 @@ def create_api_assignment(
                 }
                 for p in body.params
             ]
+        param_validates_dict = None
+        if body.param_validates:
+            param_validates_dict = [
+                {
+                    "name": pv.name,
+                    "validation_script": pv.validation_script,
+                    "message_when_fail": pv.message_when_fail,
+                }
+                for pv in body.param_validates
+            ]
         ctx = ApiContext(
             api_assignment_id=a.id,
             content=body.content or "",
             params=params_dict,
+            param_validates=param_validates_dict,
+            result_transform=body.result_transform or None,
         )
         session.add(ctx)
 
@@ -186,13 +202,19 @@ def update_api_assignment(
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
 
     update_data = body.model_dump(
-        exclude_unset=True, exclude={"id", "content", "group_ids", "params"}
+        exclude_unset=True,
+        exclude={"id", "content", "group_ids", "params", "param_validates", "result_transform"},
     )
     if update_data:
         a.sqlmodel_update(update_data)
         session.add(a)
 
-    if "content" in body.model_fields_set or "params" in body.model_fields_set:
+    if (
+        "content" in body.model_fields_set
+        or "params" in body.model_fields_set
+        or "param_validates" in body.model_fields_set
+        or "result_transform" in body.model_fields_set
+    ):
         ctx = session.exec(
             select(ApiContext).where(ApiContext.api_assignment_id == a.id)
         ).first()
@@ -216,6 +238,20 @@ def update_api_assignment(
                         for p in body.params
                     ]
                 ctx.params = params_dict
+            if "param_validates" in body.model_fields_set:
+                param_validates_dict = None
+                if body.param_validates:
+                    param_validates_dict = [
+                        {
+                            "name": pv.name,
+                            "validation_script": pv.validation_script,
+                            "message_when_fail": pv.message_when_fail,
+                        }
+                        for pv in body.param_validates
+                    ]
+                ctx.param_validates = param_validates_dict
+            if "result_transform" in body.model_fields_set:
+                ctx.result_transform = body.result_transform or None
             ctx.updated_at = datetime.now(timezone.utc)
             session.add(ctx)
         else:
@@ -234,11 +270,23 @@ def update_api_assignment(
                     }
                     for p in body.params
                 ]
+            param_validates_dict = None
+            if body.param_validates:
+                param_validates_dict = [
+                    {
+                        "name": pv.name,
+                        "validation_script": pv.validation_script,
+                        "message_when_fail": pv.message_when_fail,
+                    }
+                    for pv in body.param_validates
+                ]
             session.add(
                 ApiContext(
                     api_assignment_id=a.id,
                     content=body.content or "",
                     params=params_dict,
+                    param_validates=param_validates_dict,
+                    result_transform=body.result_transform or None,
                 )
             )
 
@@ -335,7 +383,8 @@ def debug_api_assignment(
         ctx = session.exec(
             select(ApiContext).where(ApiContext.api_assignment_id == a.id)
         ).first()
-        content = (ctx.content if ctx else "") or ""
+        # Use content from body if provided (for testing edited content), otherwise from DB
+        content = body.content if body.content is not None else ((ctx.content if ctx else "") or "")
         if ctx and ctx.params:
             params_definition = ctx.params
         if engine is None:
@@ -395,6 +444,13 @@ def debug_api_assignment(
                 detail=f"Missing required parameters: {', '.join(missing_params)}",
             )
 
+    # Param validate (Python scripts) if configured on ApiContext
+    if body.id is not None and ctx and getattr(ctx, "param_validates", None):
+        try:
+            run_param_validates(ctx.param_validates, body.params or {})
+        except ParamValidateError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
     try:
         out = ApiExecutor().execute(
             engine=engine,
@@ -403,6 +459,12 @@ def debug_api_assignment(
             datasource_id=datasource_id,
             session=session,
         )
+        # Result transform (Python) if configured on ApiContext (only when using id)
+        if body.id is not None and ctx and getattr(ctx, "result_transform", None):
+            try:
+                out = run_result_transform(ctx.result_transform, out, body.params or {})
+            except ResultTransformError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
         return out
     except Exception as e:
         # Return detailed error for debugging

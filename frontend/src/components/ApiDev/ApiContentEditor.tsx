@@ -2,7 +2,7 @@ import Editor, { type OnMount } from "@monaco-editor/react"
 import type * as Monaco from "monaco-editor"
 import { Braces } from "lucide-react"
 import type { MutableRefObject } from "react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { format as formatSql } from "sql-formatter"
 import initRuff, { format as formatPython } from "@wasm-fmt/ruff_fmt/vite"
 
@@ -21,6 +21,8 @@ type Props = {
   paramNames?: string[]
   height?: number
   disabled?: boolean
+  // Expose editor ref so parent can sync value before unmount
+  onEditorReady?: (getValue: () => string) => void
 }
 
 let ruffInitPromise: Promise<void> | null = null
@@ -201,9 +203,10 @@ export default function ApiContentEditor({
   onChange,
   onBlur,
   placeholder,
-  paramNames,
+  paramNames = [],
   height = 420,
-  disabled,
+  disabled = false,
+  onEditorReady,
 }: Props) {
   const { resolvedTheme } = useTheme()
   const { showErrorToast, showSuccessToast } = useCustomToast()
@@ -230,6 +233,8 @@ export default function ApiContentEditor({
   const monacoRef = useRef<typeof Monaco | null>(null)
   const valueRef = useRef<string>("")
   useEffect(() => {
+    // Mirror latest controlled value so blur/change handlers
+    // can compare against it without forcing editor state.
     valueRef.current = value ?? ""
   }, [value])
 
@@ -248,6 +253,12 @@ export default function ApiContentEditor({
       // Set initial theme
       monaco.editor.setTheme(theme)
 
+      // Set initial value from prop when editor mounts
+      // Use valueRef.current which is synced from prop value
+      // This ensures the editor shows the correct value from form state
+      const initialValue = valueRef.current ?? ""
+      editor.setValue(initialValue)
+
       // Clean up previous providers registered from this component instance
       for (const d of disposablesRef.current) d.dispose()
       disposablesRef.current = []
@@ -262,7 +273,15 @@ export default function ApiContentEditor({
         setIsFocused(false)
         // Ensure RHF sees the latest buffer
         const current = editor.getValue()
-        if (current !== valueRef.current) onChange(current)
+        // Only sync if editor has actual content OR if valueRef is also empty
+        // This prevents empty values from overwriting form state when editor is being destroyed
+        if (current !== valueRef.current) {
+          // If current is empty but valueRef has value, editor is likely being destroyed
+          // Don't sync to avoid resetting form state
+          if (!(current.length === 0 && valueRef.current.length > 0)) {
+            onChange(current)
+          }
+        }
         onBlur?.()
       })
 
@@ -271,9 +290,77 @@ export default function ApiContentEditor({
         const current = editor.getValue()
         if (current !== valueRef.current) onChange(current)
       })
+
+      // Expose getValue function to parent component
+      if (onEditorReady) {
+        onEditorReady(() => editor.getValue())
+      }
     },
-    [onBlur, onChange, theme]
+    [onBlur, onChange, theme, onEditorReady]
   )
+
+  // Sync value to editor when value prop changes (e.g., when tab remounts)
+  // This is critical: when tab Content is opened again, we need to ensure
+  // the editor shows the value from form state, even if user didn't type anything
+  useEffect(() => {
+    if (editorRef.current) {
+      const currentEditorValue = editorRef.current.getValue()
+      const newValue = value ?? ""
+      // Always sync if different - this ensures form state is reflected in editor
+      if (currentEditorValue !== newValue) {
+        // Use setValue with a small delay to ensure it happens after mount
+        // This is important when tab remounts
+        const timeoutId = setTimeout(() => {
+          if (editorRef.current) {
+            editorRef.current.setValue(newValue)
+          }
+        }, 0)
+        return () => clearTimeout(timeoutId)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  // Sync editor value back to form when component unmounts
+  // Use useLayoutEffect to ensure sync happens before React unmounts the component
+  // Capture onChange and value at mount time to avoid sharing between instances
+  useLayoutEffect(() => {
+    // Capture the current onChange and value at mount time
+    // This ensures each editor instance has its own cleanup function
+    const currentOnChange = onChange
+    const currentValue = value ?? ""
+    
+    return () => {
+      // When component unmounts (e.g., switching tabs), sync editor value to form
+      // This is critical: even if user didn't type anything, we need to preserve
+      // the value that was loaded from form state
+      const editor = editorRef.current
+      if (editor) {
+        try {
+          const current = editor.getValue()
+          // Only sync if editor has a value (not empty) or if valueRef has value
+          // This prevents empty values from overwriting form state
+          if (current && current.length > 0) {
+            currentOnChange(current)
+          } else if (currentValue && currentValue.length > 0) {
+            // If editor is empty but valueRef has value, use valueRef
+            currentOnChange(currentValue)
+          }
+          // If both are empty, don't sync (preserve form state as-is)
+        } catch {
+          // Editor might be destroyed, only sync if valueRef has value
+          if (currentValue && currentValue.length > 0) {
+            currentOnChange(currentValue)
+          }
+        }
+      } else {
+        // Editor not ready, only sync if valueRef has value
+        if (currentValue && currentValue.length > 0) {
+          currentOnChange(currentValue)
+        }
+      }
+    }
+  }, [onChange, value]) // Include all deps to ensure each editor has its own cleanup
 
   const handleFormat = useCallback(async () => {
     try {

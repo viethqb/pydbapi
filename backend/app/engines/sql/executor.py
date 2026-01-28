@@ -1,6 +1,12 @@
 """
 Execute rendered SQL against a DataSource (Phase 3, Task 3.2).
 
+Supports:
+- Single statement: returns list[dict] (SELECT/WITH) or int (rowcount for DML)
+- Multiple statements separated by ';': returns list of results, e.g.
+  - [[{...}, {...}], [{...}]] for multiple SELECTs
+  - [rowcount1, [{...}], rowcount3] for mixed DML/SELECT
+
 Uses core.pool (connect, execute, cursor_to_dicts, PoolManager).
 """
 
@@ -22,17 +28,32 @@ def _is_select_like(sql: str) -> bool:
     return first in ("SELECT", "WITH")
 
 
+def _split_statements(sql: str) -> list[str]:
+    """
+    Naively split SQL string into statements by ';'.
+
+    This is intentionally simple and assumes semicolons only appear as
+    statement terminators, not inside string literals.
+    """
+    parts = [s.strip() for s in sql.split(";")]
+    return [p for p in parts if p]
+
+
 def execute_sql(
     datasource: DataSource,
     sql: str,
     *,
     use_pool: bool = True,
-) -> list[dict[str, Any]] | int:
+) -> list[dict[str, Any]] | int | list[Any]:
     """
     Run rendered SQL against the datasource. No parameter binding; SQL is final.
 
-    - SELECT / WITH -> list[dict] (rows)
-    - INSERT / UPDATE / DELETE / etc. -> int (rowcount)
+    - Single statement:
+      - SELECT / WITH -> list[dict] (rows)
+      - INSERT / UPDATE / DELETE / etc. -> int (rowcount)
+    - Multiple statements separated by ';':
+      - returns list of per-statement results, where each element is either
+        list[dict] (for SELECT/WITH) or int (rowcount for DML).
 
     use_pool: if True, use PoolManager.get_connection/release; else connect/close.
     """
@@ -44,11 +65,25 @@ def execute_sql(
         else:
             conn = connect(datasource)
 
-        cur = execute(conn, sql, product_type=datasource.product_type)
+        statements = _split_statements(sql)
 
-        if _is_select_like(sql):
-            return cursor_to_dicts(cur)
-        return cur.rowcount if cur.rowcount is not None else 0
+        # Single-statement behavior (backwards compatible)
+        if len(statements) == 1:
+            single_sql = statements[0]
+            cur = execute(conn, single_sql, product_type=datasource.product_type)
+            if _is_select_like(single_sql):
+                return cursor_to_dicts(cur)
+            return cur.rowcount if cur.rowcount is not None else 0
+
+        # Multi-statement: execute sequentially and collect results
+        results: list[Any] = []
+        for stmt in statements:
+            cur = execute(conn, stmt, product_type=datasource.product_type)
+            if _is_select_like(stmt):
+                results.append(cursor_to_dicts(cur))
+            else:
+                results.append(cur.rowcount if cur.rowcount is not None else 0)
+        return results
     except Exception:
         # If execution fails, rollback transaction before releasing connection
         if conn is not None:

@@ -94,6 +94,9 @@ async def gateway_proxy(
             request_path=f"{module}/{path}".rstrip("/"),
             request_body=body_for_log,
         )
+    except HTTPException:
+        # Preserve intended HTTP status codes (e.g., 400 param validate)
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

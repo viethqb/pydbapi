@@ -59,11 +59,23 @@ const paramSchema = z.object({
   location: z.enum(["query", "header", "body"]),
   data_type: z.string().optional().nullable(),
   is_required: z.boolean().default(false),
-  validate_type: z.enum(["regex", "python"]).optional().nullable(),
-  validate: z.string().optional().nullable(),
-  validate_message: z.string().optional().nullable(),
   default_value: z.string().optional().nullable(),
 })
+
+const paramValidateSchema = z.object({
+  name: z.string().min(1, "Parameter name is required"),
+  validation_script: z.string().optional().nullable(),
+  message_when_fail: z.string().optional().nullable(),
+})
+
+const DEFAULT_PARAM_VALIDATE_SCRIPT = `def validate(value, params=None):
+    """Return True if valid, otherwise False.
+
+    - value: the parameter value
+    - params: dict of all params (optional)
+    """
+    return True
+`
 
 const formSchema = z.object({
   module_id: z.string().min(1, "Module is required"),
@@ -75,8 +87,10 @@ const formSchema = z.object({
   description: z.string().max(512).optional().nullable(),
   access_type: z.enum(["public", "private"]).default("private"),
   content: z.string().optional().nullable(),
+  result_transform: z.string().optional().nullable(),
   group_ids: z.array(z.string()).default([]),
   params: z.array(paramSchema).default([]),
+  param_validates: z.array(paramValidateSchema).default([]),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -146,6 +160,8 @@ function ApiEdit() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: "onBlur",
+    // Keep field values when components unmount (e.g. when switching tabs)
+    shouldUnregister: false,
     defaultValues: {
       module_id: "",
       name: "",
@@ -156,8 +172,10 @@ function ApiEdit() {
       description: null,
       access_type: "private",
       content: "",
+      result_transform: "",
       group_ids: [],
       params: [],
+      param_validates: [],
     },
   })
 
@@ -165,17 +183,23 @@ function ApiEdit() {
   useEffect(() => {
     if (apiDetail) {
       // Parse params from api_context if available
-      let params: Array<{ name: string; location: "query" | "header" | "body"; data_type?: string | null; is_required?: boolean; validate_type?: "regex" | "python" | null; validate?: string | null; validate_message?: string | null; default_value?: string | null }> = []
+      let params: Array<{ name: string; location: "query" | "header" | "body"; data_type?: string | null; is_required?: boolean; default_value?: string | null }> = []
       if (apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params)) {
         params = apiDetail.api_context.params.map((p: Record<string, unknown>) => ({
           name: (p.name as string) || "",
           location: ((p.location as string) || "query") as "query" | "header" | "body",
           data_type: (p.data_type as string | null) || null,
           is_required: (p.is_required as boolean) ?? false,
-          validate_type: ((p.validate_type as string) || null) as "regex" | "python" | null,
-          validate: (p.validate as string | null) || null,
-          validate_message: (p.validate_message as string | null) ?? null,
           default_value: (p.default_value as string | null) || null,
+        }))
+      }
+      // Parse param_validates from api_context if available
+      let paramValidates: Array<{ name: string; validation_script?: string | null; message_when_fail?: string | null }> = []
+      if (apiDetail.api_context?.param_validates && Array.isArray(apiDetail.api_context.param_validates)) {
+        paramValidates = apiDetail.api_context.param_validates.map((pv: Record<string, unknown>) => ({
+          name: (pv.name as string) || "",
+          validation_script: (pv.validation_script as string | null) || null,
+          message_when_fail: (pv.message_when_fail as string | null) || null,
         }))
       }
       // Ensure datasource_id is properly converted to string
@@ -195,8 +219,10 @@ function ApiEdit() {
         description: apiDetail.description || null,
         access_type: apiDetail.access_type || "private",
         content: apiDetail.api_context?.content || "",
+        result_transform: apiDetail.api_context?.result_transform || "",
         group_ids: apiDetail.group_ids?.map(id => String(id)) || [],
         params: params,
+        param_validates: paramValidates,
       })
       
     }
@@ -340,8 +366,12 @@ function ApiEdit() {
         }
       }
 
+      // Send content from form to use current edited content, not DB content
       const result = await ApiAssignmentsService.debug({
         id: id,
+        content: values.content || null,
+        execute_engine: values.execute_engine,
+        datasource_id: values.datasource_id || null,
         params: paramsObj,
       })
 
@@ -372,13 +402,12 @@ function ApiEdit() {
       description: values.description || null,
       access_type: values.access_type,
       content: values.content || null,
+      result_transform: values.result_transform || null,
       group_ids: values.group_ids,
-      params:
-        values.params.length > 0
-          ? values.params.map((p) => ({
-              ...p,
-              validate_type: (p.validate?.trim() ? "python" : p.validate_type) || null,
-            }))
+      params: values.params.length > 0 ? values.params : null,
+      param_validates:
+        values.param_validates.length > 0
+          ? values.param_validates
           : null,
     })
   }
@@ -697,7 +726,7 @@ function ApiEdit() {
                               onClick={() => {
                                 field.onChange([
                                   ...field.value,
-                                  { name: "", location: "query" as const, data_type: null, is_required: false, validate_type: null, validate: null, validate_message: null, default_value: null },
+                                  { name: "", location: "query" as const, data_type: null, is_required: false, default_value: null },
                                 ])
                               }}
                             >
@@ -715,8 +744,6 @@ function ApiEdit() {
                                     <TableHead className="w-[140px]">Data Type</TableHead>
                                     <TableHead className="w-[100px]">Required</TableHead>
                                     <TableHead className="w-[150px]">Default Value</TableHead>
-                                    <TableHead className="w-[200px]">Validation script (Python)</TableHead>
-                                    <TableHead className="w-[180px]">Message when fail</TableHead>
                                     <TableHead className="w-[100px]">Actions</TableHead>
                                   </TableRow>
                                   {field.value.map((param, index) => {
@@ -839,20 +866,131 @@ function ApiEdit() {
                                         />
                                       </TableCell>
                                       <TableCell>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => {
+                                            field.onChange(
+                                              field.value.filter((_, i) => i !== index)
+                                            )
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                    )
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                              No parameters defined. Click "Add Parameter" to add one.
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mt-6 border-t pt-6">
+                    <FormField
+                      control={form.control}
+                      name="param_validates"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="mb-4 flex items-center justify-between">
+                            <div>
+                              <FormLabel>Parameter validate</FormLabel>
+                              <FormDescription>
+                                Define validation scripts for parameters
+                              </FormDescription>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                field.onChange([
+                                  ...field.value,
+                                  { name: "", validation_script: DEFAULT_PARAM_VALIDATE_SCRIPT, message_when_fail: null },
+                                ])
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Parameter validate
+                            </Button>
+                          </div>
+                          {field.value && field.value.length > 0 ? (
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableHead className="w-[200px]">Name</TableHead>
+                                    <TableHead>Validation script (Python)</TableHead>
+                                    <TableHead className="w-[200px]">Message when fail</TableHead>
+                                    <TableHead className="w-[100px]">Actions</TableHead>
+                                  </TableRow>
+                                  {field.value.map((paramValidate, index) => {
+                                    const paramValidateName = (paramValidate as { name?: string }).name || ""
+                                    // Get available param names from params
+                                    const availableParamNames = (form.watch("params") ?? [])
+                                      .map((p) => (typeof p?.name === "string" ? p.name.trim() : ""))
+                                      .filter(Boolean)
+                                    return (
+                                    <TableRow key={`param-validate-${index}-${paramValidateName}`}>
+                                      <TableCell>
                                         <FormField
                                           control={form.control}
-                                          name={`params.${index}.validate`}
-                                          render={({ field: validateField }) => (
+                                          name={`param_validates.${index}.name`}
+                                          render={({ field: nameField }) => (
+                                            <FormItem>
+                                              <Select
+                                                onValueChange={nameField.onChange}
+                                                value={nameField.value || ""}
+                                              >
+                                                <FormControl>
+                                                  <SelectTrigger className="h-9">
+                                                    <SelectValue placeholder="Select parameter" />
+                                                  </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                  {availableParamNames.length > 0 ? (
+                                                    availableParamNames.map((paramName) => (
+                                                      <SelectItem key={paramName} value={paramName}>
+                                                        {paramName}
+                                                      </SelectItem>
+                                                    ))
+                                                  ) : (
+                                                    <SelectItem value="" disabled>
+                                                      No parameters available
+                                                    </SelectItem>
+                                                  )}
+                                                </SelectContent>
+                                              </Select>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`param_validates.${index}.validation_script`}
+                                          render={({ field: scriptField }) => (
                                             <FormItem>
                                               <FormControl>
-                                                <Textarea
-                                                  placeholder="def validate(value): return True"
-                                                  {...validateField}
-                                                  value={validateField.value || ""}
-                                                  onChange={(e) =>
-                                                    validateField.onChange(e.target.value || null)
-                                                  }
-                                                  className="font-mono min-h-[60px]"
+                                                <ApiContentEditor
+                                                  executeEngine="SCRIPT"
+                                                  value={scriptField.value || ""}
+                                                  onChange={(next) => scriptField.onChange(next || null)}
+                                                  onBlur={scriptField.onBlur}
+                                                  placeholder={DEFAULT_PARAM_VALIDATE_SCRIPT}
+                                                  paramNames={[]}
+                                                  height={220}
                                                 />
                                               </FormControl>
                                               <FormMessage />
@@ -863,7 +1001,7 @@ function ApiEdit() {
                                       <TableCell>
                                         <FormField
                                           control={form.control}
-                                          name={`params.${index}.validate_message`}
+                                          name={`param_validates.${index}.message_when_fail`}
                                           render={({ field: msgField }) => (
                                             <FormItem>
                                               <FormControl>
@@ -904,7 +1042,7 @@ function ApiEdit() {
                             </div>
                           ) : (
                             <div className="text-sm text-muted-foreground text-center py-4 border rounded-md">
-                              No parameters defined. Click "Add Parameter" to add one.
+                              No param validations defined. Click "Add Param Validate" to add one.
                             </div>
                           )}
                           <FormMessage />
@@ -1025,6 +1163,35 @@ function ApiEdit() {
                         ? "SQL query with Jinja2 template syntax for parameters"
                         : "Python script with execute(params) function"}
                     </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="result_transform"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Result transform (Python)</FormLabel>
+                    <FormDescription>
+                      Optional Python function to transform the raw executor result before returning.
+                    </FormDescription>
+                    <FormControl>
+                      <ApiContentEditor
+                        executeEngine="SCRIPT"
+                        value={field.value || ""}
+                        onChange={(next) => field.onChange(next)}
+                        onBlur={field.onBlur}
+                        placeholder={
+                          'def transform(result, params=None):\n'
+                          + '    """Return transformed result. result is the raw executor output."""\n'
+                          + "    return result\n"
+                        }
+                        paramNames={[]}
+                        height={260}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

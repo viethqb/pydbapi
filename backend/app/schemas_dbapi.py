@@ -260,6 +260,21 @@ class ApiParameter(SQLModel):
     )
 
 
+class ApiParamValidate(SQLModel):
+    """Parameter validation script definition."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Parameter name to validate")
+    validation_script: str | None = Field(
+        default=None,
+        description="Python validation script (e.g., 'def validate(value): return True')"
+    )
+    message_when_fail: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Error message shown when validation fails"
+    )
+
+
 class ApiAssignmentCreate(SQLModel):
     """Body for POST /api-assignments/create."""
 
@@ -273,8 +288,13 @@ class ApiAssignmentCreate(SQLModel):
     access_type: ApiAccessTypeEnum = Field(default=ApiAccessTypeEnum.PRIVATE, description="public: no auth required, private: requires token")
     sort_order: int = Field(default=0)
     content: str | None = Field(default=None, description="SQL/script → ApiContext (1-1)")
+    result_transform: str | None = Field(
+        default=None,
+        description="Optional Python script to transform executor result before returning",
+    )
     group_ids: list[uuid.UUID] = Field(default_factory=list, description="ApiGroup IDs to link")
     params: list[ApiParameter] = Field(default_factory=list, description="Parameter definitions for validation")
+    param_validates: list[ApiParamValidate] = Field(default_factory=list, description="Parameter validation scripts")
 
 
 class ApiAssignmentUpdate(SQLModel):
@@ -291,8 +311,10 @@ class ApiAssignmentUpdate(SQLModel):
     access_type: ApiAccessTypeEnum | None = None
     sort_order: int | None = None
     content: str | None = None
+    result_transform: str | None = None
     group_ids: list[uuid.UUID] | None = Field(default=None, description="If set, replace group links")
     params: list[ApiParameter] | None = Field(default=None, description="If set, replace parameter definitions")
+    param_validates: list[ApiParamValidate] | None = Field(default=None, description="If set, replace parameter validation scripts")
 
 
 class ApiContextPublic(SQLModel):
@@ -302,6 +324,11 @@ class ApiContextPublic(SQLModel):
     api_assignment_id: uuid.UUID
     content: str
     params: list[dict] | None = Field(default=None, description="Parameter definitions: list of {name, location, data_type, is_required, validate_type, validate, default_value}")
+    param_validates: list[dict] | None = Field(default=None, description="Parameter validation scripts: list of {name, validation_script, message_when_fail}")
+    result_transform: str | None = Field(
+        default=None,
+        description="Python script to transform executor result before returning",
+    )
     created_at: datetime
     updated_at: datetime
 

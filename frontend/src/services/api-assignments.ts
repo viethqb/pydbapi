@@ -23,11 +23,19 @@ export type ApiAssignmentPublic = {
   updated_at: string
 }
 
+export type ApiParamValidate = {
+  name: string
+  validation_script?: string | null
+  message_when_fail?: string | null
+}
+
 export type ApiContextPublic = {
   id: string
   api_assignment_id: string
   content: string
   params: ApiParameter[] | null
+  param_validates: ApiParamValidate[] | null
+  result_transform?: string | null
   created_at: string
   updated_at: string
 }
@@ -76,6 +84,8 @@ export type ApiAssignmentCreate = {
   content?: string | null
   group_ids?: string[]
   params?: ApiParameter[]
+  param_validates?: ApiParamValidate[]
+  result_transform?: string | null
 }
 
 export type ApiAssignmentUpdate = {
@@ -92,6 +102,8 @@ export type ApiAssignmentUpdate = {
   content?: string | null
   group_ids?: string[] | null
   params?: ApiParameter[] | null
+  param_validates?: ApiParamValidate[] | null
+  result_transform?: string | null
 }
 
 export type ApiAssignmentPublishIn = {

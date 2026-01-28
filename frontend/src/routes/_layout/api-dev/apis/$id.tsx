@@ -872,6 +872,57 @@ function ApiDetail() {
                   <div className="text-sm text-muted-foreground">-</div>
                 )}
               </div>
+
+              <div className="mt-6 border-t pt-6">
+                <div className="mb-4">
+                  <div className="text-sm font-medium">Param Validate</div>
+                  <div className="text-sm text-muted-foreground">
+                    Parameter validation scripts
+                  </div>
+                </div>
+
+                {(() => {
+                  const paramValidates = (apiDetail.api_context as { param_validates?: unknown[] } | null)?.param_validates
+                  return paramValidates && Array.isArray(paramValidates) && paramValidates.length > 0 ? (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableBody>
+                          <TableRow>
+                            <TableHead className="w-[220px]">Name</TableHead>
+                            <TableHead>Validation script (Python)</TableHead>
+                            <TableHead className="w-[200px]">Message when fail</TableHead>
+                          </TableRow>
+                          {paramValidates.map((pv: unknown, idx: number) => {
+                          const paramValidate = pv as {
+                            name?: string
+                            validation_script?: string | null
+                            message_when_fail?: string | null
+                          }
+                          return (
+                          <TableRow key={`param-validate-${idx}-${paramValidate.name || ""}`}>
+                            <TableCell className="font-mono text-sm">{paramValidate.name || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground break-all">
+                              {paramValidate.validation_script && String(paramValidate.validation_script).trim() !== ""
+                                ? String(paramValidate.validation_script)
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground break-all">
+                              {paramValidate.message_when_fail && String(paramValidate.message_when_fail).trim() !== ""
+                                ? String(paramValidate.message_when_fail)
+                                : "-"}
+                            </TableCell>
+                          </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">-</div>
+                  )
+                })()}
+              </div>
+
             </TabsContent>
 
             <TabsContent value="content" className="mt-6">
@@ -906,6 +957,25 @@ function ApiDetail() {
                     <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[600px] font-mono text-sm leading-relaxed">
                       {apiDetail.api_context.content}
                     </pre>
+                  </div>
+
+                  <div className="mt-6 border-t pt-6">
+                    <div className="mb-4">
+                      <div className="text-sm font-medium">Result transform</div>
+                      <div className="text-sm text-muted-foreground">
+                        Python script to transform the raw executor result before returning
+                      </div>
+                    </div>
+
+                    {apiDetail.api_context.result_transform && apiDetail.api_context.result_transform.trim() !== "" ? (
+                      <div className="rounded-md border bg-muted p-3">
+                        <pre className="whitespace-pre-wrap break-all font-mono text-xs leading-relaxed">
+                          {apiDetail.api_context.result_transform}
+                        </pre>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">-</div>
+                    )}
                   </div>
                 </div>
               ) : (

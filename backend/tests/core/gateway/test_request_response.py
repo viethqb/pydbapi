@@ -225,6 +225,66 @@ def test_parse_params_body_for_log_returned() -> None:
     assert body_for_log2 is None
 
 
+def test_parse_params_respects_location_header_only() -> None:
+    async def run() -> dict:
+        req = _make_request(
+            method="POST",
+            query_string=b"col1=query",
+            headers=[(b"content-type", b"application/json"), (b"col1", b"header")],
+            body=b'{"col1": "body"}',
+        )
+        params, _ = await parse_params(
+            req,
+            {},
+            "POST",
+            params_definition=[{"name": "col1", "location": "header"}],
+        )
+        return params
+
+    out = _run(run())
+    assert out == {"col1": "header"}
+
+
+def test_parse_params_wrong_location_is_ignored() -> None:
+    async def run() -> dict:
+        req = _make_request(
+            method="GET",
+            query_string=b"col1=query",
+            headers=[],
+        )
+        params, _ = await parse_params(
+            req,
+            {},
+            "GET",
+            params_definition=[{"name": "col1", "location": "header"}],
+        )
+        return params
+
+    out = _run(run())
+    # col1 exists in query, but configured as header => ignored
+    assert out == {}
+
+
+def test_parse_params_respects_location_body_only() -> None:
+    async def run() -> dict:
+        req = _make_request(
+            method="POST",
+            query_string=b"col1=query",
+            headers=[(b"content-type", b"application/json")],
+            body=b'{"col1": "body"}',
+        )
+        params, _ = await parse_params(
+            req,
+            {},
+            "POST",
+            params_definition=[{"name": "col1", "location": "body"}],
+        )
+        return params
+
+    out = _run(run())
+    assert out == {"col1": "body"}
+
+
 # --- format_response ---
 
 
