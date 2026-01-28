@@ -51,6 +51,8 @@ import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
 import useCustomToast from "@/hooks/useCustomToast"
 import { Checkbox } from "@/components/ui/checkbox"
+import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
+import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
 
 const paramSchema = z.object({
   name: z.string().min(1, "Parameter name is required"),
@@ -159,6 +161,9 @@ function ApiCreate() {
   })
 
   const executeEngine = form.watch("execute_engine")
+  const paramNamesForContentSuggestions = (form.watch("params") ?? [])
+    .map((p) => (typeof p?.name === "string" ? p.name.trim() : ""))
+    .filter(Boolean)
 
   // Fetch modules, datasources, and groups
   const { data: modulesData } = useQuery({
@@ -924,6 +929,9 @@ function ApiCreate() {
                       </TableRow>
                     </TableBody>
                   </Table>
+
+                  <ApiContentExamples executeEngine={executeEngine} />
+
                   <FormField
                     control={form.control}
                     name="content"
@@ -933,15 +941,17 @@ function ApiCreate() {
                           {executeEngine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
                         </FormLabel>
                         <FormControl>
-                          <Textarea
+                          <ApiContentEditor
+                            executeEngine={executeEngine}
+                            value={field.value || ""}
+                            onChange={(next) => field.onChange(next)}
+                            onBlur={field.onBlur}
                             placeholder={
                               executeEngine === "SQL"
-                                ? 'SELECT * FROM users WHERE id = {{ params.id }}'
+                                ? 'SELECT * FROM users WHERE id = {{ id | sql_int }}'
                                 : 'def execute(params):\n    return {"result": "success"}'
                             }
-                            className="font-mono min-h-[400px]"
-                            {...field}
-                            value={field.value || ""}
+                            paramNames={paramNamesForContentSuggestions}
                           />
                         </FormControl>
                         <FormDescription>
