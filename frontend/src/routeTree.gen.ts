@@ -25,6 +25,8 @@ import { Route as LayoutSystemClientsRouteImport } from './routes/_layout/system
 import { Route as LayoutConnectionCreateRouteImport } from './routes/_layout/connection/create'
 import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connection/$id'
 import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
+import { Route as LayoutAboutSqlJinjaRouteImport } from './routes/_layout/about.sql-jinja'
+import { Route as LayoutAboutPythonScriptRouteImport } from './routes/_layout/about.python-script'
 import { Route as LayoutSystemGroupsIndexRouteImport } from './routes/_layout/system/groups/index'
 import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
 import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
@@ -117,6 +119,16 @@ const LayoutApiRepositoryIdRoute = LayoutApiRepositoryIdRouteImport.update({
   path: '/api-repository/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAboutSqlJinjaRoute = LayoutAboutSqlJinjaRouteImport.update({
+  id: '/sql-jinja',
+  path: '/sql-jinja',
+  getParentRoute: () => LayoutAboutRoute,
+} as any)
+const LayoutAboutPythonScriptRoute = LayoutAboutPythonScriptRouteImport.update({
+  id: '/python-script',
+  path: '/python-script',
+  getParentRoute: () => LayoutAboutRoute,
+} as any)
 const LayoutSystemGroupsIndexRoute = LayoutSystemGroupsIndexRouteImport.update({
   id: '/system/groups/',
   path: '/system/groups/',
@@ -182,9 +194,11 @@ export interface FileRoutesByFullPath {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/about': typeof LayoutAboutRoute
+  '/about': typeof LayoutAboutRouteWithChildren
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
+  '/about/python-script': typeof LayoutAboutPythonScriptRoute
+  '/about/sql-jinja': typeof LayoutAboutSqlJinjaRoute
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
@@ -209,10 +223,12 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/about': typeof LayoutAboutRoute
+  '/about': typeof LayoutAboutRouteWithChildren
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/about/python-script': typeof LayoutAboutPythonScriptRoute
+  '/about/sql-jinja': typeof LayoutAboutSqlJinjaRoute
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
@@ -239,10 +255,12 @@ export interface FileRoutesById {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/_layout/about': typeof LayoutAboutRoute
+  '/_layout/about': typeof LayoutAboutRouteWithChildren
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/about/python-script': typeof LayoutAboutPythonScriptRoute
+  '/_layout/about/sql-jinja': typeof LayoutAboutSqlJinjaRoute
   '/_layout/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/_layout/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/_layout/connection/create': typeof LayoutConnectionCreateRoute
@@ -273,6 +291,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/admin'
     | '/settings'
+    | '/about/python-script'
+    | '/about/sql-jinja'
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
@@ -301,6 +321,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/settings'
     | '/'
+    | '/about/python-script'
+    | '/about/sql-jinja'
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
@@ -330,6 +352,8 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/about/python-script'
+    | '/_layout/about/sql-jinja'
     | '/_layout/api-repository/$id'
     | '/_layout/connection/$id'
     | '/_layout/connection/create'
@@ -472,6 +496,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiRepositoryIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/about/sql-jinja': {
+      id: '/_layout/about/sql-jinja'
+      path: '/sql-jinja'
+      fullPath: '/about/sql-jinja'
+      preLoaderRoute: typeof LayoutAboutSqlJinjaRouteImport
+      parentRoute: typeof LayoutAboutRoute
+    }
+    '/_layout/about/python-script': {
+      id: '/_layout/about/python-script'
+      path: '/python-script'
+      fullPath: '/about/python-script'
+      preLoaderRoute: typeof LayoutAboutPythonScriptRouteImport
+      parentRoute: typeof LayoutAboutRoute
+    }
     '/_layout/system/groups/': {
       id: '/_layout/system/groups/'
       path: '/system/groups'
@@ -552,6 +590,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface LayoutAboutRouteChildren {
+  LayoutAboutPythonScriptRoute: typeof LayoutAboutPythonScriptRoute
+  LayoutAboutSqlJinjaRoute: typeof LayoutAboutSqlJinjaRoute
+}
+
+const LayoutAboutRouteChildren: LayoutAboutRouteChildren = {
+  LayoutAboutPythonScriptRoute: LayoutAboutPythonScriptRoute,
+  LayoutAboutSqlJinjaRoute: LayoutAboutSqlJinjaRoute,
+}
+
+const LayoutAboutRouteWithChildren = LayoutAboutRoute._addFileChildren(
+  LayoutAboutRouteChildren,
+)
+
 interface LayoutConnectionIdRouteChildren {
   LayoutConnectionIdEditRoute: typeof LayoutConnectionIdEditRoute
 }
@@ -588,7 +640,7 @@ const LayoutApiDevModulesIdRouteWithChildren =
   )
 
 interface LayoutRouteChildren {
-  LayoutAboutRoute: typeof LayoutAboutRoute
+  LayoutAboutRoute: typeof LayoutAboutRouteWithChildren
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
@@ -610,7 +662,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutAboutRoute: LayoutAboutRoute,
+  LayoutAboutRoute: LayoutAboutRouteWithChildren,
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
