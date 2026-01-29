@@ -40,6 +40,8 @@ import { ApiAssignmentsService, type VersionCommitPublic, type VersionCommitDeta
 import { ModulesService } from "@/services/modules"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
+import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
+import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/api-dev/apis/$id")({
@@ -901,10 +903,27 @@ function ApiDetail() {
                           return (
                           <TableRow key={`param-validate-${idx}-${paramValidate.name || ""}`}>
                             <TableCell className="font-mono text-sm">{paramValidate.name || "-"}</TableCell>
-                            <TableCell className="font-mono text-xs text-muted-foreground break-all">
-                              {paramValidate.validation_script && String(paramValidate.validation_script).trim() !== ""
-                                ? String(paramValidate.validation_script)
-                                : "-"}
+                            <TableCell>
+                              {paramValidate.validation_script && String(paramValidate.validation_script).trim() !== "" ? (
+                                <ApiContentEditor
+                                  executeEngine="SCRIPT"
+                                  value={String(paramValidate.validation_script)}
+                                  // Read-only viewer in detail page
+                                  onChange={() => {}}
+                                  disabled
+                                  autoHeight
+                                  minHeight={120}
+                                  maxHeight={360}
+                                  placeholder={
+                                    "def validate(value, params=None):\n"
+                                    + "    # return True/False\n"
+                                    + "    return True\n"
+                                  }
+                                  paramNames={[]}
+                                />
+                              ) : (
+                                <div className="text-sm text-muted-foreground">-</div>
+                              )}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground break-all">
                               {paramValidate.message_when_fail && String(paramValidate.message_when_fail).trim() !== ""
@@ -953,26 +972,54 @@ function ApiDetail() {
                       )}
                     </Button>
                   </div>
-                  <div className="relative">
-                    <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[600px] font-mono text-sm leading-relaxed">
-                      {apiDetail.api_context.content}
-                    </pre>
-                  </div>
+                  {apiDetail.execute_engine === "SQL" ? (
+                    <SqlStatementsEditor
+                      value={apiDetail.api_context.content || ""}
+                      onChange={() => {}}
+                      disabled
+                      placeholder={'SELECT * FROM users WHERE id = {{ id | sql_int }}'}
+                      paramNames={[]}
+                    />
+                  ) : (
+                    <ApiContentEditor
+                      executeEngine="SCRIPT"
+                      value={apiDetail.api_context.content || ""}
+                      // Read-only viewer in detail page
+                      onChange={() => {}}
+                      disabled
+                      autoHeight
+                      minHeight={260}
+                      maxHeight={720}
+                      placeholder={'def execute(params):\n    return {"result": "success"}'}
+                      paramNames={[]}
+                    />
+                  )}
 
                   <div className="mt-6 border-t pt-6">
                     <div className="mb-4">
-                      <div className="text-sm font-medium">Result transform</div>
+                      <div className="text-sm font-medium">Result transform (Python)</div>
                       <div className="text-sm text-muted-foreground">
                         Python script to transform the raw executor result before returning
                       </div>
                     </div>
 
                     {apiDetail.api_context.result_transform && apiDetail.api_context.result_transform.trim() !== "" ? (
-                      <div className="rounded-md border bg-muted p-3">
-                        <pre className="whitespace-pre-wrap break-all font-mono text-xs leading-relaxed">
-                          {apiDetail.api_context.result_transform}
-                        </pre>
-                      </div>
+                      <ApiContentEditor
+                        executeEngine="SCRIPT"
+                        value={apiDetail.api_context.result_transform}
+                        // Read-only viewer in detail page
+                        onChange={() => {}}
+                        disabled
+                        autoHeight
+                        minHeight={160}
+                        maxHeight={520}
+                        placeholder={
+                          'def transform(result, params=None):\n'
+                          + '    """Return transformed result. result is the raw executor output."""\n'
+                          + "    return result\n"
+                        }
+                        paramNames={[]}
+                      />
                     ) : (
                       <div className="text-sm text-muted-foreground">-</div>
                     )}

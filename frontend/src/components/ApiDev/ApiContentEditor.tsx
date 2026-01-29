@@ -20,6 +20,9 @@ type Props = {
   placeholder?: string
   paramNames?: string[]
   height?: number
+  autoHeight?: boolean
+  minHeight?: number
+  maxHeight?: number
   disabled?: boolean
   // Expose editor ref so parent can sync value before unmount
   onEditorReady?: (getValue: () => string) => void
@@ -205,6 +208,9 @@ export default function ApiContentEditor({
   placeholder,
   paramNames = [],
   height = 420,
+  autoHeight = false,
+  minHeight,
+  maxHeight,
   disabled = false,
   onEditorReady,
 }: Props) {
@@ -273,14 +279,9 @@ export default function ApiContentEditor({
         setIsFocused(false)
         // Ensure RHF sees the latest buffer
         const current = editor.getValue()
-        // Only sync if editor has actual content OR if valueRef is also empty
-        // This prevents empty values from overwriting form state when editor is being destroyed
-        if (current !== valueRef.current) {
-          // If current is empty but valueRef has value, editor is likely being destroyed
-          // Don't sync to avoid resetting form state
-          if (!(current.length === 0 && valueRef.current.length > 0)) {
-            onChange(current)
-          }
+        // Only call onChange if value actually changed
+        if (current !== valueRef.current && current.length > 0) {
+          onChange(current)
         }
         onBlur?.()
       })
@@ -308,6 +309,8 @@ export default function ApiContentEditor({
       const newValue = value ?? ""
       // Always sync if different - this ensures form state is reflected in editor
       if (currentEditorValue !== newValue) {
+        // Update valueRef BEFORE setting editor value to prevent onChange loop
+        valueRef.current = newValue
         // Use setValue with a small delay to ensure it happens after mount
         // This is important when tab remounts
         const timeoutId = setTimeout(() => {
@@ -338,27 +341,17 @@ export default function ApiContentEditor({
       if (editor) {
         try {
           const current = editor.getValue()
-          // Only sync if editor has a value (not empty) or if valueRef has value
-          // This prevents empty values from overwriting form state
-          if (current && current.length > 0) {
+          // Only sync if value is DIFFERENT from what we received as prop
+          // This prevents unnecessary onChange calls that cause infinite loops
+          if (current !== currentValue && current && current.length > 0) {
             currentOnChange(current)
-          } else if (currentValue && currentValue.length > 0) {
-            // If editor is empty but valueRef has value, use valueRef
-            currentOnChange(currentValue)
           }
-          // If both are empty, don't sync (preserve form state as-is)
+          // If values are the same, don't sync (no change to report)
         } catch {
-          // Editor might be destroyed, only sync if valueRef has value
-          if (currentValue && currentValue.length > 0) {
-            currentOnChange(currentValue)
-          }
-        }
-      } else {
-        // Editor not ready, only sync if valueRef has value
-        if (currentValue && currentValue.length > 0) {
-          currentOnChange(currentValue)
+          // Editor might be destroyed - don't sync to avoid loops
         }
       }
+      // If editor not ready, don't sync - nothing to report
     }
   }, [onChange, value]) // Include all deps to ensure each editor has its own cleanup
 
@@ -394,6 +387,19 @@ export default function ApiContentEditor({
 
   const showPlaceholder = (value ?? "").trim() === "" && !isFocused
 
+  const effectiveHeight = useMemo(() => {
+    if (!autoHeight) return height
+    const src = (value ?? "").trim() !== "" ? (value ?? "") : (placeholder ?? "")
+    const lines = Math.max(1, src.split(/\r\n|\r|\n/).length)
+    // Keep in sync with Monaco options lineHeight=20 (+ UI chrome padding).
+    const lineHeightPx = 20
+    const chromePx = 64
+    const computed = lines * lineHeightPx + chromePx
+    const minH = minHeight ?? 140
+    const maxH = maxHeight ?? 520
+    return Math.max(minH, Math.min(maxH, computed))
+  }, [autoHeight, height, maxHeight, minHeight, placeholder, value])
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -419,7 +425,7 @@ export default function ApiContentEditor({
           </div>
         )}
         <Editor
-          height={height}
+          height={effectiveHeight}
           language={language}
           theme={theme}
           value={value}

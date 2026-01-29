@@ -53,6 +53,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { Checkbox } from "@/components/ui/checkbox"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
 import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
+import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 
 const paramSchema = z.object({
   name: z.string().min(1, "Parameter name is required"),
@@ -1145,18 +1146,27 @@ function ApiEdit() {
                       {executeEngine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
                     </FormLabel>
                     <FormControl>
-                      <ApiContentEditor
-                        executeEngine={executeEngine}
-                        value={field.value || ""}
-                        onChange={(next) => field.onChange(next)}
-                        onBlur={field.onBlur}
-                        placeholder={
-                          executeEngine === "SQL"
-                            ? 'SELECT * FROM users WHERE id = {{ id | sql_int }}'
-                            : 'def execute(params):\n    return {"result": "success"}'
-                        }
-                        paramNames={paramNamesForContentSuggestions}
-                      />
+                      {executeEngine === "SQL" ? (
+                        <SqlStatementsEditor
+                          value={field.value || ""}
+                          onChange={(next) => field.onChange(next)}
+                          onBlur={field.onBlur}
+                          placeholder={'SELECT * FROM users WHERE id = {{ id | sql_int }}'}
+                          paramNames={paramNamesForContentSuggestions}
+                        />
+                      ) : (
+                        <ApiContentEditor
+                          executeEngine={executeEngine}
+                          value={field.value || ""}
+                          onChange={(next) => field.onChange(next)}
+                          onBlur={field.onBlur}
+                          autoHeight
+                          minHeight={260}
+                          maxHeight={720}
+                          placeholder={'def execute(params):\n    return {"result": "success"}'}
+                          paramNames={paramNamesForContentSuggestions}
+                        />
+                      )}
                     </FormControl>
                     <FormDescription>
                       {executeEngine === "SQL"
@@ -1183,13 +1193,15 @@ function ApiEdit() {
                         value={field.value || ""}
                         onChange={(next) => field.onChange(next)}
                         onBlur={field.onBlur}
+                        autoHeight
+                        minHeight={160}
+                        maxHeight={520}
                         placeholder={
                           'def transform(result, params=None):\n'
                           + '    """Return transformed result. result is the raw executor output."""\n'
                           + "    return result\n"
                         }
                         paramNames={[]}
-                        height={260}
                       />
                     </FormControl>
                     <FormMessage />
