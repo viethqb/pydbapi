@@ -73,9 +73,13 @@ def run(
         )
         raise RuntimeError("ApiContext not found for ApiAssignment")
 
-    # Prefer published version content (content_snapshot) when available.
-    # Backward-compatible fallback: if no published_version_id, use current ApiContext.content.
+    # Prefer published version snapshot when available.
+    # Backward-compatible fallback: if snapshot fields are missing/null, use current ApiContext fields.
     content_to_run = ctx.content
+    params_definition = ctx.params if getattr(ctx, "params", None) else None
+    param_validates_definition = getattr(ctx, "param_validates", None)
+    result_transform_code = getattr(ctx, "result_transform", None)
+
     if api.published_version_id:
         vc = session.exec(
             select(VersionCommit).where(VersionCommit.id == api.published_version_id)
@@ -92,10 +96,16 @@ def run(
                 request_body=request_body,
             )
             raise RuntimeError("Published VersionCommit not found for ApiAssignment")
+
         content_to_run = vc.content_snapshot
+        if getattr(vc, "params_snapshot", None) is not None:
+            params_definition = vc.params_snapshot
+        if getattr(vc, "param_validates_snapshot", None) is not None:
+            param_validates_definition = vc.param_validates_snapshot
+        if getattr(vc, "result_transform_snapshot", None) is not None:
+            result_transform_code = vc.result_transform_snapshot
 
     # Validate required parameters if params definition exists on ApiContext
-    params_definition = ctx.params if ctx and ctx.params else None
     if params_definition:
         missing_params: list[str] = []
         for param_def in params_definition:
@@ -122,10 +132,10 @@ def run(
                 detail=f"Missing required parameters: {', '.join(missing_params)}",
             )
 
-    # Param validate (Python scripts) if configured on ApiContext
-    if getattr(ctx, "param_validates", None):
+    # Param validate (Python scripts) if configured
+    if param_validates_definition:
         try:
-            run_param_validates(ctx.param_validates, params)
+            run_param_validates(param_validates_definition, params)
         except ParamValidateError as e:
             _write_access_record(
                 session,
@@ -163,10 +173,10 @@ def run(
             datasource=api.datasource,
             session=session,
         )
-        # Result transform (Python) if configured on ApiContext
-        if getattr(ctx, "result_transform", None):
+        # Result transform (Python) if configured
+        if result_transform_code:
             try:
-                result = run_result_transform(ctx.result_transform, result, params or {})
+                result = run_result_transform(result_transform_code, result, params or {})
             except ResultTransformError as e:
                 _write_access_record(
                     session,

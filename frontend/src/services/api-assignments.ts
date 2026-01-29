@@ -123,6 +123,9 @@ export type VersionCommitPublic = {
 
 export type VersionCommitDetail = VersionCommitPublic & {
   content_snapshot: string
+  params_snapshot?: ApiParameter[] | null
+  param_validates_snapshot?: ApiParamValidate[] | null
+  result_transform_snapshot?: string | null
 }
 
 export type VersionCommitCreate = {
@@ -250,6 +253,13 @@ export const ApiAssignmentsService = {
     return request<VersionCommitDetail>(`/api/v1/api-assignments/versions/${versionId}`, {
       method: "GET",
     })
+  },
+
+  restoreVersion: async (id: string, versionId: string): Promise<ApiAssignmentDetail> => {
+    return request<ApiAssignmentDetail>(
+      `/api/v1/api-assignments/${id}/versions/${versionId}/restore`,
+      { method: "POST" }
+    )
   },
 
   deleteVersion: async (versionId: string): Promise<{ message: string }> => {

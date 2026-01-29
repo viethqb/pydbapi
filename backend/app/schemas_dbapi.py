@@ -519,6 +519,18 @@ class VersionCommitDetail(SQLModel):
     api_assignment_id: uuid.UUID
     version: int
     content_snapshot: str
+    params_snapshot: list[dict] | None = Field(
+        default=None,
+        description="Snapshot of parameter definitions at commit time",
+    )
+    param_validates_snapshot: list[dict] | None = Field(
+        default=None,
+        description="Snapshot of parameter validation scripts at commit time",
+    )
+    result_transform_snapshot: str | None = Field(
+        default=None,
+        description="Snapshot of Python result transform script at commit time",
+    )
     commit_message: str | None
     committed_by_id: uuid.UUID | None
     committed_by_email: str | None = Field(default=None, description="Email of user who created this version")

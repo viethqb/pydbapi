@@ -513,7 +513,7 @@ def create_version(
     id: uuid.UUID,
     body: VersionCommitCreate,
 ) -> Any:
-    """Create a new version of API content. Captures current ApiContext content."""
+    """Create a new version snapshot for the API (content + params + validations + transform)."""
     a = session.get(ApiAssignment, id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
@@ -540,6 +540,9 @@ def create_version(
         api_assignment_id=a.id,
         version=max_version + 1,
         content_snapshot=ctx.content,
+        params_snapshot=getattr(ctx, "params", None),
+        param_validates_snapshot=getattr(ctx, "param_validates", None),
+        result_transform_snapshot=getattr(ctx, "result_transform", None),
         commit_message=body.commit_message,
         committed_by_id=current_user.id,
     )
@@ -552,6 +555,9 @@ def create_version(
         api_assignment_id=version.api_assignment_id,
         version=version.version,
         content_snapshot=version.content_snapshot,
+        params_snapshot=version.params_snapshot,
+        param_validates_snapshot=version.param_validates_snapshot,
+        result_transform_snapshot=version.result_transform_snapshot,
         commit_message=version.commit_message,
         committed_by_id=version.committed_by_id,
         committed_by_email=current_user.email,
@@ -624,11 +630,62 @@ def get_version(
         api_assignment_id=version.api_assignment_id,
         version=version.version,
         content_snapshot=version.content_snapshot,
+        params_snapshot=getattr(version, "params_snapshot", None),
+        param_validates_snapshot=getattr(version, "param_validates_snapshot", None),
+        result_transform_snapshot=getattr(version, "result_transform_snapshot", None),
         commit_message=version.commit_message,
         committed_by_id=version.committed_by_id,
         committed_by_email=committed_by_email,
         committed_at=version.committed_at,
     )
+
+
+@router.post("/{id}/versions/{version_id}/restore", response_model=ApiAssignmentDetail)
+def restore_version(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    id: uuid.UUID,
+    version_id: uuid.UUID,
+) -> Any:
+    """Restore API dev config from a version snapshot. Overwrites current ApiContext with version's content, params, param_validates, result_transform."""
+    a = session.get(ApiAssignment, id)
+    if not a:
+        raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    version = session.get(VersionCommit, version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    if version.api_assignment_id != id:
+        raise HTTPException(status_code=400, detail="Version does not belong to this API")
+
+    ctx = session.exec(
+        select(ApiContext).where(ApiContext.api_assignment_id == a.id)
+    ).first()
+    content = version.content_snapshot
+    params = getattr(version, "params_snapshot", None)
+    param_validates = getattr(version, "param_validates_snapshot", None)
+    result_transform = getattr(version, "result_transform_snapshot", None)
+
+    if ctx:
+        ctx.content = content
+        ctx.params = params
+        ctx.param_validates = param_validates
+        ctx.result_transform = result_transform
+        ctx.updated_at = datetime.now(timezone.utc)
+        session.add(ctx)
+    else:
+        session.add(
+            ApiContext(
+                api_assignment_id=a.id,
+                content=content,
+                params=params,
+                param_validates=param_validates,
+                result_transform=result_transform,
+            )
+        )
+
+    session.commit()
+    a = session.get(ApiAssignment, id)
+    return _to_detail(a)
 
 
 @router.delete("/versions/{version_id}", response_model=Message)

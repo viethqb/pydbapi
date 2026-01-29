@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Globe, Pencil, Trash2, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces, GitBranch, User } from "lucide-react"
+import { ArrowLeft, Globe, Pencil, Trash2, RotateCcw, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces, GitBranch, User } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -82,6 +82,8 @@ function ApiDetail() {
   const [selectedVersionForPublish, setSelectedVersionForPublish] = useState<string | null>(null)
   const [deleteVersionDialogOpen, setDeleteVersionDialogOpen] = useState(false)
   const [versionToDelete, setVersionToDelete] = useState<string | null>(null)
+  const [restoreVersionDialogOpen, setRestoreVersionDialogOpen] = useState(false)
+  const [versionToRestore, setVersionToRestore] = useState<string | null>(null)
   const { handleSubmit } = useForm()
 
   // Check if we're on the edit route
@@ -152,6 +154,22 @@ function ApiDetail() {
       setVersionToDelete(null)
       refetchVersions()
       queryClient.invalidateQueries({ queryKey: ["api-assignment", id] })
+    },
+    onError: (error: Error) => {
+      showErrorToast(error.message)
+    },
+  })
+
+  // Restore version mutation (overwrite current dev config with version snapshot)
+  const restoreVersionMutation = useMutation({
+    mutationFn: (versionId: string) => ApiAssignmentsService.restoreVersion(id, versionId),
+    onSuccess: (data) => {
+      showSuccessToast("Dev config restored from version successfully")
+      setRestoreVersionDialogOpen(false)
+      setVersionToRestore(null)
+      setSelectedVersion(null)
+      queryClient.setQueryData(["api-assignment", id], data)
+      refetchVersions()
     },
     onError: (error: Error) => {
       showErrorToast(error.message)
@@ -233,6 +251,15 @@ function ApiDetail() {
 
   const handleConfirmDeleteVersion = () => {
     deleteVersionMutation.mutate()
+  }
+
+  const handleRestoreVersion = (versionId: string) => {
+    setVersionToRestore(versionId)
+    setRestoreVersionDialogOpen(true)
+  }
+
+  const handleConfirmRestoreVersion = () => {
+    if (versionToRestore) restoreVersionMutation.mutate(versionToRestore)
   }
 
   const handleCreateVersion = () => {
@@ -1117,6 +1144,15 @@ function ApiDetail() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  onClick={() => handleRestoreVersion(version.id)}
+                                  title="Restore this version into current dev config (content, params, validations, result transform)"
+                                >
+                                  <RotateCcw className="mr-1 h-4 w-4" />
+                                  Restore
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => handleDeleteVersion(version.id)}
                                   disabled={apiDetail?.published_version_id === version.id}
                                   className="text-destructive hover:text-destructive"
@@ -1630,6 +1666,38 @@ function ApiDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Restore Version Dialog */}
+      <Dialog
+        open={restoreVersionDialogOpen}
+        onOpenChange={(open) => {
+          setRestoreVersionDialogOpen(open)
+          if (!open) setVersionToRestore(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Restore Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to restore this version? Current dev config (content, parameters, validations, result transform) will be overwritten.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={restoreVersionMutation.isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <LoadingButton
+              onClick={handleConfirmRestoreVersion}
+              loading={restoreVersionMutation.isPending}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Restore
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* View Version Dialog */}
       <Dialog open={!!selectedVersion} onOpenChange={() => setSelectedVersion(null)}>
         <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -1639,13 +1707,154 @@ function ApiDetail() {
               {selectedVersion?.commit_message || "No commit message"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>Content Snapshot</Label>
               <pre className="p-4 bg-muted rounded-md overflow-auto max-h-[400px] font-mono text-sm">
                 {selectedVersion?.content_snapshot}
               </pre>
             </div>
+
+            <div className="space-y-2">
+              <Label>Params Snapshot</Label>
+              {selectedVersion?.params_snapshot && Array.isArray(selectedVersion.params_snapshot) && selectedVersion.params_snapshot.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableHead className="w-[220px]">Name</TableHead>
+                        <TableHead className="w-[120px]">Location</TableHead>
+                        <TableHead className="w-[140px]">Type</TableHead>
+                        <TableHead className="w-[110px]">Required</TableHead>
+                        <TableHead>Default</TableHead>
+                      </TableRow>
+                      {selectedVersion.params_snapshot.map((p: unknown, idx: number) => {
+                        const param = p as {
+                          name?: string
+                          location?: string
+                          data_type?: string
+                          is_required?: boolean
+                          default_value?: unknown
+                        }
+                        return (
+                          <TableRow key={`version-param-${idx}-${param.name || ""}`}>
+                            <TableCell className="font-mono text-sm">{param.name || "-"}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-normal">
+                                {param.location || "query"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-normal">
+                                {param.data_type || "string"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={param.is_required ? "default" : "secondary"} className="font-normal">
+                                {param.is_required ? "Yes" : "No"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground break-all">
+                              {param.default_value != null && String(param.default_value).trim() !== ""
+                                ? String(param.default_value)
+                                : "-"}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">-</div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Param Validates Snapshot</Label>
+              {(() => {
+                const paramValidates = selectedVersion?.param_validates_snapshot
+                return paramValidates && Array.isArray(paramValidates) && paramValidates.length > 0 ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableHead className="w-[220px]">Name</TableHead>
+                          <TableHead>Validation script (Python)</TableHead>
+                          <TableHead className="w-[200px]">Message when fail</TableHead>
+                        </TableRow>
+                        {paramValidates.map((pv: unknown, idx: number) => {
+                          const paramValidate = pv as {
+                            name?: string
+                            validation_script?: string | null
+                            message_when_fail?: string | null
+                          }
+                          return (
+                            <TableRow key={`version-param-validate-${idx}-${paramValidate.name || ""}`}>
+                              <TableCell className="font-mono text-sm">{paramValidate.name || "-"}</TableCell>
+                              <TableCell>
+                                {paramValidate.validation_script && String(paramValidate.validation_script).trim() !== "" ? (
+                                  <ApiContentEditor
+                                    executeEngine="SCRIPT"
+                                    value={String(paramValidate.validation_script)}
+                                    // Read-only viewer in detail page
+                                    onChange={() => {}}
+                                    disabled
+                                    autoHeight
+                                    minHeight={120}
+                                    maxHeight={360}
+                                    placeholder={
+                                      "def validate(value, params=None):\n"
+                                      + "    # return True/False\n"
+                                      + "    return True\n"
+                                    }
+                                    paramNames={[]}
+                                  />
+                                ) : (
+                                  <div className="text-sm text-muted-foreground">-</div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground break-all">
+                                {paramValidate.message_when_fail && String(paramValidate.message_when_fail).trim() !== ""
+                                  ? String(paramValidate.message_when_fail)
+                                  : "-"}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">-</div>
+                )
+              })()}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Result Transform Snapshot</Label>
+              {selectedVersion?.result_transform_snapshot && selectedVersion.result_transform_snapshot.trim() !== "" ? (
+                <ApiContentEditor
+                  executeEngine="SCRIPT"
+                  value={selectedVersion.result_transform_snapshot}
+                  // Read-only viewer in detail page
+                  onChange={() => {}}
+                  disabled
+                  autoHeight
+                  minHeight={160}
+                  maxHeight={520}
+                  placeholder={
+                    'def transform(result, params=None):\n'
+                    + '    """Return transformed result. result is the raw executor output."""\n'
+                    + "    return result\n"
+                  }
+                  paramNames={[]}
+                />
+              ) : (
+                <div className="text-sm text-muted-foreground">-</div>
+              )}
+            </div>
+
             <div className="text-sm text-muted-foreground">
               <p>Committed at: {selectedVersion ? new Date(selectedVersion.committed_at).toLocaleString() : ""}</p>
               {selectedVersion?.committed_by_email && (
@@ -1657,6 +1866,15 @@ function ApiDetail() {
             <DialogClose asChild>
               <Button variant="outline">Close</Button>
             </DialogClose>
+            {selectedVersion && (
+              <Button
+                variant="default"
+                onClick={() => handleRestoreVersion(selectedVersion.id)}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Restore to dev config
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

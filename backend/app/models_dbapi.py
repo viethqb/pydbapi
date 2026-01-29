@@ -372,6 +372,21 @@ class VersionCommit(SQLModel, table=True):
     )
     version: int = Field(default=1)
     content_snapshot: str = Field(sa_column=Column(Text, nullable=False))
+    params_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+        description="Snapshot of ApiContext.params at commit time",
+    )
+    param_validates_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+        description="Snapshot of ApiContext.param_validates at commit time",
+    )
+    result_transform_snapshot: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+        description="Snapshot of ApiContext.result_transform at commit time",
+    )
     commit_message: str | None = Field(default=None, max_length=512)
     committed_by_id: uuid.UUID | None = Field(
         default=None,
