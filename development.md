@@ -75,11 +75,17 @@ make docker-up
 make docker-down
 ```
 
-* Migrations: one consolidated revision `a00000000001_initial_schema` (user, item, DBAPI Phase 1). New changes: `make migrate-new msg=...`.
+* Migrations: one consolidated revision `001_schema` (full schema). Apply: `make migrate`. **Tạo migration mới tự động từ models** (Alembic autogenerate):
 
 ```bash
-make migrate
-make migrate-new msg=add_foo
+make migrate                    # Áp dụng migrations (upgrade head)
+make migrate-new msg=add_foo     # Tạo file migration mới từ thay đổi trong app/models*.py
+```
+
+Tạo lại migration duy nhất từ đầu (DB trống, xóa hết file trong `backend/app/alembic/versions/` trừ `.keep`):
+
+```bash
+cd backend && uv run alembic revision --autogenerate -m "001_schema"
 ```
 
 If the DB was created with old multi-version migrations, reset and re-run: drop DB (or `docker compose -f docker-compose.test.yml down -v` for test), create/start DB, then `alembic upgrade head`.

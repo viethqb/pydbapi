@@ -1,12 +1,5 @@
-import {
-  BookOpen,
-  Code2,
-  Database,
-  LayoutDashboard,
-  Settings,
-  Users,
-} from "lucide-react"
 import { Link as RouterLink } from "@tanstack/react-router"
+import { Users } from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -20,37 +13,25 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
+import { baseNavItems } from "./navItems"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
-const baseItems: Item[] = [
-  { icon: LayoutDashboard, title: "Dashboard", path: "/" },
-  { icon: Database, title: "Connection", path: "/connection" },
-  {
-    icon: Code2,
-    title: "API Dev",
-    submenu: [
-      { title: "Modules", path: "/api-dev/modules" },
-      { title: "APIs", path: "/api-dev/apis" },
-    ],
-  },
-  { icon: BookOpen, title: "API Repository", path: "/api-repository" },
-  {
-    icon: Settings,
-    title: "System",
-    submenu: [
-      { title: "Groups", path: "/system/groups" },
-      { title: "Clients", path: "/system/clients" },
-    ],
-  },
-]
+function toMainItem(item: (typeof baseNavItems)[number]): Item {
+  return {
+    icon: item.icon,
+    title: item.title,
+    path: item.path,
+    submenu: item.submenu,
+  }
+}
 
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
 
-  const items = currentUser?.is_superuser
-    ? [...baseItems, { icon: Users, title: "Admin", path: "/admin" }]
-    : baseItems
+  const items: Item[] = currentUser?.is_superuser
+    ? [...baseNavItems.map(toMainItem), { icon: Users, title: "Admin", path: "/admin" }]
+    : baseNavItems.map(toMainItem)
 
   return (
     <Sidebar collapsible="icon">

@@ -41,6 +41,13 @@ import { ModulesService } from "@/services/modules"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
+import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
+import {
+  RESULT_TRANSFORM_PLACEHOLDER,
+  SCRIPT_CONTENT_PLACEHOLDER,
+  SQL_CONTENT_PLACEHOLDER,
+} from "@/components/ApiDev/apiContentPlaceholders"
+import ResultTransformExamples from "@/components/ApiDev/ResultTransformExamples"
 import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 import useCustomToast from "@/hooks/useCustomToast"
 
@@ -999,57 +1006,54 @@ function ApiDetail() {
                       )}
                     </Button>
                   </div>
+                  <ApiContentExamples executeEngine={apiDetail.execute_engine} />
                   {apiDetail.execute_engine === "SQL" ? (
                     <SqlStatementsEditor
                       value={apiDetail.api_context.content || ""}
                       onChange={() => {}}
                       disabled
-                      placeholder={'SELECT * FROM users WHERE id = {{ id | sql_int }}'}
+                      placeholder={SQL_CONTENT_PLACEHOLDER}
                       paramNames={[]}
                     />
                   ) : (
                     <ApiContentEditor
                       executeEngine="SCRIPT"
                       value={apiDetail.api_context.content || ""}
-                      // Read-only viewer in detail page
                       onChange={() => {}}
                       disabled
                       autoHeight
                       minHeight={260}
                       maxHeight={720}
-                      placeholder={'def execute(params):\n    return {"result": "success"}'}
+                      placeholder={SCRIPT_CONTENT_PLACEHOLDER}
                       paramNames={[]}
                     />
                   )}
 
-                  <div className="mt-6 border-t pt-6">
-                    <div className="mb-4">
-                      <div className="text-sm font-medium">Result transform (Python)</div>
-                      <div className="text-sm text-muted-foreground">
+                  <div className="border-t pt-6 mt-6">
+                    <div className="mb-2">
+                      <h3 className="text-lg font-semibold">Result transform (Python)</h3>
+                      <p className="text-sm text-muted-foreground">
                         Python script to transform the raw executor result before returning
-                      </div>
+                      </p>
                     </div>
-
-                    {apiDetail.api_context.result_transform && apiDetail.api_context.result_transform.trim() !== "" ? (
-                      <ApiContentEditor
-                        executeEngine="SCRIPT"
-                        value={apiDetail.api_context.result_transform}
-                        // Read-only viewer in detail page
-                        onChange={() => {}}
-                        disabled
-                        autoHeight
-                        minHeight={160}
-                        maxHeight={520}
-                        placeholder={
-                          'def transform(result, params=None):\n'
-                          + '    """Return transformed result. result is the raw executor output."""\n'
-                          + "    return result\n"
-                        }
-                        paramNames={[]}
-                      />
-                    ) : (
-                      <div className="text-sm text-muted-foreground">-</div>
-                    )}
+                    <ResultTransformExamples />
+                    <div className="mt-4">
+                      {apiDetail.api_context.result_transform && apiDetail.api_context.result_transform.trim() !== "" ? (
+                        <ApiContentEditor
+                          executeEngine="SCRIPT"
+                          value={apiDetail.api_context.result_transform}
+                          onChange={() => {}}
+                          disabled
+                          autoHeight
+                          minHeight={260}
+                          maxHeight={720}
+                          placeholder={RESULT_TRANSFORM_PLACEHOLDER}
+                          paramNames={[]}
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">-</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1841,13 +1845,9 @@ function ApiDetail() {
                   onChange={() => {}}
                   disabled
                   autoHeight
-                  minHeight={160}
-                  maxHeight={520}
-                  placeholder={
-                    'def transform(result, params=None):\n'
-                    + '    """Return transformed result. result is the raw executor output."""\n'
-                    + "    return result\n"
-                  }
+                  minHeight={260}
+                  maxHeight={720}
+                  placeholder={RESULT_TRANSFORM_PLACEHOLDER}
                   paramNames={[]}
                 />
               ) : (

@@ -15,6 +15,7 @@ test:
 migrate:
 	@cd backend && uv run alembic upgrade head
 
+# Tạo migration mới tự động từ models (Alembic autogenerate). VD: make migrate-new msg="add_foo"
 migrate-new:
 	@cd backend && uv run alembic revision --autogenerate -m "$(if $(msg),$(msg),change)"
 

@@ -53,6 +53,12 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { Checkbox } from "@/components/ui/checkbox"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
 import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
+import {
+  RESULT_TRANSFORM_PLACEHOLDER,
+  SCRIPT_CONTENT_PLACEHOLDER,
+  SQL_CONTENT_PLACEHOLDER,
+} from "@/components/ApiDev/apiContentPlaceholders"
+import ResultTransformExamples from "@/components/ApiDev/ResultTransformExamples"
 import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 
 const paramSchema = z.object({
@@ -1135,79 +1141,83 @@ function ApiEdit() {
                 </TableBody>
               </Table>
 
-              <ApiContentExamples executeEngine={executeEngine} />
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {executeEngine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {executeEngine === "SQL"
+                      ? "SQL query with Jinja2 template syntax for parameters"
+                      : "Python script with execute(params) function"}
+                  </p>
+                </div>
+                <ApiContentExamples executeEngine={executeEngine} />
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        {executeEngine === "SQL" ? (
+                          <SqlStatementsEditor
+                            value={field.value || ""}
+                            onChange={(next) => field.onChange(next)}
+                            onBlur={field.onBlur}
+                            placeholder={SQL_CONTENT_PLACEHOLDER}
+                            paramNames={paramNamesForContentSuggestions}
+                          />
+                        ) : (
+                          <ApiContentEditor
+                            executeEngine={executeEngine}
+                            value={field.value || ""}
+                            onChange={(next) => field.onChange(next)}
+                            onBlur={field.onBlur}
+                            autoHeight
+                            minHeight={260}
+                            maxHeight={720}
+                            placeholder={SCRIPT_CONTENT_PLACEHOLDER}
+                            paramNames={paramNamesForContentSuggestions}
+                          />
+                        )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {executeEngine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
-                    </FormLabel>
-                    <FormControl>
-                      {executeEngine === "SQL" ? (
-                        <SqlStatementsEditor
-                          value={field.value || ""}
-                          onChange={(next) => field.onChange(next)}
-                          onBlur={field.onBlur}
-                          placeholder={'SELECT * FROM users WHERE id = {{ id | sql_int }}'}
-                          paramNames={paramNamesForContentSuggestions}
-                        />
-                      ) : (
-                        <ApiContentEditor
-                          executeEngine={executeEngine}
-                          value={field.value || ""}
-                          onChange={(next) => field.onChange(next)}
-                          onBlur={field.onBlur}
-                          autoHeight
-                          minHeight={260}
-                          maxHeight={720}
-                          placeholder={'def execute(params):\n    return {"result": "success"}'}
-                          paramNames={paramNamesForContentSuggestions}
-                        />
-                      )}
-                    </FormControl>
-                    <FormDescription>
-                      {executeEngine === "SQL"
-                        ? "SQL query with Jinja2 template syntax for parameters"
-                        : "Python script with execute(params) function"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="result_transform"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Result transform (Python)</FormLabel>
-                    <FormDescription>
-                      Optional Python function to transform the raw executor result before returning.
-                    </FormDescription>
-                    <FormControl>
-                      <ApiContentEditor
-                        executeEngine="SCRIPT"
-                        value={field.value || ""}
-                        onChange={(next) => field.onChange(next)}
-                        onBlur={field.onBlur}
-                        autoHeight
-                        minHeight={160}
-                        maxHeight={520}
-                        placeholder={
-                          'def transform(result, params=None):\n'
-                          + '    """Return transformed result. result is the raw executor output."""\n'
-                          + "    return result\n"
-                        }
-                        paramNames={[]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <div className="border-t pt-6 mt-6">
+                  <div className="mb-2">
+                    <h3 className="text-lg font-semibold">Result transform (Python)</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Python script to transform the raw executor result before returning
+                    </p>
+                  </div>
+                  <ResultTransformExamples />
+                  <FormField
+                    control={form.control}
+                    name="result_transform"
+                    render={({ field }) => (
+                      <FormItem className="mt-4">
+                        <FormControl>
+                          <ApiContentEditor
+                            executeEngine="SCRIPT"
+                            value={field.value || ""}
+                            onChange={(next) => field.onChange(next)}
+                            onBlur={field.onBlur}
+                            autoHeight
+                            minHeight={260}
+                            maxHeight={720}
+                            placeholder={RESULT_TRANSFORM_PLACEHOLDER}
+                            paramNames={[]}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="debug" className="space-y-4">
