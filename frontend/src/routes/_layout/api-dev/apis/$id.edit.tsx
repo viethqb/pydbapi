@@ -53,6 +53,8 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { Checkbox } from "@/components/ui/checkbox"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
 import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
+import ParamValidateExamples from "@/components/ApiDev/ParamValidateExamples"
+import ParamsExample from "@/components/ApiDev/ParamsExample"
 import {
   RESULT_TRANSFORM_PLACEHOLDER,
   SCRIPT_CONTENT_PLACEHOLDER,
@@ -67,6 +69,7 @@ const paramSchema = z.object({
   data_type: z.string().optional().nullable(),
   is_required: z.boolean().default(false),
   default_value: z.string().optional().nullable(),
+  description: z.string().max(512).optional().nullable(),
 })
 
 const paramValidateSchema = z.object({
@@ -190,7 +193,7 @@ function ApiEdit() {
   useEffect(() => {
     if (apiDetail) {
       // Parse params from api_context if available
-      let params: Array<{ name: string; location: "query" | "header" | "body"; data_type?: string | null; is_required?: boolean; default_value?: string | null }> = []
+      let params: Array<{ name: string; location: "query" | "header" | "body"; data_type?: string | null; is_required?: boolean; default_value?: string | null; description?: string | null }> = []
       if (apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params)) {
         params = apiDetail.api_context.params.map((p: Record<string, unknown>) => ({
           name: (p.name as string) || "",
@@ -198,6 +201,7 @@ function ApiEdit() {
           data_type: (p.data_type as string | null) || null,
           is_required: (p.is_required as boolean) ?? false,
           default_value: (p.default_value as string | null) || null,
+          description: (p.description as string | null) || null,
         }))
       }
       // Parse param_validates from api_context if available
@@ -723,7 +727,7 @@ function ApiEdit() {
                             <div>
                               <FormLabel>Parameters</FormLabel>
                               <FormDescription>
-                                Define API parameters (query, header, or body)
+                                Define API parameters (query, header, body). Set data type for validation.
                               </FormDescription>
                             </div>
                             <Button
@@ -733,7 +737,7 @@ function ApiEdit() {
                               onClick={() => {
                                 field.onChange([
                                   ...field.value,
-                                  { name: "", location: "query" as const, data_type: null, is_required: false, default_value: null },
+                                  { name: "", location: "query" as const, data_type: null, is_required: false, default_value: null, description: null },
                                 ])
                               }}
                             >
@@ -741,17 +745,19 @@ function ApiEdit() {
                               Add Parameter
                             </Button>
                           </div>
+                          <ParamsExample />
                           {field.value && field.value.length > 0 ? (
-                            <div className="rounded-md border">
+                            <div className="rounded-md border overflow-x-auto">
                               <Table>
                                 <TableBody>
                                   <TableRow>
-                                    <TableHead className="w-[200px]">Name</TableHead>
-                                    <TableHead className="w-[120px]">Location</TableHead>
-                                    <TableHead className="w-[140px]">Data Type</TableHead>
-                                    <TableHead className="w-[100px]">Required</TableHead>
-                                    <TableHead className="w-[150px]">Default Value</TableHead>
-                                    <TableHead className="w-[100px]">Actions</TableHead>
+                                    <TableHead className="w-[160px]">Name</TableHead>
+                                    <TableHead className="w-[100px]">Location</TableHead>
+                                    <TableHead className="w-[110px]">Data Type</TableHead>
+                                    <TableHead className="w-[80px]">Required</TableHead>
+                                    <TableHead className="w-[120px]">Default</TableHead>
+                                    <TableHead className="min-w-[160px]">Description</TableHead>
+                                    <TableHead className="w-[80px]">Actions</TableHead>
                                   </TableRow>
                                   {field.value.map((param, index) => {
                                     const paramName = (param as { name?: string }).name || ""
@@ -856,13 +862,35 @@ function ApiEdit() {
                                             <FormItem>
                                               <FormControl>
                                                 <Input
-                                                  placeholder="Default value"
+                                                  placeholder="Default"
                                                   {...defaultValueField}
                                                   value={defaultValueField.value || ""}
                                                   onChange={(e) =>
                                                     defaultValueField.onChange(
                                                       e.target.value || null
                                                     )
+                                                  }
+                                                  className="h-9"
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.description`}
+                                          render={({ field: descField }) => (
+                                            <FormItem>
+                                              <FormControl>
+                                                <Input
+                                                  placeholder="Mô tả ý nghĩa param"
+                                                  {...descField}
+                                                  value={descField.value || ""}
+                                                  onChange={(e) =>
+                                                    descField.onChange(e.target.value || null)
                                                   }
                                                   className="h-9"
                                                 />
@@ -931,6 +959,7 @@ function ApiEdit() {
                               Add Parameter validate
                             </Button>
                           </div>
+                          <ParamValidateExamples />
                           {field.value && field.value.length > 0 ? (
                             <div className="rounded-md border">
                               <Table>

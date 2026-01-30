@@ -60,7 +60,7 @@ const SQL_EXAMPLES: Example[] = [
   {
     title: "SQL – Output values (safe quoting via filters)",
     description:
-      "Always use filters (sql_string, sql_int, etc.) to avoid injection; never embed params raw.",
+      "Structure: Jinja2 SELECT. Input: col1, col2, col3 (params). Output: one row. Use sql_string, sql_int to avoid injection.",
     code:
       "SELECT\n" +
       "  {{ col1 | sql_string }} AS col1,\n" +
@@ -70,7 +70,7 @@ const SQL_EXAMPLES: Example[] = [
   {
     title: "SQL – Dynamic WHERE + IN list",
     description:
-      "Use {% where %} for dynamic clauses; in_list for safe IN (...); sql_like for ILIKE.",
+      "Structure: Jinja2 SELECT with {% where %}. Input: ids, name, status, limit, offset (params). Output: rows; in_list for IN (...), sql_like for ILIKE.",
     code:
       "SELECT id, name, status\n" +
       "FROM users\n" +
@@ -84,7 +84,7 @@ const SQL_EXAMPLES: Example[] = [
   },
   {
     title: "SQL – Single row by ID",
-    description: "Simple lookup by primary key; use sql_int for numeric IDs.",
+    description: "Structure: Jinja2 SELECT WHERE. Input: id (param). Output: single row or empty. Use sql_int for numeric IDs.",
     code:
       "SELECT id, name, email, created_at\n" +
       "FROM users\n" +
@@ -92,7 +92,7 @@ const SQL_EXAMPLES: Example[] = [
   },
   {
     title: "SQL – Conditional JOIN",
-    description: "Use {% if %} to optionally add JOINs based on params.",
+    description: "Structure: Jinja2 SELECT with {% if %} JOIN. Input: include_profile (param). Output: user rows; profile columns only if include_profile is true.",
     code:
       "SELECT u.id, u.name, p.title AS profile_title\n" +
       "FROM users u\n" +
@@ -103,7 +103,7 @@ const SQL_EXAMPLES: Example[] = [
   },
   {
     title: "SQL – Pagination + ordering",
-    description: "LIMIT/OFFSET and ORDER BY with safe filters.",
+    description: "Structure: Jinja2 SELECT with {% where %}. Input: q, limit, offset (params). Output: rows filtered, ordered, sliced.",
     code:
       "SELECT id, name, status\n" +
       "FROM items\n" +
@@ -119,7 +119,7 @@ const SCRIPT_EXAMPLES: Example[] = [
   {
     title: "Script – Lookup by ID",
     description:
-      "Use req.get() for params; db.query_one() for single row; assign result.",
+      "Structure: req.get, db.query_one; assign result. Input: user_id (param). Output: result = {\"user\": row} or {\"error\": \"...\"}.",
     code:
       "user_id = req.get(\"user_id\")\n" +
       "if not user_id:\n" +
@@ -133,7 +133,7 @@ const SCRIPT_EXAMPLES: Example[] = [
   },
   {
     title: "Script – List + filter",
-    description: "db.query() returns list of dicts; build result from rows.",
+    description: "Structure: req.get, db.query; assign result. Input: min_age (param, default 18). Output: result = {\"total\": n, \"users\": rows}.",
     code:
       "min_age = req.get(\"min_age\", 18)\n" +
       "users = db.query(\n" +
@@ -144,7 +144,7 @@ const SCRIPT_EXAMPLES: Example[] = [
   },
   {
     title: "Script – Transaction (DML)",
-    description: "Use tx.begin/commit/rollback; db.execute for INSERT/UPDATE/DELETE.",
+    description: "Structure: tx.begin/commit/rollback, db.execute; assign result. Input: status, user_id (params). Output: result = {\"updated\": rc} or {\"error\": str}.",
     code:
       "tx.begin()\n" +
       "try:\n" +
@@ -160,7 +160,7 @@ const SCRIPT_EXAMPLES: Example[] = [
   },
   {
     title: "Script – Cache read-through",
-    description: "cache.get/set optional; reduce DB load for hot keys.",
+    description: "Structure: cache.get/set, db.query_one; assign result. Input: user_id (param). Output: result = user dict or {\"error\": \"Not found\"}.",
     code:
       "key = f\"user_{req.get('user_id')}\"\n" +
       "cached = cache.get(key)\n" +
@@ -175,7 +175,7 @@ const SCRIPT_EXAMPLES: Example[] = [
 ]
 
 export default function ApiContentExamples({ executeEngine }: Props) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
 
   const contentExamples = useMemo<Example[]>(
     () => (executeEngine === "SQL" ? SQL_EXAMPLES : SCRIPT_EXAMPLES),
@@ -193,8 +193,8 @@ export default function ApiContentExamples({ executeEngine }: Props) {
           <div className="text-sm font-medium">Content examples</div>
           <div className="text-xs text-muted-foreground">
             {executeEngine === "SQL"
-              ? "SQL (Jinja2) templates — filters, {% where %}, {% if %}"
-              : "Python Script — req, db, tx, cache; assign result"}
+              ? "Structure: Jinja2 template; params (dict) as variables. Input: params. Output: SQL query result (list of rows). Use {{ param | filter }}, {% where %}, {% if %}."
+              : "Structure: Python script; params via req.get(), globals: db, tx, cache; assign result. Input: params (req.get). Output: result (dict/list) — returned after optional transform."}
           </div>
         </div>
         <ChevronDown

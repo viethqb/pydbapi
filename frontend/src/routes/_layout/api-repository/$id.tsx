@@ -195,7 +195,7 @@ function ApiRepositoryDetail() {
       moduleSegment = currentModule.name.toLowerCase().replace(/\s+/g, "-")
     }
     const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
-    let url = `${baseUrl}/api/${moduleSegment}/${apiPath}`
+    let url = `${baseUrl}/${moduleSegment}/${apiPath}`
     
     // Add query params
     const validParams = queryParams.filter((p) => p.key && p.value)

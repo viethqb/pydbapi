@@ -42,6 +42,8 @@ import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
 import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
+import ParamValidateExamples from "@/components/ApiDev/ParamValidateExamples"
+import ParamsExample from "@/components/ApiDev/ParamsExample"
 import {
   RESULT_TRANSFORM_PLACEHOLDER,
   SCRIPT_CONTENT_PLACEHOLDER,
@@ -305,7 +307,7 @@ function ApiDetail() {
       body: {},
     }
 
-    apiDetail.api_context.params.forEach((param: { name?: string; location?: string; default_value?: string }) => {
+    apiDetail.api_context.params.forEach((param: { name?: string; location?: string; default_value?: string | null }) => {
       if (!param.name) return
       const location = param.location || "query"
       const defaultValue = param.default_value || ""
@@ -374,7 +376,7 @@ function ApiDetail() {
   }, [generatedToken, apiDetail?.access_type])
 
   // Build API URL with query params (must be before early returns)
-  // Gateway pattern: /api/{module}/{path}
+  // Gateway pattern: /{module}/{path}
   // module is derived from module.path_prefix (strip leading/trailing slashes) or module name
   const apiUrl = useMemo(() => {
     const currentModule = module
@@ -390,7 +392,7 @@ function ApiDetail() {
       moduleSegment = currentModule.name.toLowerCase().replace(/\s+/g, "-")
     }
     const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
-    let url = `${baseUrl}/api/${moduleSegment}/${apiPath}`
+    let url = `${baseUrl}/${moduleSegment}/${apiPath}`
     
     // Add query params
     const validParams = queryParams.filter((p) => p.key && p.value)
@@ -850,22 +852,25 @@ function ApiDetail() {
 
               <div className="mt-6 border-t pt-6">
                 <div className="mb-4">
-                  <div className="text-sm font-medium">Params</div>
+                  <div className="text-sm font-medium">Parameters</div>
                   <div className="text-sm text-muted-foreground">
-                    Parameters defined for this API (query/header/body)
+                    Parameters (query/header/body). Data type used for validation.
                   </div>
                 </div>
 
+                <ParamsExample />
+
                 {apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params) && apiDetail.api_context.params.length > 0 ? (
-                  <div className="rounded-md border">
+                  <div className="rounded-md border overflow-x-auto">
                     <Table>
                       <TableBody>
                         <TableRow>
-                          <TableHead className="w-[220px]">Name</TableHead>
-                          <TableHead className="w-[120px]">Location</TableHead>
-                          <TableHead className="w-[140px]">Type</TableHead>
-                          <TableHead className="w-[110px]">Required</TableHead>
-                          <TableHead>Default</TableHead>
+                          <TableHead className="w-[140px]">Name</TableHead>
+                          <TableHead className="w-[90px]">Location</TableHead>
+                          <TableHead className="w-[100px]">Type</TableHead>
+                          <TableHead className="w-[80px]">Required</TableHead>
+                          <TableHead className="w-[110px]">Default</TableHead>
+                          <TableHead className="min-w-[160px]">Description</TableHead>
                         </TableRow>
                         {apiDetail.api_context.params.map((p: unknown, idx: number) => {
                           const param = p as {
@@ -874,6 +879,7 @@ function ApiDetail() {
                             data_type?: string
                             is_required?: boolean
                             default_value?: unknown
+                            description?: string | null
                           }
                           return (
                           <TableRow key={`param-${idx}-${param.name || ""}`}>
@@ -898,6 +904,9 @@ function ApiDetail() {
                                 ? String(param.default_value)
                                 : "-"}
                             </TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate" title={param.description || undefined}>
+                              {param.description && param.description.trim() !== "" ? param.description : "-"}
+                            </TableCell>
                           </TableRow>
                           )
                         })}
@@ -911,11 +920,13 @@ function ApiDetail() {
 
               <div className="mt-6 border-t pt-6">
                 <div className="mb-4">
-                  <div className="text-sm font-medium">Param Validate</div>
+                  <div className="text-sm font-medium">Parameter Validation</div>
                   <div className="text-sm text-muted-foreground">
                     Parameter validation scripts
                   </div>
                 </div>
+
+                <ParamValidateExamples />
 
                 {(() => {
                   const paramValidates = (apiDetail.api_context as { param_validates?: unknown[] } | null)?.param_validates
@@ -1720,17 +1731,18 @@ function ApiDetail() {
             </div>
 
             <div className="space-y-2">
-              <Label>Params Snapshot</Label>
+              <Label>Parameters Snapshot</Label>
               {selectedVersion?.params_snapshot && Array.isArray(selectedVersion.params_snapshot) && selectedVersion.params_snapshot.length > 0 ? (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableBody>
                       <TableRow>
-                        <TableHead className="w-[220px]">Name</TableHead>
-                        <TableHead className="w-[120px]">Location</TableHead>
-                        <TableHead className="w-[140px]">Type</TableHead>
-                        <TableHead className="w-[110px]">Required</TableHead>
-                        <TableHead>Default</TableHead>
+                        <TableHead className="w-[140px]">Name</TableHead>
+                        <TableHead className="w-[90px]">Location</TableHead>
+                        <TableHead className="w-[100px]">Type</TableHead>
+                        <TableHead className="w-[80px]">Required</TableHead>
+                        <TableHead className="w-[110px]">Default</TableHead>
+                        <TableHead className="min-w-[160px]">Description</TableHead>
                       </TableRow>
                       {selectedVersion.params_snapshot.map((p: unknown, idx: number) => {
                         const param = p as {
@@ -1739,6 +1751,7 @@ function ApiDetail() {
                           data_type?: string
                           is_required?: boolean
                           default_value?: unknown
+                          description?: string | null
                         }
                         return (
                           <TableRow key={`version-param-${idx}-${param.name || ""}`}>
@@ -1763,6 +1776,9 @@ function ApiDetail() {
                                 ? String(param.default_value)
                                 : "-"}
                             </TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate" title={param.description || undefined}>
+                              {param.description && param.description.trim() !== "" ? param.description : "-"}
+                            </TableCell>
                           </TableRow>
                         )
                       })}
@@ -1775,7 +1791,7 @@ function ApiDetail() {
             </div>
 
             <div className="space-y-2">
-              <Label>Param Validates Snapshot</Label>
+              <Label>Parameter Validation Snapshot</Label>
               {(() => {
                 const paramValidates = selectedVersion?.param_validates_snapshot
                 return paramValidates && Array.isArray(paramValidates) && paramValidates.length > 0 ? (

@@ -34,5 +34,5 @@ if settings.all_cors_origins:
 
 app.include_router(token_router)
 app.include_router(api_router, prefix=settings.API_V1_STR)
-# Dynamic API: /api/{module}/{path:path} (after api_router so /api/v1/... is matched first)
-app.include_router(gateway_router, prefix="/api")
+# Dynamic API: /{module}/{path:path} (gateway; api_router at /api/v1/... matched first)
+app.include_router(gateway_router)

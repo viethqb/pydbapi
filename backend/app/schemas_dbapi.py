@@ -258,6 +258,11 @@ class ApiParameter(SQLModel):
         default=None,
         description="Default value for this parameter (used in debug UI and as fallback)"
     )
+    description: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Human-readable description of the parameter (meaning, usage)"
+    )
 
 
 class ApiParamValidate(SQLModel):
@@ -323,7 +328,7 @@ class ApiContextPublic(SQLModel):
     id: uuid.UUID
     api_assignment_id: uuid.UUID
     content: str
-    params: list[dict] | None = Field(default=None, description="Parameter definitions: list of {name, location, data_type, is_required, validate_type, validate, default_value}")
+    params: list[dict] | None = Field(default=None, description="Parameter definitions: list of {name, location, data_type, is_required, default_value, description}")
     param_validates: list[dict] | None = Field(default=None, description="Parameter validation scripts: list of {name, validation_script, message_when_fail}")
     result_transform: str | None = Field(
         default=None,

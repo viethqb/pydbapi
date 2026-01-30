@@ -69,6 +69,8 @@ export type ApiParameter = {
   validate_type?: "regex" | "python" | null
   validate?: string | null
   validate_message?: string | null
+  default_value?: string | null
+  description?: string | null
 }
 
 export type ApiAssignmentCreate = {

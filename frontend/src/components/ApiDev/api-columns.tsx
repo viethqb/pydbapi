@@ -72,7 +72,7 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
       }
       
       const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-      const fullPath = `/api/${moduleSegment}/${apiPath}`
+      const fullPath = `/${moduleSegment}/${apiPath}`
       
       return (
         <span className="font-mono text-sm">

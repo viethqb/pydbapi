@@ -35,7 +35,7 @@ function buildApiPath(
     moduleSegment = module.name.toLowerCase().replace(/\s+/g, "-")
   }
   const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-  return `/api/${moduleSegment}/${apiPath}`
+  return `/${moduleSegment}/${apiPath}`
 }
 
 export const Route = createFileRoute("/_layout/system/groups/$id")({

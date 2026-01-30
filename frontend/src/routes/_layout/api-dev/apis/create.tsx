@@ -53,6 +53,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { Checkbox } from "@/components/ui/checkbox"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
 import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
+import ParamsExample from "@/components/ApiDev/ParamsExample"
 import {
   RESULT_TRANSFORM_PLACEHOLDER,
   SCRIPT_CONTENT_PLACEHOLDER,
@@ -67,6 +68,7 @@ const paramSchema = z.object({
   data_type: z.string().optional().nullable(),
   is_required: z.boolean().default(false),
   default_value: z.string().optional().nullable(),
+  description: z.string().max(512).optional().nullable(),
 })
 
 const paramValidateSchema = z.object({
@@ -627,11 +629,11 @@ function ApiCreate() {
                       name="params"
                       render={({ field }) => (
                         <FormItem>
-                          <div className="mb-4 flex items-center justify-between">
+                            <div className="mb-4 flex items-center justify-between">
                             <div>
                               <FormLabel>Parameters</FormLabel>
                               <FormDescription>
-                                Define API parameters (query, header, or body)
+                                Define API parameters (query, header, body). Set data type for validation.
                               </FormDescription>
                             </div>
                             <Button
@@ -641,7 +643,7 @@ function ApiCreate() {
                               onClick={() => {
                                 field.onChange([
                                   ...field.value,
-                                  { name: "", location: "query" as const, data_type: null, is_required: false, default_value: null },
+                                  { name: "", location: "query" as const, data_type: null, is_required: false, default_value: null, description: null },
                                 ])
                               }}
                             >
@@ -649,17 +651,19 @@ function ApiCreate() {
                               Add Parameter
                             </Button>
                           </div>
+                          <ParamsExample />
                           {field.value && field.value.length > 0 ? (
-                            <div className="rounded-md border">
+                            <div className="rounded-md border overflow-x-auto">
                               <Table>
                                 <TableBody>
                                   <TableRow>
-                                    <TableHead className="w-[200px]">Name</TableHead>
-                                    <TableHead className="w-[120px]">Location</TableHead>
-                                    <TableHead className="w-[140px]">Data Type</TableHead>
-                                    <TableHead className="w-[100px]">Required</TableHead>
-                                    <TableHead className="w-[150px]">Default Value</TableHead>
-                                    <TableHead className="w-[100px]">Actions</TableHead>
+                                    <TableHead className="w-[160px]">Name</TableHead>
+                                    <TableHead className="w-[100px]">Location</TableHead>
+                                    <TableHead className="w-[110px]">Data Type</TableHead>
+                                    <TableHead className="w-[80px]">Required</TableHead>
+                                    <TableHead className="w-[120px]">Default</TableHead>
+                                    <TableHead className="min-w-[160px]">Description</TableHead>
+                                    <TableHead className="w-[80px]">Actions</TableHead>
                                   </TableRow>
                                   {field.value.map((param, index) => {
                                     const paramName = (param as { name?: string }).name || ""
@@ -764,13 +768,35 @@ function ApiCreate() {
                                             <FormItem>
                                               <FormControl>
                                                 <Input
-                                                  placeholder="Default value"
+                                                  placeholder="Default"
                                                   {...defaultValueField}
                                                   value={defaultValueField.value || ""}
                                                   onChange={(e) =>
                                                     defaultValueField.onChange(
                                                       e.target.value || null
                                                     )
+                                                  }
+                                                  className="h-9"
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <FormField
+                                          control={form.control}
+                                          name={`params.${index}.description`}
+                                          render={({ field: descField }) => (
+                                            <FormItem>
+                                              <FormControl>
+                                                <Input
+                                                  placeholder="Mô tả ý nghĩa param"
+                                                  {...descField}
+                                                  value={descField.value || ""}
+                                                  onChange={(e) =>
+                                                    descField.onChange(e.target.value || null)
                                                   }
                                                   className="h-9"
                                                 />

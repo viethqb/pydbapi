@@ -23,6 +23,7 @@ from app.models_dbapi import (
     ApiContext,
     VersionCommit,
 )
+from app.core.param_type import ParamTypeError, validate_and_coerce_params
 from app.core.param_validate import ParamValidateError, run_param_validates
 from app.schemas_dbapi import (
     ApiAssignmentCreate,
@@ -155,6 +156,7 @@ def create_api_assignment(
                     "validate": p.validate,
                     "validate_message": p.validate_message,
                     "default_value": p.default_value,
+                    "description": getattr(p, "description", None),
                 }
                 for p in body.params
             ]
@@ -234,6 +236,7 @@ def update_api_assignment(
                             "validate": p.validate,
                             "validate_message": p.validate_message,
                             "default_value": p.default_value,
+                            "description": getattr(p, "description", None),
                         }
                         for p in body.params
                     ]
@@ -267,6 +270,7 @@ def update_api_assignment(
                         "validate": p.validate,
                         "validate_message": p.validate_message,
                         "default_value": p.default_value,
+                        "description": getattr(p, "description", None),
                     }
                     for p in body.params
                 ]
@@ -444,10 +448,18 @@ def debug_api_assignment(
                 detail=f"Missing required parameters: {', '.join(missing_params)}",
             )
 
+    # Validate and coerce params by data_type
+    params_to_use = body.params or {}
+    if params_definition:
+        try:
+            params_to_use = validate_and_coerce_params(params_definition, params_to_use)
+        except ParamTypeError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
     # Param validate (Python scripts) if configured on ApiContext
     if body.id is not None and ctx and getattr(ctx, "param_validates", None):
         try:
-            run_param_validates(ctx.param_validates, body.params or {})
+            run_param_validates(ctx.param_validates, params_to_use)
         except ParamValidateError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -455,14 +467,14 @@ def debug_api_assignment(
         out = ApiExecutor().execute(
             engine=engine,
             content=content,
-            params=body.params or {},
+            params=params_to_use,
             datasource_id=datasource_id,
             session=session,
         )
         # Result transform (Python) if configured on ApiContext (only when using id)
         if body.id is not None and ctx and getattr(ctx, "result_transform", None):
             try:
-                out = run_result_transform(ctx.result_transform, out, body.params or {})
+                out = run_result_transform(ctx.result_transform, out, params_to_use)
             except ResultTransformError as e:
                 raise HTTPException(status_code=400, detail=str(e)) from e
         return out
@@ -474,7 +486,7 @@ def debug_api_assignment(
             "error": error_msg,
             "error_type": error_type,
             "content": content[:200] if content else None,  # First 200 chars
-            "params": body.params or {},
+            "params": params_to_use,
         }
 
 

@@ -109,7 +109,7 @@ export function ClientFormDialog({
   const getApiFullPath = useCallback(
     (api: ApiAssignmentPublic): string => {
       const mod = modulesMap[api.module_id]
-      if (!mod) return `/api/${api.path || ""}`.replace(/\/+/g, "/")
+      if (!mod) return `/${api.path || ""}`.replace(/\/+/g, "/")
       const raw = (mod.path_prefix || "/").replace(/^\/+|\/+$/g, "")
       const seg =
         raw ||
@@ -120,7 +120,7 @@ export function ClientFormDialog({
           .replace(/^-|-$/g, "") ||
         "default"
       const p = (api.path || "").replace(/^\//, "")
-      return `/api/${seg}/${p}`.replace(/\/+/g, "/")
+      return `/${seg}/${p}`.replace(/\/+/g, "/")
     },
     [modulesMap],
   )

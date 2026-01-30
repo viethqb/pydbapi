@@ -165,7 +165,7 @@ def test_gateway_proxy_200(
     client: TestClient,
     db: Session,
 ) -> None:
-    """GET /api/{module}/{path} with Bearer: resolve, run SQL, 200 JSON."""
+    """GET /{module}/{path} with Bearer: resolve, run SQL, 200 JSON."""
     _allow_localhost(db)
 
     def _db_override() -> Generator[Session, None, None]:
@@ -213,7 +213,7 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
 
     # Gateway
     r = client.get(
-        "/api/public/ping",
+        "/public/ping",
         headers=_gw_headers(token),
     )
     assert r.status_code == 200
@@ -239,7 +239,7 @@ def test_gateway_proxy_401_without_auth(client: TestClient, db: Session) -> None
         )
         db.commit()
 
-        r = client.get("/api/a/r", headers=_gw_headers())
+        r = client.get("/a/r", headers=_gw_headers())
         assert r.status_code == 401
     finally:
         client.app.dependency_overrides.pop(get_db, None)
@@ -265,7 +265,7 @@ def test_gateway_proxy_404_module(client: TestClient, db: Session) -> None:
         token = tr.json()["access_token"]
 
         r = client.get(
-            "/api/nonexistent/any",
+            "/nonexistent/any",
             headers=_gw_headers(token),
         )
         assert r.status_code == 404
@@ -296,7 +296,7 @@ def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
         token = tr.json()["access_token"]
 
         r = client.get(
-            "/api/m/nonexistent",
+            "/m/nonexistent",
             headers=_gw_headers(token),
         )
         assert r.status_code == 404

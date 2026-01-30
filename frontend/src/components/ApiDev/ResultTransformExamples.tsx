@@ -54,7 +54,7 @@ function CodeExample({ title, description, code }: Example) {
 const EXAMPLES: Example[] = [
   {
     title: "Passthrough",
-    description: "Minimal signature; return result unchanged.",
+    description: "Function: transform(result, params=None). Input: result, params. Output: result unchanged.",
     code:
       "def transform(result, params=None):\n" +
       '    """Transform raw executor result. params = request params dict."""\n' +
@@ -62,14 +62,14 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Wrap in {data}",
-    description: "Standard envelope for list/object responses.",
+    description: "Function: transform(result, params=None). Input: result. Output: {\"data\": result, \"ok\": true}.",
     code:
       "def transform(result, params=None):\n" +
       "    return {\"data\": result, \"ok\": True}\n",
   },
   {
     title: "Pick fields",
-    description: "Return only selected keys from rows or object.",
+    description: "Function: transform(result, params=None). Input: result (list or dict). Output: list/dict with only id and name keys.",
     code:
       "def transform(result, params=None):\n" +
       "    if isinstance(result, list):\n" +
@@ -78,7 +78,7 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Add computed field",
-    description: "Add derived fields (e.g. full_name) to each row.",
+    description: "Function: transform(result, params=None). Input: result (list of dicts). Output: same list with full_name added to each row.",
     code:
       "def transform(result, params=None):\n" +
       "    if isinstance(result, list):\n" +
@@ -88,7 +88,7 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Filter rows",
-    description: "Filter list items (e.g. by is_active) before returning.",
+    description: "Function: transform(result, params=None). Input: result (list of dicts). Output: list with only rows where is_active is true.",
     code:
       "def transform(result, params=None):\n" +
       "    if isinstance(result, list):\n" +
@@ -97,7 +97,7 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Paginate in transform",
-    description: "Slice list using params (limit/offset) when not done in SQL/Script.",
+    description: "Function: transform(result, params=None). Input: result (list), params (limit, offset). Output: result[offset:offset+limit].",
     code:
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
@@ -110,7 +110,7 @@ const EXAMPLES: Example[] = [
 ]
 
 export default function ResultTransformExamples() {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
 
   return (
     <div className="rounded-md border mt-4">
@@ -122,7 +122,7 @@ export default function ResultTransformExamples() {
         <div>
           <div className="text-sm font-medium">Result transform (Python) examples</div>
           <div className="text-xs text-muted-foreground">
-            transform(result, params=None) — wrap, pick fields, filter, add computed
+            Function: transform(result, params=None). Input: result (raw executor output: list of dicts or single dict), params (request params dict). Output: transformed value returned as API response body.
           </div>
         </div>
         <ChevronDown
