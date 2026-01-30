@@ -19,7 +19,8 @@
       "recommended": true,
       "suspicious": {
         "noExplicitAny": "off",
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noTemplateCurlyInString": "off"
       },
       "style": {
         "noNonNullAssertion": "off",

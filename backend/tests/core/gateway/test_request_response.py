@@ -8,6 +8,7 @@ from app.core.gateway.request_response import (
     format_response,
     keys_to_camel,
     keys_to_snake,
+    normalize_api_result,
     parse_params,
 )
 
@@ -285,21 +286,67 @@ def test_parse_params_respects_location_body_only() -> None:
     assert out == {"col1": "body"}
 
 
+# --- normalize_api_result ---
+
+
+def test_normalize_api_result_sql_mode_single_stmt() -> None:
+    """SQL mode, 1 statement: data = result directly (no extra list wrap)."""
+    result = {"data": [[{"x": 1}, {"x": 2}]]}
+    out = normalize_api_result(result, "SQL")
+    assert out == {"data": [{"x": 1}, {"x": 2}]}
+    assert "success" not in out
+
+
+def test_normalize_api_result_sql_mode_multi_stmt() -> None:
+    """SQL mode, multiple statements: data = [stmt1_result, stmt2_result, ...]."""
+    result = {"data": [[{"x": 1}], 2]}
+    out = normalize_api_result(result, "SQL")
+    assert out == {"data": [[{"x": 1}], 2]}
+    assert "success" not in out
+
+
+def test_normalize_api_result_script_mode_envelope() -> None:
+    """SCRIPT mode: unwrap script return (envelope) to top level."""
+    result = {"data": {"success": True, "message": None, "data": [1, 2], "total": 10}}
+    out = normalize_api_result(result, "SCRIPT")
+    assert out == {"success": True, "message": None, "data": [1, 2], "total": 10}
+
+
+def test_normalize_api_result_script_mode_wrap() -> None:
+    """SCRIPT mode: script returned non-envelope -> wrap in { success, message, data }."""
+    result = {"data": [1, 2, 3]}
+    out = normalize_api_result(result, "SCRIPT")
+    assert out == {"success": True, "message": None, "data": [1, 2, 3]}
+
+
+def test_normalize_api_result_already_envelope() -> None:
+    """Result transform returned envelope directly (SCRIPT path)."""
+    result = {"success": False, "message": "error", "data": []}
+    out = normalize_api_result(result, "SCRIPT")
+    assert out == {"success": False, "message": "error", "data": []}
+
+
+def test_normalize_api_result_raw_list_no_engine() -> None:
+    """No engine: wrap raw list in envelope."""
+    result = [{"a": 1}]
+    out = normalize_api_result(result, None)
+    assert out == {"success": True, "message": None, "data": [{"a": 1}]}
+
+
 # --- format_response ---
 
 
 def test_format_response_snake_default() -> None:
     req = _make_request(query_string=b"")
-    result = {"data": [{"user_id": 1}], "rowcount": 1}
-    assert format_response(result, req) == {"data": [{"user_id": 1}], "rowcount": 1}
+    result = {"success": True, "message": None, "data": [{"user_id": 1}]}
+    assert format_response(result, req) == {"success": True, "message": None, "data": [{"user_id": 1}]}
 
 
 def test_format_response_camel_query() -> None:
     req = _make_request(query_string=b"naming=camel")
-    result = {"data": [{"user_id": 1, "first_name": "x"}], "rowcount": 1}
+    result = {"success": True, "message": None, "data": [{"user_id": 1, "first_name": "x"}]}
     out = format_response(result, req)
-    # data/rowcount: only keys with underscore are converted; "rowcount" stays as-is
-    assert out == {"data": [{"userId": 1, "firstName": "x"}], "rowcount": 1}
+    assert out == {"success": True, "message": None, "data": [{"userId": 1, "firstName": "x"}]}
 
 
 def test_format_response_camel_header() -> None:

@@ -15,6 +15,7 @@ from app.core.gateway import (
     check_rate_limit,
     client_can_access_api,
     format_response,
+    normalize_api_result,
     parse_params,
     verify_gateway_client,
 )
@@ -98,7 +99,13 @@ async def gateway_proxy(
         # Preserve intended HTTP status codes (e.g., 400 param validate)
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        # Return standard envelope on error: { success: false, message: "...", data: [] }
+        error_body = {"success": False, "message": str(e), "data": []}
+        out = format_response(error_body, request)
+        return JSONResponse(status_code=500, content=out)
 
-    out = format_response(result, request)
+    engine = getattr(api, "execute_engine", None)
+    engine_value = engine.value if hasattr(engine, "value") else (engine or None)
+    normalized = normalize_api_result(result, engine_value)
+    out = format_response(normalized, request)
     return JSONResponse(content=out)

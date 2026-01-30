@@ -218,6 +218,7 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
     )
     assert r.status_code == 200
     data = r.json()
+    # SQL mode: 1 statement -> data = rows directly (no extra list wrap)
     assert "data" in data
     assert data["data"] == [{"x": 1}]
 

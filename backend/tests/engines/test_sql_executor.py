@@ -37,7 +37,8 @@ def test_execute_sql_select_uses_pool(
 
     out = execute_sql(ds, "SELECT 1 AS n", use_pool=True)
 
-    assert out == [{"n": 1}]
+    # Single statement -> list of one result
+    assert out == [[{"n": 1}]]
     mock_pm.return_value.get_connection.assert_called_once_with(ds)
     mock_execute.assert_called_once_with(mock_conn, "SELECT 1 AS n", product_type=ds.product_type)
     mock_ctd.assert_called_once_with(mock_cur)
@@ -62,7 +63,7 @@ def test_execute_sql_select_no_pool(
     with patch("app.engines.sql.executor.cursor_to_dicts", return_value=[{"n": 1}]):
         out = execute_sql(ds, "SELECT 1 AS n", use_pool=False)
 
-    assert out == [{"n": 1}]
+    assert out == [[{"n": 1}]]
     mock_connect.assert_called_once_with(ds)
     mock_conn.close.assert_called_once()
 
@@ -82,7 +83,7 @@ def test_execute_sql_insert_returns_rowcount(
 
     out = execute_sql(ds, "INSERT INTO t (a) VALUES (1)", use_pool=True)
 
-    assert out == 3
+    assert out == [3]
     mock_pm.return_value.release.assert_called_once()
 
 
@@ -101,5 +102,5 @@ def test_execute_sql_with_cte_treated_as_select(
     with patch("app.engines.sql.executor.cursor_to_dicts", return_value=[]):
         out = execute_sql(ds, "WITH c AS (SELECT 1) SELECT * FROM c", use_pool=True)
 
-    assert out == []
+    assert out == [[]]
     mock_execute.assert_called_once()

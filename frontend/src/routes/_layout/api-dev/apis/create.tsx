@@ -850,7 +850,15 @@ function ApiCreate() {
                             render={({ field }) => (
                               <FormItem>
                                 <Select
-                                  onValueChange={field.onChange}
+                                  onValueChange={(value) => {
+                                    field.onChange(value)
+                                    if (value === "SCRIPT") {
+                                      const content = form.getValues("content")
+                                      if (!content?.trim()) {
+                                        form.setValue("content", SCRIPT_CONTENT_PLACEHOLDER)
+                                      }
+                                    }
+                                  }}
                                   value={field.value}
                                 >
                                   <FormControl>

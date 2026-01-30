@@ -64,10 +64,9 @@ class ApiExecutor:
                 _log.error("SQL template render failed: %s", e, exc_info=True)
                 raise
             try:
+                # execute_sql always returns list of statement results (data[0], data[1], ...)
                 out = execute_sql(ds, sql)
-                if isinstance(out, list):
-                    return {"data": out}
-                return {"rowcount": out}
+                return {"data": out}
             except Exception as e:
                 _log.error("SQL execution failed: %s. SQL: %s", e, sql, exc_info=True)
                 raise ValueError(f"SQL execution failed: {str(e)}") from e

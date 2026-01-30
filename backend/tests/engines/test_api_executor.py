@@ -33,7 +33,8 @@ def test_api_executor_sql_returns_data(
 ) -> None:
     ds = _make_datasource()
     mock_engine_cls.return_value.render.return_value = "SELECT 1 AS n"
-    mock_execute_sql.return_value = [{"n": 1}, {"n": 2}]
+    # execute_sql returns list of statement results (one stmt -> one element)
+    mock_execute_sql.return_value = [[{"n": 1}, {"n": 2}]]
 
     out = ApiExecutor().execute(
         engine=ExecuteEngineEnum.SQL,
@@ -42,7 +43,7 @@ def test_api_executor_sql_returns_data(
         datasource=ds,
     )
 
-    assert out == {"data": [{"n": 1}, {"n": 2}]}
+    assert out == {"data": [[{"n": 1}, {"n": 2}]]}
     mock_engine_cls.return_value.render.assert_called_once_with("SELECT 1 AS n", {"x": 1})
     mock_execute_sql.assert_called_once_with(ds, "SELECT 1 AS n")
 
@@ -55,7 +56,8 @@ def test_api_executor_sql_returns_rowcount(
 ) -> None:
     ds = _make_datasource()
     mock_engine_cls.return_value.render.return_value = "INSERT INTO t (a) VALUES (1)"
-    mock_execute_sql.return_value = 3
+    # execute_sql returns list of statement results (one stmt -> one element = rowcount)
+    mock_execute_sql.return_value = [3]
 
     out = ApiExecutor().execute(
         engine=ExecuteEngineEnum.SQL,
@@ -64,7 +66,7 @@ def test_api_executor_sql_returns_rowcount(
         datasource=ds,
     )
 
-    assert out == {"rowcount": 3}
+    assert out == {"data": [3]}
     mock_execute_sql.assert_called_once()
 
 
@@ -78,7 +80,8 @@ def test_api_executor_sql_loads_datasource_from_session(
     mock_session = MagicMock()
     mock_session.get.return_value = ds
     mock_engine_cls.return_value.render.return_value = "SELECT 1"
-    mock_execute_sql.return_value = []
+    # execute_sql returns list of statement results
+    mock_execute_sql.return_value = [[]]
 
     out = ApiExecutor().execute(
         engine=ExecuteEngineEnum.SQL,
@@ -87,7 +90,7 @@ def test_api_executor_sql_loads_datasource_from_session(
         session=mock_session,
     )
 
-    assert out == {"data": []}
+    assert out == {"data": [[]]}
     mock_session.get.assert_called_once()
     assert mock_session.get.call_args[0][1] == ds.id
     mock_execute_sql.assert_called_once_with(ds, "SELECT 1")

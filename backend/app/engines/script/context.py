@@ -130,7 +130,13 @@ class ScriptContext:
             self._in_tx = False
 
     def to_dict(self) -> dict[str, Any]:
-        """Namespace for exec(compiled, globals): db, http, cache, env, log, req, tx, ds."""
+        """Namespace for exec(compiled, globals): db, http, cache, env, log, req, tx, ds, result."""
+        # Default result envelope: script can mutate result["data"], result["total"], etc., then return result
+        result: dict[str, Any] = {
+            "success": True,
+            "message": None,
+            "data": [],
+        }
         return {
             "db": self.db,
             "ds": self.ds,
@@ -140,6 +146,7 @@ class ScriptContext:
             "log": self.log,
             "req": self.req,
             "tx": self.tx,
+            "result": result,
         }
 
 

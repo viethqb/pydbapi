@@ -41,6 +41,7 @@ from app.schemas_dbapi import (
     VersionCommitPublic,
 )
 from app.core.result_transform import ResultTransformError, run_result_transform
+from app.core.gateway.request_response import normalize_api_result
 
 router = APIRouter(prefix="/api-assignments", tags=["api-assignments"])
 
@@ -373,7 +374,8 @@ def debug_api_assignment(
 
     - If body.id: load ApiAssignment + ApiContext; use content, execute_engine, datasource_id.
     - If body.content (inline): use content, execute_engine, datasource_id from body.
-    Returns {"data": ...}, {"rowcount": n}, or {"error": "..."}.
+    Returns same format as gateway: SQL -> { data: rows or [stmt1, stmt2, ...] };
+    SCRIPT -> { success, message, data } at top level; on error -> { error, error_type, ... }.
     """
     content: str
     engine = body.execute_engine
@@ -477,7 +479,9 @@ def debug_api_assignment(
                 out = run_result_transform(ctx.result_transform, out, params_to_use)
             except ResultTransformError as e:
                 raise HTTPException(status_code=400, detail=str(e)) from e
-        return out
+        # Same format as gateway: SQL -> { data: rows }; SCRIPT -> { success, message, data } at top level
+        engine_value = engine.value if engine and hasattr(engine, "value") else None
+        return normalize_api_result(out, engine_value)
     except Exception as e:
         # Return detailed error for debugging
         error_msg = str(e)

@@ -166,6 +166,54 @@ async def parse_params(
     return (out, body_for_log)
 
 
+def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict[str, Any]:
+    """
+    Format executor result for API response.
+
+    - SQL mode: return { data: [stmt1_result, stmt2_result, ...] } as-is (no success/message envelope).
+    - Python (SCRIPT) mode: executor returns {"data": script_return}. If script_return is the envelope
+      { success, message, data }, return it at top level (unwrap). Else wrap in { success, message, data }.
+    """
+    # SQL mode: keep { data: [...] } only. Single statement -> data = rows (no extra list wrap).
+    if execute_engine == "SQL":
+        if isinstance(result, dict) and "data" in result:
+            data = result["data"]
+            if isinstance(data, list) and len(data) == 1:
+                return {"data": data[0]}
+            return {"data": data}
+        return {"data": result if isinstance(result, list) else [result] if result is not None else []}
+
+    # SCRIPT mode: unwrap envelope to top level
+    if isinstance(result, dict) and "data" in result:
+        inner = result["data"]
+        if (
+            isinstance(inner, dict)
+            and "success" in inner
+            and "message" in inner
+            and "data" in inner
+        ):
+            data = inner["data"]
+            if not isinstance(data, list):
+                data = [data] if data is not None else []
+            out = dict(inner)
+            out["data"] = data
+            return out
+        # Script returned something else -> wrap
+        data = result["data"]
+        if not isinstance(data, list):
+            data = [data] if data is not None else []
+        return {"success": True, "message": None, "data": data}
+    # Result transform or raw
+    if isinstance(result, dict) and "success" in result and "message" in result and "data" in result:
+        data = result["data"]
+        if not isinstance(data, list):
+            data = [data] if data is not None else []
+        return {"success": bool(result.get("success", True)), "message": result.get("message"), "data": data}
+    if isinstance(result, list):
+        return {"success": True, "message": None, "data": result}
+    return {"success": True, "message": None, "data": [result] if result is not None else []}
+
+
 def _response_naming(request: Request) -> str:
     """'camel' if ?naming=camel or X-Response-Naming: camel; else 'snake'."""
     q = (request.query_params.get("naming") or "").strip().lower()
@@ -179,9 +227,8 @@ def format_response(result: dict[str, Any] | Any, request: Request) -> dict[str,
     """
     Apply response naming and return JSON-serializable structure.
 
-    - Result: from ApiExecutor, e.g. {"data": [...]} or {"rowcount": int}.
-    - If ?naming=camel or X-Response-Naming: camel: recursively convert keys to camelCase.
-    - Default: leave as-is (snake_case from DB/engine).
+    Expects result to be normalized to { success, message, data } (see normalize_api_result).
+    If ?naming=camel or X-Response-Naming: camel: recursively convert keys to camelCase.
     """
     if not isinstance(result, dict):
         return result

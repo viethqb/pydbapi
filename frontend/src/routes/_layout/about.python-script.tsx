@@ -254,6 +254,27 @@ host = ds["host"]
 port = ds["port"]`}
                 />
               </div>
+
+              <div>
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Badge variant="outline">Extra libraries (pandas, etc.)</Badge>
+                </h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Admins can enable extra modules via <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">SCRIPT_EXTRA_MODULES</code> (comma-separated, e.g. <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">pandas,numpy</code>). 
+                  Those modules are injected as globals: use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">pandas</code> directly in the script (no <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">import</code>). 
+                  The backend must have the package installed (e.g. <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">pip install pandas</code>).
+                </p>
+                <CodeBlock
+                  code={`# When SCRIPT_EXTRA_MODULES includes "pandas":
+def execute(params=None):
+    params = params or {}
+    rows = db.query("SELECT id, name, score FROM users")
+    df = pandas.DataFrame(rows)
+    summary = df["score"].mean()
+    return {"mean_score": float(summary), "count": len(rows)}`}
+                  title="Example: pandas (if enabled)"
+                />
+              </div>
             </div>
           </div>
 

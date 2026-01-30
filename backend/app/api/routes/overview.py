@@ -57,7 +57,9 @@ def get_overview_stats(
         modules=_count(session, ApiModule),
         groups=_count(session, ApiGroup),
         apis_total=_count(session, ApiAssignment),
-        apis_published=_count(session, ApiAssignment, ApiAssignment.is_published == True),
+        apis_published=_count(
+            session, ApiAssignment, ApiAssignment.is_published == True
+        ),
         clients=_count(session, AppClient),
     )
 
@@ -89,9 +91,7 @@ def get_requests_by_day(
         elif isinstance(day_value, str):
             # SQLite returns YYYY-MM-DD strings for date(...)
             day_value = date.fromisoformat(day_value.split("T")[0])
-        points.append(
-            RequestsByDayPoint(day=day_value, count=int(count_value or 0))
-        )
+        points.append(RequestsByDayPoint(day=day_value, count=int(count_value or 0)))
 
     return RequestsByDayOut(data=points)
 
@@ -143,11 +143,7 @@ def get_recent_access(
 ) -> RecentAccessOut:
     """Latest AccessRecord entries (default limit=20). request_body excluded."""
     limit = max(1, min(100, limit))
-    stmt = (
-        select(AccessRecord)
-        .order_by(AccessRecord.created_at.desc())
-        .limit(limit)
-    )
+    stmt = select(AccessRecord).order_by(AccessRecord.created_at.desc()).limit(limit)
     rows = session.exec(stmt).all()
     return RecentAccessOut(data=[_to_access_public(r) for r in rows])
 
@@ -172,9 +168,7 @@ def get_recent_commits(
     """Latest VersionCommit entries (default limit=20). content_snapshot excluded."""
     limit = max(1, min(100, limit))
     stmt = (
-        select(VersionCommit)
-        .order_by(VersionCommit.committed_at.desc())
-        .limit(limit)
+        select(VersionCommit).order_by(VersionCommit.committed_at.desc()).limit(limit)
     )
     rows = session.exec(stmt).all()
     return RecentCommitsOut(data=[_to_version_commit_public(v) for v in rows])

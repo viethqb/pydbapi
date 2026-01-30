@@ -53,6 +53,21 @@ class TestScriptExecutorBasic:
         )
         assert out == [2, 4, 6]
 
+    def test_execute_function_style(self) -> None:
+        """When script defines execute(params), it is called with req and return value is used."""
+        ctx = ScriptContext(
+            datasource=_make_datasource(),
+            req={"a": 1, "b": 2},
+            pool_manager=MockPool(),
+        )
+        script = (
+            "def execute(params=None):\n"
+            "    params = params or {}\n"
+            "    return [params.get('a', 0), params.get('b', 0)]\n"
+        )
+        out = ScriptExecutor().execute(script, ctx)
+        assert out == [1, 2]
+
     def test_no_result_returns_none(self) -> None:
         ctx = ScriptContext(
             datasource=_make_datasource(),

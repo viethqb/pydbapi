@@ -146,10 +146,13 @@ export type ApiAssignmentDebugIn = {
   params?: Record<string, unknown>
 }
 
+/** Debug response: SQL -> { data }; SCRIPT -> { success, message, data }; error -> { error, error_type?, ... } */
 export type ApiAssignmentDebugOut = {
   data?: unknown
-  rowcount?: number
+  success?: boolean
+  message?: string | null
   error?: string
+  error_type?: string
 }
 
 const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"

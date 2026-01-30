@@ -117,60 +117,93 @@ const SQL_EXAMPLES: Example[] = [
 
 const SCRIPT_EXAMPLES: Example[] = [
   {
+    title: "Script – Simple query (default)",
+    description:
+      "result has success, message, data. Append to result[\"data\"], optionally result[\"total\"], return result.",
+    code:
+      "def execute(params=None):\n" +
+      "    params = params or {}\n" +
+      '    sql = "SELECT 1 AS col"\n' +
+      "    rows = db.query(sql)\n" +
+      '    result["data"].append(rows)\n' +
+      "    return result\n",
+  },
+  {
     title: "Script – Lookup by ID",
     description:
-      "Structure: req.get, db.query_one; assign result. Input: user_id (param). Output: result = {\"user\": row} or {\"error\": \"...\"}.",
+      "Function: execute(params=None). params.get(\"user_id\"), db.query_one; return {\"user\": row} or {\"error\": \"...\"}.",
     code:
-      "user_id = req.get(\"user_id\")\n" +
-      "if not user_id:\n" +
-      "    result = {\"error\": \"user_id is required\"}\n" +
-      "else:\n" +
+      "def execute(params=None):\n" +
+      "    params = params or {}\n" +
+      '    user_id = params.get("user_id")\n' +
+      '    if not user_id:\n' +
+      '        return {"error": "user_id is required"}\n' +
       "    row = db.query_one(\n" +
-      "        \"SELECT id, name, email FROM users WHERE id = %s\",\n" +
+      '        "SELECT id, name, email FROM users WHERE id = %s",\n' +
       "        (user_id,),\n" +
       "    )\n" +
-      "    result = {\"user\": row} if row else {\"error\": \"Not found\"}",
+      '    return {"user": row} if row else {"error": "Not found"}\n',
+  },
+  {
+    title: "Script – 2 SQL queries (like SQL mode)",
+    description:
+      "Append each query result to result[\"data\"]; add result[\"total\"]; return result.",
+    code:
+      "def execute(params=None):\n" +
+      "    params = params or {}\n" +
+      '    result["data"].append(db.query("SELECT id, name FROM users LIMIT 10"))\n' +
+      '    count_row = db.query_one("SELECT COUNT(*) AS total FROM users")\n' +
+      "    result[\"total\"] = count_row[\"total\"] if count_row else 0\n" +
+      "    return result\n",
   },
   {
     title: "Script – List + filter",
-    description: "Structure: req.get, db.query; assign result. Input: min_age (param, default 18). Output: result = {\"total\": n, \"users\": rows}.",
+    description:
+      "Function: execute(params=None). params.get(\"min_age\", 18), db.query; return {\"total\": n, \"users\": rows}.",
     code:
-      "min_age = req.get(\"min_age\", 18)\n" +
-      "users = db.query(\n" +
-      "    \"SELECT id, name, age FROM users WHERE age >= %s\",\n" +
-      "    (min_age,),\n" +
-      ")\n" +
-      "result = {\"total\": len(users), \"users\": users}",
+      "def execute(params=None):\n" +
+      "    params = params or {}\n" +
+      '    min_age = params.get("min_age", 18)\n' +
+      "    users = db.query(\n" +
+      '        "SELECT id, name, age FROM users WHERE age >= %s",\n' +
+      "        (min_age,),\n" +
+      "    )\n" +
+      '    return {"total": len(users), "users": users}\n',
   },
   {
     title: "Script – Transaction (DML)",
-    description: "Structure: tx.begin/commit/rollback, db.execute; assign result. Input: status, user_id (params). Output: result = {\"updated\": rc} or {\"error\": str}.",
+    description:
+      "Function: execute(params=None). tx.begin/commit/rollback, db.execute; return {\"updated\": rc} or {\"error\": str}.",
     code:
-      "tx.begin()\n" +
-      "try:\n" +
-      "    rc = db.execute(\n" +
-      "        \"UPDATE users SET status = %s WHERE id = %s\",\n" +
-      "        (req.get(\"status\", 1), req.get(\"user_id\")),\n" +
-      "    )\n" +
-      "    tx.commit()\n" +
-      "    result = {\"updated\": rc}\n" +
-      "except Exception as e:\n" +
-      "    tx.rollback()\n" +
-      "    result = {\"error\": str(e)}",
+      "def execute(params=None):\n" +
+      "    params = params or {}\n" +
+      "    tx.begin()\n" +
+      "    try:\n" +
+      "        rc = db.execute(\n" +
+      '            "UPDATE users SET status = %s WHERE id = %s",\n' +
+      "            (params.get(\"status\", 1), params.get(\"user_id\")),\n" +
+      "        )\n" +
+      "        tx.commit()\n" +
+      '        return {"updated": rc}\n' +
+      "    except Exception as e:\n" +
+      "        tx.rollback()\n" +
+      '        return {"error": str(e)}\n',
   },
   {
     title: "Script – Cache read-through",
-    description: "Structure: cache.get/set, db.query_one; assign result. Input: user_id (param). Output: result = user dict or {\"error\": \"Not found\"}.",
+    description:
+      "Function: execute(params=None). cache.get/set, db.query_one; return user dict or {\"error\": \"Not found\"}.",
     code:
-      "key = f\"user_{req.get('user_id')}\"\n" +
-      "cached = cache.get(key)\n" +
-      "if cached:\n" +
-      "    result = cached\n" +
-      "else:\n" +
-      "    user = db.query_one(\"SELECT * FROM users WHERE id = %s\", (req.get(\"user_id\"),))\n" +
+      "def execute(params=None):\n" +
+      "    params = params or {}\n" +
+      '    key = f"user_{params.get(\'user_id\')}"\n' +
+      "    cached = cache.get(key)\n" +
+      "    if cached:\n" +
+      "        return cached\n" +
+      '    user = db.query_one("SELECT * FROM users WHERE id = %s", (params.get("user_id"),))\n' +
       "    if user:\n" +
       "        cache.set(key, user, ttl=300)\n" +
-      "    result = user if user else {\"error\": \"Not found\"}",
+      '    return user if user else {"error": "Not found"}\n',
   },
 ]
 
@@ -194,7 +227,7 @@ export default function ApiContentExamples({ executeEngine }: Props) {
           <div className="text-xs text-muted-foreground">
             {executeEngine === "SQL"
               ? "Structure: Jinja2 template; params (dict) as variables. Input: params. Output: SQL query result (list of rows). Use {{ param | filter }}, {% where %}, {% if %}."
-              : "Structure: Python script; params via req.get(), globals: db, tx, cache; assign result. Input: params (req.get). Output: result (dict/list) — returned after optional transform."}
+              : "Structure: def execute(params=None): ... return result. Params from request; globals: db, tx, cache, req. Return dict/list — returned after optional transform."}
           </div>
         </div>
         <ChevronDown

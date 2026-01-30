@@ -9,6 +9,7 @@ from app.core.gateway.request_response import (
     format_response,
     keys_to_camel,
     keys_to_snake,
+    normalize_api_result,
     parse_params,
 )
 from app.core.gateway.resolver import path_to_regex, resolve_api_assignment, resolve_module
@@ -21,6 +22,7 @@ __all__ = [
     "format_response",
     "keys_to_camel",
     "keys_to_snake",
+    "normalize_api_result",
     "parse_params",
     "path_to_regex",
     "resolve_api_assignment",

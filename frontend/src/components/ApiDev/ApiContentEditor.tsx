@@ -102,7 +102,13 @@ const JINJA_TAGS: Array<{ id: string; label: string; insert: string }> = [
   })),
 ]
 
+// Register completion providers once per Monaco instance to avoid duplicate suggestions
+// when multiple editors (e.g. Content + Result transform) use the same language.
+let sqlCompletionDisposable: Monaco.IDisposable | null = null
+let pythonCompletionDisposable: Monaco.IDisposable | null = null
+
 function registerSqlCompletions(monaco: typeof Monaco) {
+  if (sqlCompletionDisposable) return sqlCompletionDisposable
   const keywords = [
     "SELECT",
     "FROM",
@@ -131,7 +137,7 @@ function registerSqlCompletions(monaco: typeof Monaco) {
     "FALSE",
   ]
 
-  return monaco.languages.registerCompletionItemProvider("sql", {
+  const disposable = monaco.languages.registerCompletionItemProvider("sql", {
     triggerCharacters: [".", " "],
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position)
@@ -152,11 +158,29 @@ function registerSqlCompletions(monaco: typeof Monaco) {
       return { suggestions }
     },
   })
+  sqlCompletionDisposable = disposable
+  return disposable
 }
 
+// Built-in globals for Python script. Kind (Module/Variable) applied in provider.
+const PYTHON_SCRIPT_GLOBALS: Array<{ label: string; detail: string; kind: "module" | "variable" }> = [
+  { label: "db", detail: "Database: query, query_one, execute, insert, update, delete", kind: "module" },
+  { label: "http", detail: "HTTP client: get, post, put, delete", kind: "module" },
+  { label: "cache", detail: "Cache (Redis): get, set, delete, exists, incr, decr", kind: "module" },
+  { label: "env", detail: "Environment: get, get_int, get_bool", kind: "module" },
+  { label: "log", detail: "Logging: info, warn, error, debug", kind: "module" },
+  { label: "req", detail: "Request params dict (same as params in execute)", kind: "variable" },
+  { label: "tx", detail: "Transaction: begin, commit, rollback", kind: "module" },
+  { label: "ds", detail: "DataSource metadata: id, name, host, database", kind: "variable" },
+  { label: "params", detail: "Request params dict (argument of execute)", kind: "variable" },
+  { label: "json", detail: "json.loads, json.dumps", kind: "module" },
+  { label: "datetime", detail: "datetime, date, time, timedelta", kind: "module" },
+]
+
 function registerPythonCompletions(monaco: typeof Monaco) {
-  return monaco.languages.registerCompletionItemProvider("python", {
-    triggerCharacters: [".", "("],
+  if (pythonCompletionDisposable) return pythonCompletionDisposable
+  const disposable = monaco.languages.registerCompletionItemProvider("python", {
+    triggerCharacters: [".", "(", " "],
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position)
       const range = new monaco.Range(
@@ -165,41 +189,127 @@ function registerPythonCompletions(monaco: typeof Monaco) {
         position.lineNumber,
         word.endColumn
       )
+      const lineContent = model.getLineContent(position.lineNumber)
+      const textBeforeCursor = lineContent.slice(0, position.column - 1)
+      const trimmed = textBeforeCursor.trimEnd()
 
-      const suggestions: Monaco.languages.CompletionItem[] = [
-        {
-          label: "execute(params) (snippet)",
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText:
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: Monaco snippet placeholder syntax
-            "def execute(params):\n    ${1:# TODO: implement}\n    return ${2:{\"result\": \"success\"}}\n",
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          range,
-        },
-        {
-          label: "params.get",
-          kind: monaco.languages.CompletionItemKind.Method,
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: Monaco snippet placeholder syntax
-          insertText: "params.get(${1:\"key\"})",
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          range,
-        },
-        {
-          label: "return dict",
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: Monaco snippet placeholder syntax
-          insertText: "return {${1:\"key\"}: ${2:\"value\"}}",
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          range,
-        },
-      ]
+      const suggestions: Monaco.languages.CompletionItem[] = []
+
+      // Member completion: db.*, http.*, cache.*, env.*, log.*, tx.* (single-quote strings for Monaco ${n:placeholder})
+      if (trimmed.endsWith("db.")) {
+        suggestions.push(
+          { label: "query", insertText: 'query(${1:sql}, ${2:params=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "list[dict]. Run SELECT; params: (tuple) or [list] for %s" },
+          { label: "query_one", insertText: 'query_one(${1:sql}, ${2:params=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "dict | None. Single row" },
+          { label: "execute", insertText: 'execute(${1:sql}, ${2:params=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. Run INSERT/UPDATE/DELETE; returns rowcount" },
+          { label: "insert", insertText: 'insert(${1:sql}, ${2:params=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. INSERT" },
+          { label: "update", insertText: 'update(${1:sql}, ${2:params=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. UPDATE" },
+          { label: "delete", insertText: 'delete(${1:sql}, ${2:params=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. DELETE" },
+        )
+      } else if (trimmed.endsWith("http.")) {
+        suggestions.push(
+          { label: "get", insertText: 'get(${1:url})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "GET request; returns JSON or text" },
+          { label: "post", insertText: 'post(${1:url}, ${2:json=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "POST request" },
+          { label: "put", insertText: 'put(${1:url}, ${2:json=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "PUT request" },
+          { label: "delete", insertText: 'delete(${1:url})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "DELETE request" },
+        )
+      } else if (trimmed.endsWith("cache.")) {
+        suggestions.push(
+          { label: "get", insertText: 'get(${1:key})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get value by key" },
+          { label: "set", insertText: 'set(${1:key}, ${2:value}, ${3:ttl_seconds=None})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Set key=value; optional TTL" },
+          { label: "delete", insertText: 'delete(${1:key})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Delete key" },
+          { label: "exists", insertText: 'exists(${1:key})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "bool" },
+          { label: "incr", insertText: 'incr(${1:key}, ${2:amount=1})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Increment counter" },
+          { label: "decr", insertText: 'decr(${1:key}, ${2:amount=1})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Decrement counter" },
+        )
+      } else if (trimmed.endsWith("env.")) {
+        suggestions.push(
+          { label: "get", insertText: 'get(${1:key})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get env/settings value (whitelisted keys)" },
+          { label: "get_int", insertText: 'get_int(${1:key})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get as int" },
+          { label: "get_bool", insertText: 'get_bool(${1:key})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get as bool" },
+        )
+      } else if (trimmed.endsWith("log.")) {
+        suggestions.push(
+          { label: "info", insertText: 'info(${1:msg})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log info" },
+          { label: "warn", insertText: 'warn(${1:msg})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log warning" },
+          { label: "error", insertText: 'error(${1:msg})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log error" },
+          { label: "debug", insertText: 'debug(${1:msg})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log debug" },
+        )
+      } else if (trimmed.endsWith("tx.")) {
+        suggestions.push(
+          { label: "begin", insertText: "begin()", range, kind: monaco.languages.CompletionItemKind.Method, detail: "Start transaction" },
+          { label: "commit", insertText: "commit()", range, kind: monaco.languages.CompletionItemKind.Method, detail: "Commit transaction" },
+          { label: "rollback", insertText: "rollback()", range, kind: monaco.languages.CompletionItemKind.Method, detail: "Rollback transaction" },
+        )
+      } else {
+        // Globals and snippets
+        const kindModule = monaco.languages.CompletionItemKind.Module
+        const kindVar = monaco.languages.CompletionItemKind.Variable
+        for (const g of PYTHON_SCRIPT_GLOBALS) {
+          suggestions.push({
+            label: g.label,
+            detail: g.detail,
+            kind: g.kind === "module" ? kindModule : kindVar,
+            insertText: g.label,
+            range,
+          })
+        }
+        suggestions.push(
+          {
+            label: "execute(params=None) (snippet)",
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'def execute(params=None):\n    ${1:params = params or {}}\n    sql = "${2:SELECT 1 AS col}"\n    rows = db.query(sql)\n    return ${3:rows}\n',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            detail: "Main entry: params from request, return dict/list",
+          },
+          {
+            label: "params.get",
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'params.get(${1:"key"}${2:, default})',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            detail: "Get request param with optional default",
+          },
+          {
+            label: "db.query(sql)",
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'db.query(${1:"SELECT * FROM table"}${2:, (param1,)})\n${3:return }rows',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            detail: "Run SELECT, get list of dicts",
+          },
+          {
+            label: "db.query_one(sql)",
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'row = db.query_one(${1:"SELECT * FROM table WHERE id = %s"}, (${2:id},))',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            detail: "Single row or None",
+          },
+          {
+            label: "return dict",
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'return {${1:"key"}: ${2:value}}',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            detail: "Return JSON object",
+          },
+          {
+            label: "return list",
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'return ${1:rows}',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            detail: "Return list (e.g. rows)",
+          },
+        )
+      }
 
       return { suggestions }
     },
   })
+  pythonCompletionDisposable = disposable
+  return disposable
 }
 
 export default function ApiContentEditor({
@@ -238,7 +348,6 @@ export default function ApiContentEditor({
   const [jinjaOpen, setJinjaOpen] = useState(false)
   const [jinjaSearch, setJinjaSearch] = useState("")
 
-  const disposablesRef = useRef<Monaco.IDisposable[]>([])
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<typeof Monaco | null>(null)
   const valueRef = useRef<string>("")
@@ -269,14 +378,9 @@ export default function ApiContentEditor({
       const initialValue = valueRef.current ?? ""
       editor.setValue(initialValue)
 
-      // Clean up previous providers registered from this component instance
-      for (const d of disposablesRef.current) d.dispose()
-      disposablesRef.current = []
-
-      disposablesRef.current.push(
-        registerSqlCompletions(monaco),
-        registerPythonCompletions(monaco)
-      )
+      // Register completion providers once globally (they are shared across editors)
+      registerSqlCompletions(monaco)
+      registerPythonCompletions(monaco)
 
       editor.onDidFocusEditorText(() => setIsFocused(true))
       editor.onDidBlurEditorText(() => {

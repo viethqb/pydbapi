@@ -44,16 +44,13 @@ def execute_sql(
     sql: str,
     *,
     use_pool: bool = True,
-) -> list[dict[str, Any]] | int | list[Any]:
+) -> list[Any]:
     """
     Run rendered SQL against the datasource. No parameter binding; SQL is final.
 
-    - Single statement:
-      - SELECT / WITH -> list[dict] (rows)
-      - INSERT / UPDATE / DELETE / etc. -> int (rowcount)
-    - Multiple statements separated by ';':
-      - returns list of per-statement results, where each element is either
-        list[dict] (for SELECT/WITH) or int (rowcount for DML).
+    Always returns a list of per-statement results (one element per statement).
+    - Single statement: returns [result] (result = list[dict] for SELECT/WITH, int for DML).
+    - Multiple statements (split by ';'): returns [r1, r2, ...].
 
     use_pool: if True, use PoolManager.get_connection/release; else connect/close.
     """
@@ -67,13 +64,13 @@ def execute_sql(
 
         statements = _split_statements(sql)
 
-        # Single-statement behavior (backwards compatible)
+        # Single statement: return [result] so API always gets data = [stmt1_result, ...]
         if len(statements) == 1:
             single_sql = statements[0]
             cur = execute(conn, single_sql, product_type=datasource.product_type)
             if _is_select_like(single_sql):
-                return cursor_to_dicts(cur)
-            return cur.rowcount if cur.rowcount is not None else 0
+                return [cursor_to_dicts(cur)]
+            return [cur.rowcount if cur.rowcount is not None else 0]
 
         # Multi-statement: execute sequentially and collect results
         results: list[Any] = []

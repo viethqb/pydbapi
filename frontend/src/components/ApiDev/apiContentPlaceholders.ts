@@ -13,12 +13,13 @@ export const SQL_CONTENT_PLACEHOLDER =
   "LIMIT {{ limit | sql_int }} OFFSET {{ offset | sql_int }};"
 
 export const SCRIPT_CONTENT_PLACEHOLDER =
-  "user_id = req.get(\"user_id\")\n" +
-  "if not user_id:\n" +
-  "    result = {\"error\": \"user_id is required\"}\n" +
-  "else:\n" +
-  "    row = db.query_one(\"SELECT id, name, email FROM users WHERE id = %s\", (user_id,))\n" +
-  "    result = {\"user\": row} if row else {\"error\": \"Not found\"}"
+  "def execute(params=None):\n" +
+  '    """result = {success, message, data}. Append to result["data"], add result["total"], return result."""\n' +
+  "    params = params or {}\n" +
+  '    sql = "SELECT 1 AS col"\n' +
+  "    rows = db.query(sql)\n" +
+  '    result["data"].append(rows)\n' +
+  "    return result\n"
 
 export const RESULT_TRANSFORM_PLACEHOLDER =
   "def transform(result, params=None):\n" +
