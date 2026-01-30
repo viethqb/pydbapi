@@ -1,12 +1,18 @@
 import Editor, { type OnMount } from "@monaco-editor/react"
 import type * as Monaco from "monaco-editor"
-import { Braces } from "lucide-react"
-import type { MutableRefObject } from "react"
+import { Braces, ChevronDown } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { format as formatSql } from "sql-formatter"
 import initRuff, { format as formatPython } from "@wasm-fmt/ruff_fmt/vite"
 
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
 import useCustomToast from "@/hooks/useCustomToast"
 
@@ -60,10 +66,43 @@ function unmaskJinjaBlocks(input: string, blocks: string[]) {
   return out
 }
 
-function registerSqlCompletions(
-  monaco: typeof Monaco,
-  paramNamesRef: MutableRefObject<string[]>
-) {
+// Jinja2 filters (backend engines/sql/filters.py)
+const JINJA_FILTER_NAMES = [
+  "sql_string",
+  "sql_int",
+  "sql_float",
+  "sql_bool",
+  "sql_date",
+  "sql_datetime",
+  "in_list",
+  "sql_like",
+  "sql_like_start",
+  "sql_like_end",
+  "json",
+] as const
+
+// Jinja2 tags for the dropdown (SQL mode only). Insert at cursor when selected.
+const JINJA_TAGS: Array<{ id: string; label: string; insert: string }> = [
+  // Block tags
+  { id: "if", label: "{% if %} ... {% endif %}", insert: "{% if param %}\n  \n{% endif %}" },
+  { id: "for", label: "{% for %} ... {% endfor %}", insert: "{% for item in items %}\n  \n{% endfor %}" },
+  { id: "where", label: "{% where %} ... {% endwhere %}", insert: "{% where %}\n  {% if param %}condition\n  {% endif %}\n{% endwhere %}" },
+  { id: "set", label: "{% set %}", insert: "{% set var = value %}" },
+  { id: "else", label: "{% else %}", insert: "{% else %}" },
+  { id: "elif", label: "{% elif %}", insert: "{% elif condition %}" },
+  { id: "endif", label: "{% endif %}", insert: "{% endif %}" },
+  { id: "endfor", label: "{% endfor %}", insert: "{% endfor %}" },
+  { id: "endwhere", label: "{% endwhere %}", insert: "{% endwhere %}" },
+  { id: "comment", label: "{# comment #}", insert: "{#  #}" },
+  // Param + filter: {{ param | filter }}
+  ...JINJA_FILTER_NAMES.map((f) => ({
+    id: `param-${f}`,
+    label: `{{ param | ${f} }}`,
+    insert: `{{ param | ${f} }}`,
+  })),
+]
+
+function registerSqlCompletions(monaco: typeof Monaco) {
   const keywords = [
     "SELECT",
     "FROM",
@@ -93,7 +132,7 @@ function registerSqlCompletions(
   ]
 
   return monaco.languages.registerCompletionItemProvider("sql", {
-    triggerCharacters: ["{", ".", " "],
+    triggerCharacters: [".", " "],
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position)
       const range = new monaco.Range(
@@ -102,8 +141,7 @@ function registerSqlCompletions(
         position.lineNumber,
         word.endColumn
       )
-
-      const baseSuggestions: Monaco.languages.CompletionItem[] = keywords.map(
+      const suggestions: Monaco.languages.CompletionItem[] = keywords.map(
         (k) => ({
           label: k,
           kind: monaco.languages.CompletionItemKind.Keyword,
@@ -111,43 +149,7 @@ function registerSqlCompletions(
           range,
         })
       )
-
-      const params = Array.from(new Set(paramNamesRef.current))
-        .map((x) => x.trim())
-        .filter(Boolean)
-
-      const paramSuggestions: Monaco.languages.CompletionItem[] = params.flatMap(
-        (name) => [
-          {
-            label: `{{ ${name} }}`,
-            kind: monaco.languages.CompletionItemKind.Variable,
-            insertText: `{{ ${name} }}`,
-            range,
-            detail: "Jinja2 param",
-          },
-          {
-            label: `{{ ${name} | sql_string }}`,
-            kind: monaco.languages.CompletionItemKind.Function,
-            insertText: `{{ ${name} | sql_string }}`,
-            range,
-            detail: "Jinja2 param (quoted string)",
-          },
-        ]
-      )
-
-      const snippetSuggestions: Monaco.languages.CompletionItem[] = [
-        {
-          label: "Jinja2 param (snippet)",
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: Monaco snippet placeholder syntax
-          insertText: "{{ ${1:name} }}",
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          range,
-        },
-      ]
-
-      return { suggestions: [...snippetSuggestions, ...paramSuggestions, ...baseSuggestions] }
+      return { suggestions }
     },
   })
 }
@@ -233,6 +235,8 @@ export default function ApiContentEditor({
 
   const [isFormatting, setIsFormatting] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
+  const [jinjaOpen, setJinjaOpen] = useState(false)
+  const [jinjaSearch, setJinjaSearch] = useState("")
 
   const disposablesRef = useRef<Monaco.IDisposable[]>([])
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -270,7 +274,7 @@ export default function ApiContentEditor({
       disposablesRef.current = []
 
       disposablesRef.current.push(
-        registerSqlCompletions(monaco, paramNamesRef),
+        registerSqlCompletions(monaco),
         registerPythonCompletions(monaco)
       )
 
@@ -355,6 +359,18 @@ export default function ApiContentEditor({
     }
   }, [onChange, value]) // Include all deps to ensure each editor has its own cleanup
 
+  const insertJinjaAtCursor = useCallback((snippet: string) => {
+    const editor = editorRef.current
+    if (!editor) return
+    const selection = editor.getSelection()
+    if (!selection) return
+    editor.executeEdits("jinja-insert", [{ range: selection, text: snippet }])
+    setJinjaOpen(false)
+    setJinjaSearch("")
+    const newValue = editor.getValue()
+    if (newValue !== valueRef.current) onChange(newValue)
+  }, [onChange])
+
   const handleFormat = useCallback(async () => {
     try {
       setIsFormatting(true)
@@ -400,22 +416,77 @@ export default function ApiContentEditor({
     return Math.max(minH, Math.min(maxH, computed))
   }, [autoHeight, height, maxHeight, minHeight, placeholder, value])
 
+  const jinjaTagsFiltered = useMemo(() => {
+    const q = jinjaSearch.trim().toLowerCase()
+    if (!q) return JINJA_TAGS
+    return JINJA_TAGS.filter(
+      (t) => t.id.toLowerCase().includes(q) || t.label.toLowerCase().includes(q)
+    )
+  }, [jinjaSearch])
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs text-muted-foreground">
           Autocomplete: <span className="font-mono">Ctrl+Space</span>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleFormat}
-          disabled={disabled || isFormatting}
-        >
-          <Braces className="mr-2 h-4 w-4" />
-          {isFormatting ? "Formatting..." : "Format"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {executeEngine === "SQL" && (
+            <DropdownMenu open={jinjaOpen} onOpenChange={(open) => { setJinjaOpen(open); if (!open) setJinjaSearch("") }}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={disabled}
+                  className="gap-1.5"
+                >
+                  Jinja tags
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <div className="p-2 border-b">
+                  <Input
+                    placeholder="Search tags..."
+                    value={jinjaSearch}
+                    onChange={(e) => setJinjaSearch(e.target.value)}
+                    className="h-8"
+                    onKeyDown={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="max-h-64 overflow-auto p-1">
+                  {jinjaTagsFiltered.length === 0 ? (
+                    <div className="py-4 text-center text-sm text-muted-foreground">No match</div>
+                  ) : (
+                    jinjaTagsFiltered.map((tag) => (
+                      <DropdownMenuItem
+                        key={tag.id}
+                        onSelect={(e) => {
+                          e.preventDefault()
+                          insertJinjaAtCursor(tag.insert)
+                        }}
+                        className="cursor-pointer font-mono text-xs"
+                      >
+                        {tag.label}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleFormat}
+            disabled={disabled || isFormatting}
+          >
+            <Braces className="mr-2 h-4 w-4" />
+            {isFormatting ? "Formatting..." : "Format"}
+          </Button>
+        </div>
       </div>
 
       <div className="relative rounded-md border overflow-hidden">
@@ -448,6 +519,8 @@ export default function ApiContentEditor({
             parameterHints: { enabled: true },
             formatOnPaste: false,
             formatOnType: false,
+            // Auto-close { with } (and other brackets)
+            autoClosingBrackets: true,
           }}
         />
       </div>

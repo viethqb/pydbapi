@@ -1024,7 +1024,11 @@ function ApiDetail() {
                       onChange={() => {}}
                       disabled
                       placeholder={SQL_CONTENT_PLACEHOLDER}
-                      paramNames={[]}
+                      paramNames={
+                        apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params)
+                          ? apiDetail.api_context.params.map((p: { name?: string }) => p.name).filter(Boolean) as string[]
+                          : []
+                      }
                     />
                   ) : (
                     <ApiContentEditor
