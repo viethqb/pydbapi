@@ -218,7 +218,9 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
     )
     assert r.status_code == 200
     data = r.json()
-    # SQL mode: 1 statement -> data = rows directly (no extra list wrap)
+    # All responses: { success, message, data }. SQL 1 statement -> data = rows directly
+    assert data.get("success") is True
+    assert data.get("message") is None
     assert "data" in data
     assert data["data"] == [{"x": 1}]
 

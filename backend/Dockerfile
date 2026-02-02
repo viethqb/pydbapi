@@ -33,12 +33,12 @@ COPY ./backend/pyproject.toml ./backend/alembic.ini /app/backend/
 
 COPY ./backend/app /app/backend/app
 
-# Sync the project
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
+# Sync the project (including script-extras: pandas, numpy from backend/pyproject.toml)
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --package app
+    --mount=type=bind,source=backend/pyproject.toml,target=backend/pyproject.toml \
+    uv sync --frozen --package app --group script-extras
 
 WORKDIR /app/backend/
 

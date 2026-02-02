@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy import delete
 from sqlmodel import func, select
 
@@ -363,6 +364,14 @@ def unpublish_api_assignment(
     return _to_public(a)
 
 
+def _debug_error_response(status_code: int, detail: str) -> JSONResponse:
+    """Return standard envelope { success: false, message, data: [] } for debug errors."""
+    return JSONResponse(
+        status_code=status_code,
+        content={"success": False, "message": str(detail), "data": []},
+    )
+
+
 @router.post("/debug")
 def debug_api_assignment(
     session: SessionDep,
@@ -374,10 +383,9 @@ def debug_api_assignment(
 
     - If body.id: load ApiAssignment + ApiContext; use content, execute_engine, datasource_id.
     - If body.content (inline): use content, execute_engine, datasource_id from body.
-    Returns same format as gateway: SQL -> { data: rows or [stmt1, stmt2, ...] };
-    SCRIPT -> { success, message, data } at top level; on error -> { error, error_type, ... }.
+    Returns same format as gateway: { success, message, data }; errors use same envelope.
     """
-    content: str
+    content: str = ""
     engine = body.execute_engine
     datasource_id = body.datasource_id
     params_definition: list[dict] | None = None
@@ -385,7 +393,7 @@ def debug_api_assignment(
     if body.id is not None:
         a = session.get(ApiAssignment, body.id)
         if not a:
-            raise HTTPException(status_code=404, detail="ApiAssignment not found")
+            return _debug_error_response(404, "ApiAssignment not found")
         ctx = session.exec(
             select(ApiContext).where(ApiContext.api_assignment_id == a.id)
         ).first()
@@ -400,35 +408,20 @@ def debug_api_assignment(
     else:
         content = body.content or ""
         if not content:
-            raise HTTPException(
-                status_code=400,
-                detail="Either id or content is required",
-            )
+            return _debug_error_response(400, "Either id or content is required")
         if engine is None:
-            raise HTTPException(
-                status_code=400,
-                detail="execute_engine is required when using inline content",
-            )
+            return _debug_error_response(400, "execute_engine is required when using inline content")
 
     if (engine and engine.value == "SQL") or (engine and engine.value == "SCRIPT"):
         if datasource_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail="datasource_id is required for SQL and SCRIPT engines",
-            )
+            return _debug_error_response(400, "datasource_id is required for SQL and SCRIPT engines")
         # Check if datasource is active
         from app.models_dbapi import DataSource
         datasource = session.get(DataSource, datasource_id)
         if not datasource:
-            raise HTTPException(
-                status_code=404,
-                detail="DataSource not found",
-            )
+            return _debug_error_response(404, "DataSource not found")
         if not datasource.is_active:
-            raise HTTPException(
-                status_code=400,
-                detail="DataSource is inactive and cannot be used",
-            )
+            return _debug_error_response(400, "DataSource is inactive and cannot be used")
 
     # Validate required parameters if params definition exists
     if params_definition:
@@ -445,9 +438,8 @@ def debug_api_assignment(
                         missing_params.append(param_name)
 
         if missing_params:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Missing required parameters: {', '.join(missing_params)}",
+            return _debug_error_response(
+                400, f"Missing required parameters: {', '.join(missing_params)}"
             )
 
     # Validate and coerce params by data_type
@@ -456,14 +448,14 @@ def debug_api_assignment(
         try:
             params_to_use = validate_and_coerce_params(params_definition, params_to_use)
         except ParamTypeError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+            return _debug_error_response(400, str(e))
 
     # Param validate (Python scripts) if configured on ApiContext
     if body.id is not None and ctx and getattr(ctx, "param_validates", None):
         try:
             run_param_validates(ctx.param_validates, params_to_use)
         except ParamValidateError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+            return _debug_error_response(400, str(e))
 
     try:
         out = ApiExecutor().execute(
@@ -478,19 +470,23 @@ def debug_api_assignment(
             try:
                 out = run_result_transform(ctx.result_transform, out, params_to_use)
             except ResultTransformError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
+                return _debug_error_response(400, str(e))
         # Same format as gateway: SQL -> { data: rows }; SCRIPT -> { success, message, data } at top level
         engine_value = engine.value if engine and hasattr(engine, "value") else None
         return normalize_api_result(out, engine_value)
     except Exception as e:
-        # Return detailed error for debugging
+        # Same envelope as gateway errors: { success, message, data }; debug details in data
         error_msg = str(e)
-        error_type = type(e).__name__
         return {
-            "error": error_msg,
-            "error_type": error_type,
-            "content": content[:200] if content else None,  # First 200 chars
-            "params": params_to_use,
+            "success": False,
+            "message": error_msg,
+            "data": [
+                {
+                    "error_type": type(e).__name__,
+                    "content_preview": content[:200] if content else None,
+                    "params": params_to_use,
+                }
+            ],
         }
 
 

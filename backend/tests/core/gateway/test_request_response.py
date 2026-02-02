@@ -290,19 +290,17 @@ def test_parse_params_respects_location_body_only() -> None:
 
 
 def test_normalize_api_result_sql_mode_single_stmt() -> None:
-    """SQL mode, 1 statement: data = result directly (no extra list wrap)."""
+    """SQL mode, 1 statement: envelope { success, message, data }; data = rows directly."""
     result = {"data": [[{"x": 1}, {"x": 2}]]}
     out = normalize_api_result(result, "SQL")
-    assert out == {"data": [{"x": 1}, {"x": 2}]}
-    assert "success" not in out
+    assert out == {"success": True, "message": None, "data": [{"x": 1}, {"x": 2}]}
 
 
 def test_normalize_api_result_sql_mode_multi_stmt() -> None:
-    """SQL mode, multiple statements: data = [stmt1_result, stmt2_result, ...]."""
+    """SQL mode, multiple statements: envelope with data = [stmt1_result, stmt2_result, ...]."""
     result = {"data": [[{"x": 1}], 2]}
     out = normalize_api_result(result, "SQL")
-    assert out == {"data": [[{"x": 1}], 2]}
-    assert "success" not in out
+    assert out == {"success": True, "message": None, "data": [[{"x": 1}], 2]}
 
 
 def test_normalize_api_result_script_mode_envelope() -> None:

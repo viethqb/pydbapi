@@ -34,6 +34,12 @@ def _get_client_ip(request: Request) -> str:
     return getattr(getattr(request, "client", None), "host", None) or "0.0.0.0"
 
 
+def _gateway_error(request: Request, status_code: int, detail: str) -> JSONResponse:
+    """Return standard envelope { success: false, message, data: [] } for gateway errors."""
+    body = {"success": False, "message": str(detail), "data": []}
+    return JSONResponse(status_code=status_code, content=format_response(body, request))
+
+
 @router.api_route("/{module}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def gateway_proxy(
     module: str,
@@ -48,15 +54,15 @@ async def gateway_proxy(
     """
     ip = _get_client_ip(request)
     if not check_firewall(ip, session):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        return _gateway_error(request, 403, "Forbidden")
 
     mod = resolve_module(module, session)
     if not mod:
-        raise HTTPException(status_code=404, detail="Not Found")
+        return _gateway_error(request, 404, "Not Found")
 
     resolved = resolve_api_assignment(mod.id, path, request.method, session)
     if not resolved:
-        raise HTTPException(status_code=404, detail="Not Found")
+        return _gateway_error(request, 404, "Not Found")
     api, path_params = resolved
 
     # Check access_type: public APIs don't require authentication
@@ -64,15 +70,15 @@ async def gateway_proxy(
     if api.access_type == ApiAccessTypeEnum.PRIVATE:
         app_client = verify_gateway_client(request, session)
         if not app_client:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+            return _gateway_error(request, 401, "Unauthorized")
         # Client can only call APIs in assigned groups (or direct API links)
         if not client_can_access_api(session, app_client.id, api.id):
-            raise HTTPException(status_code=403, detail="Forbidden")
+            return _gateway_error(request, 403, "Forbidden")
 
     # Rate limit: use client_id if authenticated, otherwise use IP
     rate_limit_key = app_client.client_id if app_client else ip
     if not check_rate_limit(rate_limit_key):
-        raise HTTPException(status_code=429, detail="Too Many Requests")
+        return _gateway_error(request, 429, "Too Many Requests")
 
     # Load ApiContext to get params definition for header extraction
     ctx = session.exec(
@@ -95,9 +101,9 @@ async def gateway_proxy(
             request_path=f"{module}/{path}".rstrip("/"),
             request_body=body_for_log,
         )
-    except HTTPException:
-        # Preserve intended HTTP status codes (e.g., 400 param validate)
-        raise
+    except HTTPException as he:
+        # Convert to standard envelope; preserve status code
+        return _gateway_error(request, he.status_code, str(he.detail))
     except Exception as e:
         # Return standard envelope on error: { success: false, message: "...", data: [] }
         error_body = {"success": False, "message": str(e), "data": []}

@@ -220,12 +220,20 @@ function ApiEdit() {
             : String(apiDetail.datasource_id))
         : null
       
+      // Normalize enums: ensure string and uppercase (API may return enum object or lowercase)
+      const httpMethod = typeof apiDetail.http_method === "string"
+        ? apiDetail.http_method.toUpperCase()
+        : (apiDetail.http_method as { value?: string })?.value ?? "GET"
+      const execEngine = typeof apiDetail.execute_engine === "string"
+        ? apiDetail.execute_engine.toUpperCase()
+        : (apiDetail.execute_engine as { value?: string })?.value ?? "SQL"
+
       form.reset({
         module_id: String(apiDetail.module_id),
         name: apiDetail.name,
         path: apiDetail.path,
-        http_method: apiDetail.http_method,
-        execute_engine: apiDetail.execute_engine,
+        http_method: ["GET", "POST", "PUT", "DELETE", "PATCH"].includes(httpMethod) ? httpMethod : "GET",
+        execute_engine: execEngine === "SCRIPT" ? "SCRIPT" : "SQL",
         datasource_id: datasourceId,
         description: apiDetail.description || null,
         access_type: apiDetail.access_type || "private",
@@ -237,7 +245,7 @@ function ApiEdit() {
       })
       
     }
-  }, [apiDetail, form])
+  }, [apiDetail])
 
   const executeEngine = form.watch("execute_engine")
   const paramNamesForContentSuggestions = (form.watch("params") ?? [])
@@ -542,11 +550,12 @@ function ApiEdit() {
                               <FormItem>
                                 <Select
                                   onValueChange={field.onChange}
-                                  value={field.value}
+                                  value={field.value || "GET"}
+                                  key={field.value || "GET"}
                                 >
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue />
+                                      <SelectValue placeholder="Select HTTP method" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>

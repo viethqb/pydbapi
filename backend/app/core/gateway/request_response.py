@@ -168,20 +168,21 @@ async def parse_params(
 
 def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict[str, Any]:
     """
-    Format executor result for API response.
-
-    - SQL mode: return { data: [stmt1_result, stmt2_result, ...] } as-is (no success/message envelope).
-    - Python (SCRIPT) mode: executor returns {"data": script_return}. If script_return is the envelope
-      { success, message, data }, return it at top level (unwrap). Else wrap in { success, message, data }.
+    Format executor result for API response. All responses use envelope:
+    { "success": true|false, "message": str|null, "data": list }.
+    Applied for all HTTP methods (GET, POST, PUT, PATCH, DELETE) in gateway and debug.
     """
-    # SQL mode: keep { data: [...] } only. Single statement -> data = rows (no extra list wrap).
+    # SQL mode: wrap in envelope { success, message, data }. Single statement -> data = rows (no extra list wrap).
     if execute_engine == "SQL":
         if isinstance(result, dict) and "data" in result:
             data = result["data"]
             if isinstance(data, list) and len(data) == 1:
-                return {"data": data[0]}
-            return {"data": data}
-        return {"data": result if isinstance(result, list) else [result] if result is not None else []}
+                data = data[0]
+            elif not isinstance(data, list):
+                data = [data] if data is not None else []
+            return {"success": True, "message": None, "data": data}
+        raw = result if isinstance(result, list) else [result] if result is not None else []
+        return {"success": True, "message": None, "data": raw}
 
     # SCRIPT mode: unwrap envelope to top level
     if isinstance(result, dict) and "data" in result:
