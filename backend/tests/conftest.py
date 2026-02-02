@@ -13,7 +13,6 @@ from app.models_dbapi import (
     ApiModule,
     AppClient,
     DataSource,
-    FirewallRules,
     UnifyAlarm,
 )
 from tests.utils.user import authentication_token_from_email
@@ -34,8 +33,6 @@ def db() -> Generator[Session, None, None]:
         statement = delete(ApiGroup)
         session.execute(statement)
         statement = delete(AppClient)
-        session.execute(statement)
-        statement = delete(FirewallRules)
         session.execute(statement)
         statement = delete(UnifyAlarm)
         session.execute(statement)

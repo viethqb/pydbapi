@@ -169,7 +169,9 @@ class ApiModuleListOut(SQLModel):
 class ApiMacroDefCreate(SQLModel):
     """Body for POST /macro-defs/create."""
 
-    module_id: uuid.UUID | None = Field(default=None, description="Null = global macro_def")
+    module_id: uuid.UUID | None = Field(
+        default=None, description="Null = global macro_def"
+    )
     name: str = Field(..., min_length=1, max_length=128)
     macro_type: MacroTypeEnum
     content: str = Field(..., min_length=1)
@@ -208,7 +210,9 @@ class ApiMacroDefPublic(SQLModel):
 class ApiMacroDefDetail(ApiMacroDefPublic):
     """Detail for GET /macro-defs/{id}; adds used_by_apis_count."""
 
-    used_by_apis_count: int = Field(default=0, description="Number of APIs in scope that use this macro_def")
+    used_by_apis_count: int = Field(
+        default=0, description="Number of APIs in scope that use this macro_def"
+    )
 
 
 class MacroDefVersionCommitPublic(SQLModel):
@@ -252,7 +256,9 @@ class ApiMacroDefPublishIn(SQLModel):
     """Body for POST /macro-defs/publish."""
 
     id: uuid.UUID
-    version_id: uuid.UUID | None = Field(default=None, description="Required for publish.")
+    version_id: uuid.UUID | None = Field(
+        default=None, description="Required for publish."
+    )
 
 
 class ApiMacroDefListIn(SQLModel):
@@ -260,7 +266,9 @@ class ApiMacroDefListIn(SQLModel):
 
     page: int = Field(default=1, ge=1, description="1-based page number")
     page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
-    module_id: uuid.UUID | None = Field(default=None, description="Filter by module; null = global only")
+    module_id: uuid.UUID | None = Field(
+        default=None, description="Filter by module; null = global only"
+    )
     macro_type: MacroTypeEnum | None = None
     name__ilike: str | None = Field(default=None, max_length=128)
 
@@ -346,49 +354,49 @@ class ApiParameter(SQLModel):
     data_type: str | None = Field(
         default=None,
         max_length=64,
-        description="Data type: string, number, integer, boolean, array, object, etc."
+        description="Data type: string, number, integer, boolean, array, object, etc.",
     )
     is_required: bool = Field(
         default=False,
-        description="Whether this parameter is required (cannot be null/empty)"
+        description="Whether this parameter is required (cannot be null/empty)",
     )
     validate_type: str | None = Field(
-        default=None,
-        max_length=32,
-        description="Validation type: 'regex' or 'python'"
+        default=None, max_length=32, description="Validation type: 'regex' or 'python'"
     )
     validate: str | None = Field(
         default=None,
-        description="Validation: regex pattern (if validate_type='regex') or Python function code (if validate_type='python')"
+        description="Validation: regex pattern (if validate_type='regex') or Python function code (if validate_type='python')",
     )
     validate_message: str | None = Field(
         default=None,
         max_length=512,
-        description="Error message shown when validation fails"
+        description="Error message shown when validation fails",
     )
     default_value: str | None = Field(
         default=None,
-        description="Default value for this parameter (used in debug UI and as fallback)"
+        description="Default value for this parameter (used in debug UI and as fallback)",
     )
     description: str | None = Field(
         default=None,
         max_length=512,
-        description="Human-readable description of the parameter (meaning, usage)"
+        description="Human-readable description of the parameter (meaning, usage)",
     )
 
 
 class ApiParamValidate(SQLModel):
     """Parameter validation script definition."""
 
-    name: str = Field(..., min_length=1, max_length=255, description="Parameter name to validate")
+    name: str = Field(
+        ..., min_length=1, max_length=255, description="Parameter name to validate"
+    )
     validation_script: str | None = Field(
         default=None,
-        description="Python validation script (e.g., 'def validate(value): return True')"
+        description="Python validation script (e.g., 'def validate(value): return True')",
     )
     message_when_fail: str | None = Field(
         default=None,
         max_length=512,
-        description="Error message shown when validation fails"
+        description="Error message shown when validation fails",
     )
 
 
@@ -402,17 +410,30 @@ class ApiAssignmentCreate(SQLModel):
     execute_engine: ExecuteEngineEnum
     datasource_id: uuid.UUID | None = None
     description: str | None = Field(default=None, max_length=512)
-    access_type: ApiAccessTypeEnum = Field(default=ApiAccessTypeEnum.PRIVATE, description="public: no auth required, private: requires token")
-    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this API. None = no limit.")
+    access_type: ApiAccessTypeEnum = Field(
+        default=ApiAccessTypeEnum.PRIVATE,
+        description="public: no auth required, private: requires token",
+    )
+    rate_limit_per_minute: int | None = Field(
+        default=None, description="Max requests/min for this API. None = no limit."
+    )
     sort_order: int = Field(default=0)
-    content: str | None = Field(default=None, description="SQL/script → ApiContext (1-1)")
+    content: str | None = Field(
+        default=None, description="SQL/script → ApiContext (1-1)"
+    )
     result_transform: str | None = Field(
         default=None,
         description="Optional Python script to transform executor result before returning",
     )
-    group_ids: list[uuid.UUID] = Field(default_factory=list, description="ApiGroup IDs to link")
-    params: list[ApiParameter] = Field(default_factory=list, description="Parameter definitions for validation")
-    param_validates: list[ApiParamValidate] = Field(default_factory=list, description="Parameter validation scripts")
+    group_ids: list[uuid.UUID] = Field(
+        default_factory=list, description="ApiGroup IDs to link"
+    )
+    params: list[ApiParameter] = Field(
+        default_factory=list, description="Parameter definitions for validation"
+    )
+    param_validates: list[ApiParamValidate] = Field(
+        default_factory=list, description="Parameter validation scripts"
+    )
 
 
 class ApiAssignmentUpdate(SQLModel):
@@ -427,13 +448,21 @@ class ApiAssignmentUpdate(SQLModel):
     datasource_id: uuid.UUID | None = None
     description: str | None = None
     access_type: ApiAccessTypeEnum | None = None
-    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this API. None = no limit.")
+    rate_limit_per_minute: int | None = Field(
+        default=None, description="Max requests/min for this API. None = no limit."
+    )
     sort_order: int | None = None
     content: str | None = None
     result_transform: str | None = None
-    group_ids: list[uuid.UUID] | None = Field(default=None, description="If set, replace group links")
-    params: list[ApiParameter] | None = Field(default=None, description="If set, replace parameter definitions")
-    param_validates: list[ApiParamValidate] | None = Field(default=None, description="If set, replace parameter validation scripts")
+    group_ids: list[uuid.UUID] | None = Field(
+        default=None, description="If set, replace group links"
+    )
+    params: list[ApiParameter] | None = Field(
+        default=None, description="If set, replace parameter definitions"
+    )
+    param_validates: list[ApiParamValidate] | None = Field(
+        default=None, description="If set, replace parameter validation scripts"
+    )
 
 
 class ApiContextPublic(SQLModel):
@@ -442,8 +471,14 @@ class ApiContextPublic(SQLModel):
     id: uuid.UUID
     api_assignment_id: uuid.UUID
     content: str
-    params: list[dict] | None = Field(default=None, description="Parameter definitions: list of {name, location, data_type, is_required, default_value, description}")
-    param_validates: list[dict] | None = Field(default=None, description="Parameter validation scripts: list of {name, validation_script, message_when_fail}")
+    params: list[dict] | None = Field(
+        default=None,
+        description="Parameter definitions: list of {name, location, data_type, is_required, default_value, description}",
+    )
+    param_validates: list[dict] | None = Field(
+        default=None,
+        description="Parameter validation scripts: list of {name, validation_script, message_when_fail}",
+    )
     result_transform: str | None = Field(
         default=None,
         description="Python script to transform executor result before returning",
@@ -502,7 +537,10 @@ class ApiAssignmentPublishIn(SQLModel):
     """Body for POST /api-assignments/publish."""
 
     id: uuid.UUID
-    version_id: uuid.UUID | None = Field(default=None, description="Version to publish. Required for publish, optional for unpublish.")
+    version_id: uuid.UUID | None = Field(
+        default=None,
+        description="Version to publish. Required for publish, optional for unpublish.",
+    )
 
 
 class ApiAssignmentDebugIn(SQLModel):
@@ -524,12 +562,26 @@ class AppClientCreate(SQLModel):
     """Body for POST /clients/create; backend generates client_id, hashes client_secret."""
 
     name: str = Field(..., min_length=1, max_length=255)
-    client_secret: str = Field(..., min_length=8, max_length=512, description="Plain secret; stored hashed")
+    client_secret: str = Field(
+        ..., min_length=8, max_length=512, description="Plain secret; stored hashed"
+    )
     description: str | None = Field(default=None, max_length=512)
-    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this client. None = no limit.")
+    rate_limit_per_minute: int | None = Field(
+        default=None, description="Max requests/min for this client. None = no limit."
+    )
+    max_concurrent: int | None = Field(
+        default=None,
+        description="Max concurrent requests in flight for this client. None = use global default.",
+    )
     is_active: bool = Field(default=True)
-    group_ids: list[uuid.UUID] | None = Field(default=None, description="ApiGroups to allow API access; stored in app_client_group_link")
-    api_assignment_ids: list[uuid.UUID] | None = Field(default=None, description="Direct APIs (outside groups) the client can call; stored in app_client_api_link")
+    group_ids: list[uuid.UUID] | None = Field(
+        default=None,
+        description="ApiGroups to allow API access; stored in app_client_group_link",
+    )
+    api_assignment_ids: list[uuid.UUID] | None = Field(
+        default=None,
+        description="Direct APIs (outside groups) the client can call; stored in app_client_api_link",
+    )
 
 
 class AppClientUpdate(SQLModel):
@@ -538,7 +590,13 @@ class AppClientUpdate(SQLModel):
     id: uuid.UUID
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
-    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this client. None = no limit.")
+    rate_limit_per_minute: int | None = Field(
+        default=None, description="Max requests/min for this client. None = no limit."
+    )
+    max_concurrent: int | None = Field(
+        default=None,
+        description="Max concurrent requests in flight for this client. None = use global default.",
+    )
     is_active: bool | None = None
     group_ids: list[uuid.UUID] | None = None
     api_assignment_ids: list[uuid.UUID] | None = None
@@ -552,6 +610,7 @@ class AppClientPublic(SQLModel):
     client_id: str
     description: str | None
     rate_limit_per_minute: int | None = None
+    max_concurrent: int | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -564,6 +623,8 @@ class AppClientDetail(SQLModel):
     name: str
     client_id: str
     description: str | None
+    rate_limit_per_minute: int | None = None
+    max_concurrent: int | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -631,7 +692,9 @@ class VersionCommitPublic(SQLModel):
     version: int
     commit_message: str | None
     committed_by_id: uuid.UUID | None
-    committed_by_email: str | None = Field(default=None, description="Email of user who created this version")
+    committed_by_email: str | None = Field(
+        default=None, description="Email of user who created this version"
+    )
     committed_at: datetime
 
 
@@ -656,7 +719,9 @@ class VersionCommitDetail(SQLModel):
     )
     commit_message: str | None
     committed_by_id: uuid.UUID | None
-    committed_by_email: str | None = Field(default=None, description="Email of user who created this version")
+    committed_by_email: str | None = Field(
+        default=None, description="Email of user who created this version"
+    )
     committed_at: datetime
 
 

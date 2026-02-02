@@ -2,8 +2,8 @@
 
 ## Requirements
 
-* [Docker](https://www.docker.com/).
-* [uv](https://docs.astral.sh/uv/) for Python package and environment management.
+- [Docker](https://www.docker.com/).
+- [uv](https://docs.astral.sh/uv/) for Python package and environment management.
 
 ## Docker Compose
 
@@ -89,6 +89,15 @@ Nevertheless, if it doesn't detect a change but a syntax error, it will just sto
 
 ...this previous detail is what makes it useful to have the container alive doing nothing and then, in a Bash session, make it run the live reload server.
 
+## Script engine (optional env)
+
+For the Script Engine (Python), optional environment variables:
+
+- **SCRIPT_EXTRA_MODULES**: Comma-separated whitelist of modules (e.g. `pandas,numpy`) injected into script globals; script cannot `import` arbitrarily.
+- **SCRIPT_EXEC_TIMEOUT**: Max execution time in seconds; uses `signal.SIGALRM` on Unix (not applied on Windows).
+
+See [../docs/PARAMS_USAGE.md](../docs/PARAMS_USAGE.md) for full details (sandbox, timeout, and platform behavior).
+
 ## Backend tests
 
 To test the backend run:
@@ -127,23 +136,23 @@ As during local development your app directory is mounted as a volume inside the
 
 Make sure you create a "revision" of your models and that you "upgrade" your database with that revision every time you change them. As this is what will update the tables in your database. Otherwise, your application will have errors.
 
-* Start an interactive session in the backend container:
+- Start an interactive session in the backend container:
 
 ```console
 $ docker compose exec backend bash
 ```
 
-* Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
+- Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
 
-* After changing a model (for example, adding a column), inside the container, create a revision, e.g.:
+- After changing a model (for example, adding a column), inside the container, create a revision, e.g.:
 
 ```console
 $ alembic revision --autogenerate -m "Add column last_name to User model"
 ```
 
-* Commit to the git repository the files generated in the alembic directory.
+- Commit to the git repository the files generated in the alembic directory.
 
-* After creating the revision, run the migration in the database (this is what will actually change the database):
+- After creating the revision, run the migration in the database (this is what will actually change the database):
 
 ```console
 $ alembic upgrade head

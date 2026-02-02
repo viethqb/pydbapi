@@ -1,29 +1,28 @@
 # Security Policy
 
-Security is very important for this project and its community. 🔒
+Security is important for this project and its community. 🔒
 
-Learn more about it below. 👇
-
-## Versions
+## Supported Versions
 
 The latest version or release is supported.
 
-You are encouraged to write tests for your application and update your versions frequently after ensuring that your tests are passing. This way you will benefit from the latest features, bug fixes, and **security fixes**.
+Keep dependencies and your application up to date after ensuring tests pass, so you benefit from the latest features and **security fixes**.
 
 ## Reporting a Vulnerability
 
-If you think you found a vulnerability, and even if you are not sure about it, please report it right away by sending an email to: security@tiangolo.com. Please try to be as explicit as possible, describing all the steps and example code to reproduce the security issue.
+If you think you found a vulnerability (or are unsure), please report it as soon as possible:
 
-I (the author, [@tiangolo](https://twitter.com/tiangolo)) will review it thoroughly and get back to you.
+- **Preferred**: Open a [private security advisory](https://github.com/your-org/pydbapi/security/advisories/new) in this repository (GitHub: Security → Advisories).
+- **Alternatively**: Contact the project maintainers (e.g. via the contact method listed in the repository or your organization).
+
+Please include clear steps and example code to reproduce the issue.
 
 ## Public Discussions
 
-Please restrain from publicly discussing a potential security vulnerability. 🙊
+Please do **not** discuss potential security vulnerabilities in public issues or discussions. 🙊
 
-It's better to discuss privately and try to find a solution first, to limit the potential impact as much as possible.
+Report them privately first so impact can be limited.
 
 ---
 
 Thanks for your help!
-
-The community and I thank you for that. 🙇

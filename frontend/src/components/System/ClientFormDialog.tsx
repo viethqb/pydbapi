@@ -62,6 +62,11 @@ const formSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v === "" ? null : v)),
+  max_concurrent: z
+    .union([z.number().int().positive(), z.null(), z.literal("")])
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   is_active: z.boolean().default(true),
   group_ids: z.array(z.string()).default([]),
   api_assignment_ids: z.array(z.string()).default([]),
@@ -156,6 +161,7 @@ export function ClientFormDialog({
       client_secret: "",
       description: null,
       rate_limit_per_minute: null,
+      max_concurrent: null,
       is_active: true,
       group_ids: [],
       api_assignment_ids: [],
@@ -169,6 +175,7 @@ export function ClientFormDialog({
         client_secret: "", // Don't populate secret on edit
         description: client.description,
         rate_limit_per_minute: (client as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
+        max_concurrent: (client as { max_concurrent?: number | null }).max_concurrent ?? null,
         is_active: client.is_active,
         group_ids: client.group_ids ?? [],
         api_assignment_ids: client.api_assignment_ids ?? [],
@@ -179,6 +186,7 @@ export function ClientFormDialog({
         client_secret: "",
         description: null,
         rate_limit_per_minute: null,
+        max_concurrent: null,
         is_active: true,
         group_ids: [],
         api_assignment_ids: [],
@@ -226,6 +234,10 @@ export function ClientFormDialog({
           data.rate_limit_per_minute === "" || data.rate_limit_per_minute == null
             ? null
             : Number(data.rate_limit_per_minute),
+        max_concurrent:
+          data.max_concurrent === "" || data.max_concurrent == null
+            ? null
+            : Number(data.max_concurrent),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : [],
         api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : [],
@@ -243,6 +255,10 @@ export function ClientFormDialog({
           data.rate_limit_per_minute === "" || data.rate_limit_per_minute == null
             ? null
             : Number(data.rate_limit_per_minute),
+        max_concurrent:
+          data.max_concurrent === "" || data.max_concurrent == null
+            ? null
+            : Number(data.max_concurrent),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : undefined,
         api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : undefined,
@@ -344,6 +360,33 @@ export function ClientFormDialog({
                     </FormControl>
                     <p className="text-xs text-muted-foreground mt-1">
                       Max requests per minute for this client. Empty = no limit.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="max_concurrent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max concurrent requests</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Use global default"
+                        {...field}
+                        value={field.value === null || field.value === undefined ? "" : field.value}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          field.onChange(v === "" ? null : Number(v))
+                        }}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Max requests in flight for this client. Empty = use global default.
                     </p>
                     <FormMessage />
                   </FormItem>

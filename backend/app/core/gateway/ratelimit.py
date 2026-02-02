@@ -3,6 +3,10 @@ Gateway rate limiting (Phase 4, Task 4.2c): check_rate_limit.
 
 Sliding window: N requests per minute per key (client_id or ip).
 Redis (preferred) or in-memory fallback. Uses FLOW_CONTROL_RATE_LIMIT_*.
+
+Fail-open: when Redis is unavailable or raises an error, check_rate_limit
+returns True (allow). This avoids blocking traffic when Redis is down.
+To fail closed (reject on Redis error), you would need a separate config.
 """
 
 import threading
@@ -57,7 +61,7 @@ def _check_redis(key: str, limit: int, window_sec: float) -> bool:
         r.expire(k, int(window_sec) + 1)
         return True
     except Exception:
-        return True  # on Redis error: allow
+        return True  # fail-open: on Redis error, allow
 
 
 def _check_memory(key: str, limit: int, window_sec: float) -> bool:

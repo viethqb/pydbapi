@@ -1,36 +1,37 @@
-# Hướng dẫn sử dụng Parameters trong SQL và Script Engine
+# Parameters Usage Guide (SQL and Script Engine)
 
-## Tổng quan
+## Overview
 
-Parameters được định nghĩa trong API với 3 loại location:
-- **query**: Tham số từ URL query string (ví dụ: `?id=123&name=test`)
-- **header**: Tham số từ HTTP headers (ví dụ: `X-User-Id: 123`)
-- **body**: Tham số từ request body (JSON hoặc form data)
+Parameters are defined in the API with 3 location types:
 
-## Cách Parameters được truyền vào Engine
+- **query**: From URL query string (e.g. `?id=123&name=test`)
+- **header**: From HTTP headers (e.g. `X-User-Id: 123`)
+- **body**: From request body (JSON or form data)
+
+## How Parameters Are Passed to the Engine
 
 ### 1. SQL Engine (Jinja2 Template)
 
-Parameters được merge vào một dict duy nhất và truyền vào Jinja2 template. Thứ tự ưu tiên: **path > query > body > header**
+Parameters are merged into a single dict and passed to the Jinja2 template. Priority order: **path > query > body > header**
 
-**Ví dụ SQL với parameters:**
+**SQL example with parameters:**
 
 ```sql
--- Sử dụng query parameter
+-- Using query parameter
 SELECT * FROM users WHERE id = {{ id }}
 
--- Sử dụng header parameter
+-- Using header parameter
 SELECT * FROM users WHERE user_id = {{ x_user_id }}
 
--- Sử dụng body parameter
+-- Using body parameter
 SELECT * FROM users WHERE name = '{{ name }}' AND email = '{{ email }}'
 
--- Conditional với parameter
+-- Conditional with parameter
 {% if status %}
   AND status = '{{ status }}'
 {% endif %}
 
--- Loop với parameter
+-- Loop with parameter
 SELECT * FROM users WHERE id IN (
   {% for id in user_ids %}
     {{ id }}{% if not loop.last %},{% endif %}
@@ -40,24 +41,24 @@ SELECT * FROM users WHERE id IN (
 
 ### 2. Script Engine (Python)
 
-Parameters được truyền vào script qua biến `req` (dictionary). Thứ tự ưu tiên: **path > query > body > header**
+Parameters are passed to the script via the `req` variable (dictionary). Priority order: **path > query > body > header**
 
-**Ví dụ Python Script với parameters:**
+**Python script example with parameters:**
 
 ```python
-# Lấy query parameter
+# Get query parameter
 user_id = req.get('id')
 if user_id:
     users = db.query("SELECT * FROM users WHERE id = %s", [user_id])
 else:
     users = db.query("SELECT * FROM users")
 
-# Lấy header parameter
+# Get header parameter
 x_user_id = req.get('x_user_id')
 if x_user_id:
     user = db.query_one("SELECT * FROM users WHERE id = %s", [x_user_id])
 
-# Lấy body parameter
+# Get body parameter
 name = req.get('name')
 email = req.get('email')
 if name and email:
@@ -66,10 +67,10 @@ if name and email:
         [name, email]
     )
 
-# Lấy tất cả parameters
-all_params = req  # dict chứa tất cả params
+# Get all parameters
+all_params = req  # dict containing all params
 
-# Kiểm tra parameter có tồn tại
+# Check if parameter exists
 if 'status' in req:
     status = req['status']
     users = db.query("SELECT * FROM users WHERE status = %s", [status])
@@ -77,28 +78,30 @@ if 'status' in req:
 result = users
 ```
 
-## Định nghĩa Parameters trong Frontend
+## Defining Parameters in the Frontend
 
-Khi tạo/edit API, bạn có thể định nghĩa parameters với các thuộc tính:
+When creating/editing an API, you can define parameters with these attributes:
 
-- **Name**: Tên parameter (sẽ là key trong dict)
-- **Location**: `query`, `header`, hoặc `body`
-- **Data Type**: Kiểu dữ liệu (string, number, integer, boolean, array, object)
-- **Required**: Parameter có bắt buộc không
-- **Validate Type**: Loại validation (regex hoặc python)
-- **Validate**: Giá trị validation
+- **Name**: Parameter name (will be the key in the dict)
+- **Location**: `query`, `header`, or `body`
+- **Data Type**: Data type (string, number, integer, boolean, array, object)
+- **Required**: Whether the parameter is required
+- **Validate Type**: Validation type (regex or python)
+- **Validate**: Validation value
 
-## Ví dụ thực tế
+## Practical Examples
 
-### Ví dụ 1: API GET với query và header params
+### Example 1: API GET with query and header params
 
-**Parameters định nghĩa:**
+**Parameter definitions:**
+
 - `id` (query, required, integer)
 - `X-User-Id` (header, optional, string)
 
 **SQL:**
+
 ```sql
-SELECT * FROM users 
+SELECT * FROM users
 WHERE id = {{ id }}
 {% if x_user_id %}
   AND created_by = '{{ x_user_id }}'
@@ -106,6 +109,7 @@ WHERE id = {{ id }}
 ```
 
 **Python Script:**
+
 ```python
 user_id = req.get('id')
 x_user_id = req.get('x_user_id')
@@ -120,20 +124,23 @@ if x_user_id:
 result = db.query(query, params)
 ```
 
-### Ví dụ 2: API POST với body params
+### Example 2: API POST with body params
 
-**Parameters định nghĩa:**
+**Parameter definitions:**
+
 - `name` (body, required, string)
 - `email` (body, required, string)
 - `age` (body, optional, integer)
 
 **SQL:**
+
 ```sql
 INSERT INTO users (name, email, age)
 VALUES ('{{ name }}', '{{ email }}', {{ age | default(0) }})
 ```
 
 **Python Script:**
+
 ```python
 name = req.get('name')
 email = req.get('email')
@@ -149,32 +156,65 @@ else:
     result = {"success": True, "message": "User created"}
 ```
 
-## Lưu ý quan trọng
+## Important Notes
 
-1. **Header names**: Header names trong HTTP request thường là case-insensitive, nhưng khi extract vào params, tên sẽ giữ nguyên như định nghĩa trong params definition.
+1. **Header names**: Header names in HTTP requests are typically case-insensitive, but when extracted into params the names are kept as defined in the params definition.
 
-2. **Naming convention**: 
-   - Query và body params có thể được convert từ camelCase sang snake_case nếu request có `?naming=snake` (default)
-   - Path params không được convert
-   - Header params không được convert
+2. **Naming convention**:
+   - Query and body params may be converted from camelCase to snake_case if the request has `?naming=snake` (default)
+   - Path params are not converted
+   - Header params are not converted
 
-3. **Conflict resolution**: Nếu cùng một tên parameter xuất hiện ở nhiều location, thứ tự ưu tiên là: **path > query > body > header**
+3. **Conflict resolution**: If the same parameter name appears in multiple locations, the priority order is: **path > query > body > header**
 
-4. **Type conversion**: 
-   - SQL engine: Bạn cần tự convert type trong Jinja2 template
-   - Script engine: Python sẽ tự động convert type khi cần
+4. **Type conversion**:
+   - SQL engine: You must convert types yourself in the Jinja2 template
+   - Script engine: Python will convert types automatically when needed
 
-5. **Validation**: Parameters được validate dựa trên definition (required, data_type, validate_type, validate) trước khi truyền vào engine.
+5. **Validation**: Parameters are validated against the definition (required, data_type, validate_type, validate) before being passed to the engine.
 
-## Debug Parameters trong UI
+## Script Engine: Sandbox and Timeout (Backend)
 
-Trong tab **Debug** của API editor, bạn có thể test API với parameters. Field **"Parameters (JSON)"** nhận một JSON object chứa tất cả parameters.
+This section describes backend configuration for the Script Engine (Python): module whitelist and execution timeout.
 
-### Format JSON
+### SCRIPT_EXTRA_MODULES (module whitelist)
 
-**Lưu ý quan trọng**: Trong debug mode, **KHÔNG có phân biệt** giữa query, header, hay body params. Tất cả parameters được merge vào một dict duy nhất. Bạn chỉ cần nhập tên parameter và giá trị của nó.
+- **Purpose**: Allow the Python script to use additional modules (e.g. `pandas`, `numpy`) without allowing arbitrary `import`.
+- **Behaviour**:
+  - Value is a comma-separated string (e.g. `pandas,numpy`).
+  - **Whitelist only**: only module names in the list are injected into script globals. The script **cannot** call `import ...` arbitrarily; only the configured names are available.
+  - The backend injects only **top-level module names** (regex: `^[a-zA-Z_][a-zA-Z0-9_]*$`). Submodules (e.g. `pandas.io`) are not added via this env var.
+- **Default**: Empty (no extra modules).
+- **Example env**: `SCRIPT_EXTRA_MODULES=pandas,numpy`
+- **Security note**: Modules like `pandas`, `numpy` can execute complex code. Enable only modules you actually need and have reviewed.
 
-### Ví dụ cơ bản
+### SCRIPT_EXEC_TIMEOUT (execution timeout)
+
+- **Purpose**: Limit script execution time; avoid scripts running indefinitely.
+- **Behaviour**:
+  - Value is seconds (integer). When set, the backend will try to abort the script after that many seconds.
+  - **On Unix (Linux, macOS)**: Uses `signal.SIGALRM`. When time runs out, the kernel sends SIGALRM, the handler raises `ScriptTimeoutError` (subclass of `TimeoutError`) and the script is stopped.
+  - **On Windows**: `signal.SIGALRM` **does not exist**. The backend does not apply a timeout; the script runs until it finishes or errors. For cross-platform timeout, consider an alternative (e.g. thread-based timeout) in the future.
+- **Default**: `None` (no time limit).
+- **Example env**: `SCRIPT_EXEC_TIMEOUT=30`
+- **On error**: When a timeout occurs (only on platforms that support SIGALRM), the API returns an error corresponding to `ScriptTimeoutError`.
+
+Summary:
+
+| Environment variable   | Short description                   | Unix | Windows      |
+| ---------------------- | ----------------------------------- | ---- | ------------ |
+| `SCRIPT_EXTRA_MODULES` | Whitelist modules (comma-separated) | Yes  | Yes          |
+| `SCRIPT_EXEC_TIMEOUT`  | Timeout (seconds), uses SIGALRM     | Yes  | No (ignored) |
+
+## Debug Parameters in the UI
+
+In the **Debug** tab of the API editor you can test the API with parameters. The **"Parameters (JSON)"** field accepts a JSON object containing all parameters.
+
+### JSON format
+
+**Important**: In debug mode there is **no distinction** between query, header, or body params. All parameters are merged into a single dict. You only need to enter the parameter name and its value.
+
+### Basic example
 
 ```json
 {
@@ -184,7 +224,7 @@ Trong tab **Debug** của API editor, bạn có thể test API với parameters.
 }
 ```
 
-### Ví dụ với các kiểu dữ liệu
+### Example with data types
 
 ```json
 {
@@ -202,13 +242,14 @@ Trong tab **Debug** của API editor, bạn có thể test API với parameters.
 }
 ```
 
-### Ví dụ thực tế
+### Practical examples
 
-#### Ví dụ 1: SQL với query parameters
+#### Example 1: SQL with query parameters
 
 **SQL Template:**
+
 ```sql
-SELECT * FROM users 
+SELECT * FROM users
 WHERE id = {{ id }}
 {% if name %}
   AND name LIKE '%{{ name }}%'
@@ -216,6 +257,7 @@ WHERE id = {{ id }}
 ```
 
 **Parameters JSON:**
+
 ```json
 {
   "id": 123,
@@ -223,16 +265,18 @@ WHERE id = {{ id }}
 }
 ```
 
-#### Ví dụ 2: SQL với header parameters
+#### Example 2: SQL with header parameters
 
 **SQL Template:**
+
 ```sql
-SELECT * FROM users 
+SELECT * FROM users
 WHERE user_id = '{{ x_user_id }}'
 AND status = '{{ status }}'
 ```
 
 **Parameters JSON:**
+
 ```json
 {
   "x_user_id": "user-123",
@@ -240,9 +284,10 @@ AND status = '{{ status }}'
 }
 ```
 
-#### Ví dụ 3: Python Script với nhiều parameters
+#### Example 3: Python script with multiple parameters
 
 **Python Script:**
+
 ```python
 user_id = req.get('id')
 name = req.get('name')
@@ -267,6 +312,7 @@ result = db.query(query, params)
 ```
 
 **Parameters JSON:**
+
 ```json
 {
   "id": 123,
@@ -275,11 +321,12 @@ result = db.query(query, params)
 }
 ```
 
-#### Ví dụ 4: Array parameters
+#### Example 4: Array parameters
 
 **SQL Template:**
+
 ```sql
-SELECT * FROM users 
+SELECT * FROM users
 WHERE id IN (
   {% for id in user_ids %}
     {{ id }}{% if not loop.last %},{% endif %}
@@ -288,15 +335,17 @@ WHERE id IN (
 ```
 
 **Parameters JSON:**
+
 ```json
 {
   "user_ids": [1, 2, 3, 4, 5]
 }
 ```
 
-#### Ví dụ 5: Nested object parameters
+#### Example 5: Nested object parameters
 
 **Python Script:**
+
 ```python
 filter_data = req.get('filter', {})
 name = filter_data.get('name')
@@ -322,6 +371,7 @@ result = db.query(query, params)
 ```
 
 **Parameters JSON:**
+
 ```json
 {
   "filter": {
@@ -332,20 +382,21 @@ result = db.query(query, params)
 }
 ```
 
-### Lưu ý khi debug
+### Debug notes
 
-1. **Tất cả parameters là flat**: Trong debug mode, không cần quan tâm đến location (query/header/body). Chỉ cần nhập tên và giá trị.
+1. **All params are flat**: In debug mode you don't need to care about location (query/header/body). Just enter name and value.
 
-2. **Tên parameter**: Sử dụng đúng tên như đã define trong tab "Basic Info" → "Parameters". Nếu parameter có location="header" với tên "X-User-Id", trong debug bạn vẫn dùng key `"X-User-Id"` hoặc `"x_user_id"` (tùy vào cách bạn define).
+2. **Parameter name**: Use the same name as defined in the "Basic Info" → "Parameters" tab. If a parameter has location="header" with name "X-User-Id", in debug you still use key `"X-User-Id"` or `"x_user_id"` (depending on how you defined it).
 
-3. **Kiểu dữ liệu**: 
-   - Số: `123` hoặc `123.45`
+3. **Data types**:
+   - Number: `123` or `123.45`
    - String: `"text"`
-   - Boolean: `true` hoặc `false`
-   - Array: `[1, 2, 3]` hoặc `["a", "b", "c"]`
+   - Boolean: `true` or `false`
+   - Array: `[1, 2, 3]` or `["a", "b", "c"]`
    - Object: `{"key": "value"}`
 
-4. **Null/Empty**: Để bỏ qua parameter, không cần include trong JSON hoặc dùng `null`:
+4. **Null/Empty**: To omit a parameter, either omit it from the JSON or use `null`:
+
    ```json
    {
      "id": 123,
@@ -353,15 +404,15 @@ result = db.query(query, params)
    }
    ```
 
-5. **Validation**: Debug mode không validate parameters theo definition. Nó chỉ truyền trực tiếp vào engine. Để test validation, bạn cần gọi API qua gateway.
+5. **Validation**: Debug mode does not validate parameters against the definition. It passes them directly to the engine. To test validation, call the API via the gateway.
 
-### So sánh Debug vs Gateway
+### Debug vs Gateway comparison
 
-| Aspect | Debug Mode | Gateway (Real Request) |
-|--------|-----------|------------------------|
-| Params format | Flat JSON object | Separated by location (query/header/body) |
-| Validation | Không validate | Validate theo params definition |
-| Path params | Không có | Có (từ URL path) |
-| Header extraction | Manual trong JSON | Tự động từ HTTP headers |
-| Query extraction | Manual trong JSON | Tự động từ query string |
-| Body extraction | Manual trong JSON | Tự động từ request body |
+| Aspect            | Debug Mode       | Gateway (Real Request)                    |
+| ----------------- | ---------------- | ----------------------------------------- |
+| Params format     | Flat JSON object | Separated by location (query/header/body) |
+| Validation        | Not validated    | Validated against params definition       |
+| Path params       | Not available    | Yes (from URL path)                       |
+| Header extraction | Manual in JSON   | Automatic from HTTP headers               |
+| Query extraction  | Manual in JSON   | Automatic from query string               |
+| Body extraction   | Manual in JSON   | Automatic from request body               |

@@ -7,6 +7,7 @@ export type AppClientPublic = {
   client_id: string
   description: string | null
   rate_limit_per_minute: number | null
+  max_concurrent: number | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -34,6 +35,7 @@ export type AppClientCreate = {
   client_secret: string
   description?: string | null
   rate_limit_per_minute?: number | null
+  max_concurrent?: number | null
   is_active?: boolean
   group_ids?: string[] | null
   api_assignment_ids?: string[] | null
@@ -44,6 +46,7 @@ export type AppClientUpdate = {
   name?: string | null
   description?: string | null
   rate_limit_per_minute?: number | null
+  max_concurrent?: number | null
   is_active?: boolean | null
   group_ids?: string[] | null
   api_assignment_ids?: string[] | null

@@ -27,6 +27,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
   adminer:
     image: adminer
@@ -123,6 +124,10 @@ services:
       - SENTRY_DSN=${SENTRY_DSN}
       - SCRIPT_EXTRA_MODULES=${SCRIPT_EXTRA_MODULES:-pandas,numpy}
       - REDIS_HOST=redis
+      # Concurrent limit: global max in-flight per client (0 = no limit). Per-client override in DB.
+      - FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT=${FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT:-10}
+      # Set CONCURRENT_DEBUG=1 to print concurrent acquire/release to stdout (docker compose logs backend)
+      - CONCURRENT_DEBUG=${CONCURRENT_DEBUG:-0}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]

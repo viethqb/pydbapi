@@ -735,7 +735,7 @@ def test_update_content_creates_version_commit(
 4. **Test create version manually:**
 5. **Test rollback:**
 
-### 6.2 Frontend Tests (E2E với Playwright)
+### 6.2 Frontend Tests (E2E with Playwright)
 
 **File:** `frontend/tests/` (create new if not exists)
 

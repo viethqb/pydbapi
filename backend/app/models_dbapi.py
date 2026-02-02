@@ -158,7 +158,9 @@ class MacroDefVersionCommit(SQLModel, table=True):
 
     api_macro_def: "ApiMacroDef" = Relationship(
         back_populates="version_commits",
-        sa_relationship_kwargs={"foreign_keys": "MacroDefVersionCommit.api_macro_def_id"},
+        sa_relationship_kwargs={
+            "foreign_keys": "MacroDefVersionCommit.api_macro_def_id"
+        },
     )
 
 
@@ -175,7 +177,9 @@ class ApiMacroDef(SQLModel, table=True):
         ondelete="CASCADE",
         description="Null = global macro; non-null = module-specific",
     )
-    name: str = Field(max_length=128, index=True, description="Identifier for reference")
+    name: str = Field(
+        max_length=128, index=True, description="Identifier for reference"
+    )
     macro_type: MacroTypeEnum = Field(
         sa_column=Column(
             SQLEnum(
@@ -205,7 +209,9 @@ class ApiMacroDef(SQLModel, table=True):
     module: Optional["ApiModule"] = Relationship(back_populates="macro_defs")
     version_commits: list["MacroDefVersionCommit"] = Relationship(
         back_populates="api_macro_def",
-        sa_relationship_kwargs={"foreign_keys": "MacroDefVersionCommit.api_macro_def_id"},
+        sa_relationship_kwargs={
+            "foreign_keys": "MacroDefVersionCommit.api_macro_def_id"
+        },
     )
     published_version: Optional["MacroDefVersionCommit"] = Relationship(
         sa_relationship_kwargs={
@@ -233,9 +239,7 @@ class ApiGroup(SQLModel, table=True):
     api_assignments: list["ApiAssignmentGroupLink"] = Relationship(
         back_populates="api_group"
     )
-    client_links: list["AppClientGroupLink"] = Relationship(
-        back_populates="api_group"
-    )
+    client_links: list["AppClientGroupLink"] = Relationship(back_populates="api_group")
 
 
 # ---------------------------------------------------------------------------
@@ -270,7 +274,9 @@ class ApiAssignment(SQLModel, table=True):
         foreign_key="api_module.id", nullable=False, index=True, ondelete="CASCADE"
     )
     name: str = Field(max_length=255, index=True)
-    path: str = Field(max_length=255)  # Path within module, e.g. "users" or "users/{id}"
+    path: str = Field(
+        max_length=255
+    )  # Path within module, e.g. "users" or "users/{id}"
     http_method: HttpMethodEnum = Field(
         sa_column=Column(
             SQLEnum(
@@ -308,7 +314,7 @@ class ApiAssignment(SQLModel, table=True):
         foreign_key="version_commit.id",
         index=True,
         ondelete="SET NULL",
-        description="Version that is currently published"
+        description="Version that is currently published",
     )
     access_type: ApiAccessTypeEnum = Field(
         sa_column=Column(
@@ -450,6 +456,10 @@ class AppClient(SQLModel, table=True):
         default=None,
         description="Max requests per minute for this client. None = no limit (call freely).",
     )
+    max_concurrent: int | None = Field(
+        default=None,
+        description="Max concurrent requests in flight for this client. None = use global FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT.",
+    )
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
@@ -498,7 +508,7 @@ class VersionCommit(SQLModel, table=True):
         foreign_key="user.id",
         index=True,
         ondelete="SET NULL",
-        description="User who created this version"
+        description="User who created this version",
     )
     committed_at: datetime = Field(default_factory=_utc_now)
 

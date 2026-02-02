@@ -2,20 +2,21 @@
 
 > Based on `docs/MIGRATION_PLAN_SQLREST.md`.  
 > **Excluded:** Topology, MCP (not in tool scope).  
-> **Prerequisites:** Phase 1–4 complete; Backend API (`/api/v1/datasources`, `api-assignments`, `modules`, `groups`, `clients`, `firewall`, `alarm`, `overview`) ready.
+> **Prerequisites:** Phase 1–4 complete; Backend API (`/api/v1/datasources`, `api-assignments`, `modules`, `groups`, `clients`, `overview`) ready.  
+> **Note:** Firewall is **disabled** (no API/UI); Alarm is **planned** (model exists, no API/UI yet). System UI currently: Groups, Clients only.
 
 ---
 
 ## 1. Overview
 
-| Task | Description |
-|------|-------------|
-| **5.1** | Layout, sidebar, routing: Dashboard, Connection, System, API Dev, API Repository, About |
-| **5.2** | DataSource: list, create, edit, test, detail |
+| Task    | Description                                                                                |
+| ------- | ------------------------------------------------------------------------------------------ |
+| **5.1** | Layout, sidebar, routing: Dashboard, Connection, System, API Dev, API Repository, About    |
+| **5.2** | DataSource: list, create, edit, test, detail                                               |
 | **5.3** | API Dev: modules, API list, create/edit (Jinja2 SQL + Python script editor), params, debug |
-| **5.4** | System: groups, clients, firewall, alarm |
-| **5.5** | API Repository: search, detail (Swagger-like) |
-| **5.6** | Dashboard: stats, charts, recent activity |
+| **5.4** | System: groups, clients _(firewall disabled; alarm planned — not in current UI)_           |
+| **5.5** | API Repository: search, detail (Swagger-like)                                              |
+| **5.6** | Dashboard: stats, charts, recent activity                                                  |
 
 **Current stack (keep as-is):**
 
@@ -39,7 +40,7 @@ frontend/src/
 │   ├── Dashboard/        # 5.6: Stats, Charts, RecentActivity
 │   ├── DataSource/       # 5.2: List, Create, Edit, Test, Detail
 │   ├── ApiDev/           # 5.3: Modules, ApiList, ApiCreateEdit, Params, Debug
-│   ├── System/           # 5.4: Groups, Clients, Firewall, Alarm
+│   ├── System/           # 5.4: Groups, Clients (Firewall disabled; Alarm planned)
 │   └── ApiRepository/    # 5.5: Search, Detail (Swagger-like)
 ├── routes/
 │   └── _layout/
@@ -61,8 +62,7 @@ frontend/src/
 │       ├── system/
 │       │   ├── groups.tsx
 │       │   ├── clients.tsx
-│       │   ├── firewall.tsx
-│       │   └── alarm.tsx
+│       │   # (firewall.tsx, alarm.tsx — not implemented: firewall disabled; alarm planned)
 │       ├── api-repository/
 │       │   ├── index.tsx       # Search
 │       │   └── $id.tsx         # Detail (Swagger-like)
@@ -81,20 +81,19 @@ frontend/src/
 
 **Main groups (always visible when logged in):**
 
-| Icon | Label | Path |
-|------|--------|------|
-| `LayoutDashboard` | Dashboard | `/` |
-| `Database` | Connection | `/connection` |
-| `Code2` | API Dev | `/api-dev/modules` |
-| `BookOpen` | API Repository | `/api-repository` |
-| `Settings` | System | `/system/groups` (or submenu) |
+| Icon              | Label          | Path                          |
+| ----------------- | -------------- | ----------------------------- |
+| `LayoutDashboard` | Dashboard      | `/`                           |
+| `Database`        | Connection     | `/connection`                 |
+| `Code2`           | API Dev        | `/api-dev/modules`            |
+| `BookOpen`        | API Repository | `/api-repository`             |
+| `Settings`        | System         | `/system/groups` (or submenu) |
 
 **System submenu (or tabs on `/system`):**
 
 - Groups → `/system/groups`
 - Clients → `/system/clients`
-- Firewall → `/system/firewall`
-- Alarm → `/system/alarm`
+- _(Firewall and Alarm not in current scope: firewall disabled; alarm planned — see `docs/PHASE_STATUS_REPORT.md`)_
 
 **Footer:**
 
@@ -105,27 +104,27 @@ frontend/src/
 
 ### 3.2 Overall Routes
 
-| Route | Layout | Description |
-|-------|--------|-------------|
-| `/` | `_layout` | Dashboard |
-| `/connection` | `_layout` | DataSource list |
-| `/connection/create` | `_layout` | Create DataSource |
-| `/connection/$id` | `_layout` | DataSource detail |
-| `/connection/$id/edit` | `_layout` | Edit DataSource |
-| `/api-dev/modules` | `_layout` | Module list |
-| `/api-dev/modules/$id` | `_layout` | Module detail + API list |
-| `/api-dev/apis` | `_layout` | API list (with filter) |
-| `/api-dev/apis/create` | `_layout` | Create API |
-| `/api-dev/apis/$id` | `_layout` | API detail |
+| Route                    | Layout    | Description                      |
+| ------------------------ | --------- | -------------------------------- |
+| `/`                      | `_layout` | Dashboard                        |
+| `/connection`            | `_layout` | DataSource list                  |
+| `/connection/create`     | `_layout` | Create DataSource                |
+| `/connection/$id`        | `_layout` | DataSource detail                |
+| `/connection/$id/edit`   | `_layout` | Edit DataSource                  |
+| `/api-dev/modules`       | `_layout` | Module list                      |
+| `/api-dev/modules/$id`   | `_layout` | Module detail + API list         |
+| `/api-dev/apis`          | `_layout` | API list (with filter)           |
+| `/api-dev/apis/create`   | `_layout` | Create API                       |
+| `/api-dev/apis/$id`      | `_layout` | API detail                       |
 | `/api-dev/apis/$id/edit` | `_layout` | Edit API (editor, params, debug) |
-| `/system/groups` | `_layout` | ApiGroup CRUD |
-| `/system/clients` | `_layout` | AppClient CRUD |
-| `/system/firewall` | `_layout` | FirewallRules CRUD |
-| `/system/alarm` | `_layout` | UnifyAlarm CRUD |
-| `/api-repository` | `_layout` | Search APIs |
-| `/api-repository/$id` | `_layout` | API detail (Swagger-like) |
-| `/about` | `_layout` | About |
-| `/admin` | `_layout` | Admin (superuser) |
+| `/system/groups`         | `_layout` | ApiGroup CRUD                    |
+| `/system/clients`        | `_layout` | AppClient CRUD                   |
+| `/system/firewall`       | `_layout` | FirewallRules CRUD               |
+| `/system/alarm`          | `_layout` | UnifyAlarm CRUD                  |
+| `/api-repository`        | `_layout` | Search APIs                      |
+| `/api-repository/$id`    | `_layout` | API detail (Swagger-like)        |
+| `/about`                 | `_layout` | About                            |
+| `/admin`                 | `_layout` | Admin (superuser)                |
 
 `_layout` keeps `beforeLoad` login check; redirects to `/login` if not logged in.
 
@@ -358,4 +357,4 @@ frontend/src/
 
 ---
 
-*This document is for Phase 5 frontend; excludes Topology and MCP.*
+_This document is for Phase 5 frontend; excludes Topology and MCP._

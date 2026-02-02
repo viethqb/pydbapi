@@ -38,6 +38,7 @@ def _to_public(c: AppClient) -> AppClientPublic:
         client_id=c.client_id,
         description=c.description,
         rate_limit_per_minute=getattr(c, "rate_limit_per_minute", None),
+        max_concurrent=getattr(c, "max_concurrent", None),
         is_active=c.is_active,
         created_at=c.created_at,
         updated_at=c.updated_at,
@@ -65,7 +66,9 @@ def list_clients(
 
     stmt = _list_filters(select(AppClient), body)
     offset = (body.page - 1) * body.page_size
-    stmt = stmt.order_by(AppClient.created_at.desc()).offset(offset).limit(body.page_size)
+    stmt = (
+        stmt.order_by(AppClient.created_at.desc()).offset(offset).limit(body.page_size)
+    )
     rows = session.exec(stmt).all()
 
     return AppClientListOut(data=[_to_public(r) for r in rows], total=total)
@@ -86,6 +89,7 @@ def create_client(
         client_secret=hashed_secret,
         description=body.description,
         rate_limit_per_minute=getattr(body, "rate_limit_per_minute", None),
+        max_concurrent=getattr(body, "max_concurrent", None),
         is_active=body.is_active,
     )
     session.add(c)
@@ -110,15 +114,21 @@ def update_client(
     c = session.get(AppClient, body.id)
     if not c:
         raise HTTPException(status_code=404, detail="AppClient not found")
-    update = body.model_dump(exclude_unset=True, exclude={"id", "group_ids", "api_assignment_ids"})
+    update = body.model_dump(
+        exclude_unset=True, exclude={"id", "group_ids", "api_assignment_ids"}
+    )
     c.sqlmodel_update(update)
     session.add(c)
     if "group_ids" in body.model_fields_set:
-        session.exec(delete(AppClientGroupLink).where(AppClientGroupLink.app_client_id == c.id))
+        session.exec(
+            delete(AppClientGroupLink).where(AppClientGroupLink.app_client_id == c.id)
+        )
         for gid in body.group_ids or []:
             session.add(AppClientGroupLink(app_client_id=c.id, api_group_id=gid))
     if "api_assignment_ids" in body.model_fields_set:
-        session.exec(delete(AppClientApiLink).where(AppClientApiLink.app_client_id == c.id))
+        session.exec(
+            delete(AppClientApiLink).where(AppClientApiLink.app_client_id == c.id)
+        )
         for aid in body.api_assignment_ids or []:
             session.add(AppClientApiLink(app_client_id=c.id, api_assignment_id=aid))
     session.commit()
@@ -167,6 +177,8 @@ def _to_detail(c: AppClient) -> AppClientDetail:
         name=c.name,
         client_id=c.client_id,
         description=c.description,
+        rate_limit_per_minute=getattr(c, "rate_limit_per_minute", None),
+        max_concurrent=getattr(c, "max_concurrent", None),
         is_active=c.is_active,
         created_at=c.created_at,
         updated_at=c.updated_at,

@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
-    BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)
-    ] = []
+    BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = (
+        []
+    )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -74,7 +74,9 @@ class Settings(BaseSettings):
     EXTERNAL_DB_POOL_SIZE: int = 5
     EXTERNAL_DB_CONNECT_TIMEOUT: int = 10
     EXTERNAL_DB_STATEMENT_TIMEOUT: int | None = None
-    SCRIPT_EXEC_TIMEOUT: int | None = None  # seconds; uses signal.SIGALRM on Unix when set
+    SCRIPT_EXEC_TIMEOUT: int | None = (
+        None  # seconds; uses signal.SIGALRM on Unix when set
+    )
     # Comma-separated extra modules to expose in script globals (e.g. "pandas,numpy"). Whitelist only; no import in script.
     SCRIPT_EXTRA_MODULES: str = ""
 
@@ -103,16 +105,20 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     FLOW_CONTROL_RATE_LIMIT_PER_MINUTE: int = 60
     FLOW_CONTROL_RATE_LIMIT_ENABLED: bool = True
-    FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: int = 10
+    # Rate limit and max-concurrent: when Redis is down or errors, requests are allowed (fail-open).
+    FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: int = (
+        10  # Max in-flight per client (client_id or ip). 0 = no limit.
+    )
 
     # -------------------------------------------------------------------------
-    # DBAPI Phase 4: Gateway & auth
+    # DBAPI Phase 4: Gateway & auth (JWT only, from POST /token/generate)
     # -------------------------------------------------------------------------
     GATEWAY_JWT_EXPIRE_SECONDS: int = 3600
-    GATEWAY_AUTH_X_API_KEY_ENABLED: bool = True
     GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True  # When no rule matches
     GATEWAY_ACCESS_LOG_BODY: bool = False  # Log request_body to AccessRecord
-    GATEWAY_CONFIG_CACHE_TTL_SECONDS: int = 300  # TTL for cached API config (content, params, validate, transform)
+    GATEWAY_CONFIG_CACHE_TTL_SECONDS: int = (
+        300  # TTL for cached API config (content, params, validate, transform)
+    )
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

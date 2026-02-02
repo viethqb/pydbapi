@@ -53,6 +53,7 @@ import {
 import ResultTransformExamples from "@/components/ApiDev/ResultTransformExamples"
 import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 import useCustomToast from "@/hooks/useCustomToast"
+import { getGatewayApiKey } from "@/lib/gatewayApiKey"
 
 export const Route = createFileRoute("/_layout/api-dev/apis/$id")({
   component: ApiDetail,
@@ -346,11 +347,12 @@ function ApiDetail() {
       }))
       setQueryParams(queryArray.length > 0 ? queryArray : [{ key: "", value: "" }])
 
-      // Convert headers to key-value array
+      // Convert headers to key-value array (JWT from Generate token or Settings → Gateway API Key)
+      const gatewayToken = generatedToken || getGatewayApiKey()
       const defaultHeaders = {
         ...defaultValues.header,
         "Content-Type": "application/json",
-        ...(apiDetail.access_type === "private" && generatedToken ? { Authorization: `Bearer ${generatedToken}` } : {}),
+        ...(apiDetail.access_type === "private" && gatewayToken ? { Authorization: `Bearer ${gatewayToken}` } : {}),
       }
       const headersArray = Object.entries(defaultHeaders).map(([key, value]) => ({
         key,
@@ -367,17 +369,18 @@ function ApiDetail() {
     }
   }, [apiDetail, defaultValues, generatedToken])
 
-  // Update headers when token is generated
+  // Update headers when token is generated or when Gateway API Key is set (Settings)
   useEffect(() => {
-    if (apiDetail?.access_type === "private" && generatedToken) {
+    const gatewayToken = generatedToken || getGatewayApiKey()
+    if (apiDetail?.access_type === "private" && gatewayToken) {
       setHeaders((prev) => {
         const existing = prev.find((h) => h.key === "Authorization")
         if (existing) {
           return prev.map((h) =>
-            h.key === "Authorization" ? { ...h, value: `Bearer ${generatedToken}` } : h
+            h.key === "Authorization" ? { ...h, value: `Bearer ${gatewayToken}` } : h
           )
         } else {
-          return [...prev, { key: "Authorization", value: `Bearer ${generatedToken}` }]
+          return [...prev, { key: "Authorization", value: `Bearer ${gatewayToken}` }]
         }
       })
     }

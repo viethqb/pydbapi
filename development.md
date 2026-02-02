@@ -2,13 +2,13 @@
 
 ## Docker Compose
 
-* Start the local stack with Docker Compose:
+- Start the local stack with Docker Compose:
 
 ```bash
 docker compose watch
 ```
 
-* Now you can open your browser and interact with these URLs:
+- Now you can open your browser and interact with these URLs:
 
 Frontend, built with Docker, with routes handled based on the path: <http://localhost:5173>
 
@@ -40,34 +40,34 @@ Mailcatcher is a simple SMTP server that catches all emails sent by the backend 
 
 This is useful for:
 
-* Testing email functionality during development
-* Verifying email content and formatting
-* Debugging email-related functionality without sending real emails
+- Testing email functionality during development
+- Verifying email content and formatting
+- Debugging email-related functionality without sending real emails
 
 The backend is automatically configured to use Mailcatcher when running with Docker Compose locally (SMTP on port 1025). All captured emails can be viewed at <http://localhost:1080>.
 
 ## PyDBAPI: venv, tests, integration
 
-* Create a virtualenv and install dependencies (prefer [uv](https://docs.astral.sh/uv/)):
+- Create a virtualenv and install dependencies (prefer [uv](https://docs.astral.sh/uv/)):
 
 ```bash
 make venv
 # or: ./scripts/setup-venv.sh
 ```
 
-* Run unit tests (requires a running Postgres with migrations; see `.env`):
+- Run unit tests (requires a running Postgres with migrations; see `.env`):
 
 ```bash
 make test
 ```
 
-* Run integration tests with Docker (starts Postgres + MySQL + Redis via `docker-compose.test.yml`, runs migrations and pytest, then tears down):
+- Run integration tests with Docker (starts Postgres + MySQL + Redis via `docker-compose.test.yml`, runs migrations and pytest, then tears down):
 
 ```bash
 make integration-test
 ```
 
-* Only start the test stack (db + mysql + redis) for manual testing:
+- Only start the test stack (db + mysql + redis) for manual testing:
 
 ```bash
 make docker-up
@@ -75,14 +75,14 @@ make docker-up
 make docker-down
 ```
 
-* Migrations: one consolidated revision `001_schema` (full schema). Apply: `make migrate`. **Tạo migration mới tự động từ models** (Alembic autogenerate):
+- Migrations: one consolidated revision `001_schema` (full schema). Apply: `make migrate`. **Create new migration automatically from models** (Alembic autogenerate):
 
 ```bash
-make migrate                    # Áp dụng migrations (upgrade head)
-make migrate-new msg=add_foo     # Tạo file migration mới từ thay đổi trong app/models*.py
+make migrate                    # Apply migrations (upgrade head)
+make migrate-new msg=add_foo     # Create new migration file from changes in app/models*.py
 ```
 
-Tạo lại migration duy nhất từ đầu (DB trống, xóa hết file trong `backend/app/alembic/versions/` trừ `.keep`):
+To regenerate a single migration from scratch (empty DB, remove all files in `backend/app/alembic/versions/` except `.keep`):
 
 ```bash
 cd backend && uv run alembic revision --autogenerate -m "001_schema"
