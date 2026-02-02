@@ -37,6 +37,7 @@ def _to_public(c: AppClient) -> AppClientPublic:
         name=c.name,
         client_id=c.client_id,
         description=c.description,
+        rate_limit_per_minute=getattr(c, "rate_limit_per_minute", None),
         is_active=c.is_active,
         created_at=c.created_at,
         updated_at=c.updated_at,
@@ -84,6 +85,7 @@ def create_client(
         client_id=client_id,
         client_secret=hashed_secret,
         description=body.description,
+        rate_limit_per_minute=getattr(body, "rate_limit_per_minute", None),
         is_active=body.is_active,
     )
     session.add(c)

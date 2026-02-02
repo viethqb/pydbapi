@@ -7,8 +7,6 @@ Flow: IP -> firewall -> auth -> rate limit -> resolve -> parse_params -> run -> 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from sqlmodel import select
-
 from app.api.deps import SessionDep
 from app.core.gateway import (
     check_firewall,
@@ -19,9 +17,10 @@ from app.core.gateway import (
     parse_params,
     verify_gateway_client,
 )
+from app.core.gateway.config_cache import get_or_load_gateway_config
 from app.core.gateway.resolver import resolve_api_assignment, resolve_module
 from app.core.gateway.runner import run as runner_run
-from app.models_dbapi import ApiAccessTypeEnum, ApiContext
+from app.models_dbapi import ApiAccessTypeEnum
 
 router = APIRouter(prefix="", tags=["gateway"])
 
@@ -75,16 +74,24 @@ async def gateway_proxy(
         if not client_can_access_api(session, app_client.id, api.id):
             return _gateway_error(request, 403, "Forbidden")
 
-    # Rate limit: use client_id if authenticated, otherwise use IP
-    rate_limit_key = app_client.client_id if app_client else ip
-    if not check_rate_limit(rate_limit_key):
+    # Rate limit: only when API or client has rate_limit_per_minute configured (default: no limit)
+    client_key = app_client.client_id if app_client else f"ip:{ip}"
+    api_limit = getattr(api, "rate_limit_per_minute", None)
+    client_limit = getattr(app_client, "rate_limit_per_minute", None) if app_client else None
+    effective_limit: int | None = None
+    rate_limit_key: str = ""
+    if api_limit is not None and api_limit > 0:
+        effective_limit = api_limit
+        rate_limit_key = f"api:{api.id}:{client_key}"
+    elif client_limit is not None and client_limit > 0:
+        effective_limit = client_limit
+        rate_limit_key = f"client:{client_key}"
+    if effective_limit is not None and not check_rate_limit(rate_limit_key, limit=effective_limit):
         return _gateway_error(request, 429, "Too Many Requests")
 
-    # Load ApiContext to get params definition for header extraction
-    ctx = session.exec(
-        select(ApiContext).where(ApiContext.api_assignment_id == api.id)
-    ).first()
-    params_definition = ctx.params if ctx and ctx.params else None
+    # Get params definition from cache or DB (for header extraction)
+    config = get_or_load_gateway_config(api, session)
+    params_definition = (config.get("params_definition") or None) if config else None
 
     params, body_for_log = await parse_params(
         request, path_params, request.method, params_definition=params_definition

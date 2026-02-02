@@ -16,21 +16,28 @@ def _force_memory_backend() -> None:
 
 
 def test_rate_limit_disabled() -> None:
-    """When FLOW_CONTROL_RATE_LIMIT_ENABLED is False, all requests are allowed."""
+    """When FLOW_CONTROL_RATE_LIMIT_ENABLED is False, all requests are allowed (kill switch)."""
+    ratelimit._memory.clear()
     with patch("app.core.gateway.ratelimit.settings") as m:
         m.FLOW_CONTROL_RATE_LIMIT_ENABLED = False
-        m.FLOW_CONTROL_RATE_LIMIT_PER_MINUTE = 60
         for _ in range(100):
-            assert check_rate_limit("rl_disabled") is True
+            assert check_rate_limit("rl_disabled", limit=1) is True
+
+
+def test_rate_limit_no_limit_allowed() -> None:
+    """When limit is None, all requests are allowed."""
+    with patch("app.core.gateway.ratelimit.settings") as m:
+        m.FLOW_CONTROL_RATE_LIMIT_ENABLED = True
+        for _ in range(100):
+            assert check_rate_limit("rl_no_limit", limit=None) is True
 
 
 def test_rate_limit_under_limit() -> None:
     """Under the limit, all requests are allowed."""
     with patch("app.core.gateway.ratelimit.settings") as m:
         m.FLOW_CONTROL_RATE_LIMIT_ENABLED = True
-        m.FLOW_CONTROL_RATE_LIMIT_PER_MINUTE = 60
         for _ in range(10):
-            assert check_rate_limit("rl_under") is True
+            assert check_rate_limit("rl_under", limit=60) is True
 
 
 def test_rate_limit_over_limit() -> None:
@@ -38,12 +45,10 @@ def test_rate_limit_over_limit() -> None:
     ratelimit._memory.clear()
     with patch("app.core.gateway.ratelimit.settings") as m:
         m.FLOW_CONTROL_RATE_LIMIT_ENABLED = True
-        m.FLOW_CONTROL_RATE_LIMIT_PER_MINUTE = 60
-        for i in range(60):
-            assert check_rate_limit("rl_over") is True
-        assert check_rate_limit("rl_over") is False
-        # Still over
-        assert check_rate_limit("rl_over") is False
+        for _ in range(60):
+            assert check_rate_limit("rl_over", limit=60) is True
+        assert check_rate_limit("rl_over", limit=60) is False
+        assert check_rate_limit("rl_over", limit=60) is False
 
 
 def test_rate_limit_custom_limit() -> None:
@@ -51,18 +56,16 @@ def test_rate_limit_custom_limit() -> None:
     ratelimit._memory.clear()
     with patch("app.core.gateway.ratelimit.settings") as m:
         m.FLOW_CONTROL_RATE_LIMIT_ENABLED = True
-        m.FLOW_CONTROL_RATE_LIMIT_PER_MINUTE = 2
-        assert check_rate_limit("rl_custom") is True
-        assert check_rate_limit("rl_custom") is True
-        assert check_rate_limit("rl_custom") is False
+        assert check_rate_limit("rl_custom", limit=2) is True
+        assert check_rate_limit("rl_custom", limit=2) is True
+        assert check_rate_limit("rl_custom", limit=2) is False
 
 
 def test_rate_limit_empty_key_allowed() -> None:
     """Empty or invalid key is allowed (fail-open)."""
     with patch("app.core.gateway.ratelimit.settings") as m:
         m.FLOW_CONTROL_RATE_LIMIT_ENABLED = True
-        m.FLOW_CONTROL_RATE_LIMIT_PER_MINUTE = 60
-        assert check_rate_limit("") is True
+        assert check_rate_limit("", limit=60) is True
 
 
 def test_rate_limit_per_key() -> None:
@@ -70,10 +73,9 @@ def test_rate_limit_per_key() -> None:
     ratelimit._memory.clear()
     with patch("app.core.gateway.ratelimit.settings") as m:
         m.FLOW_CONTROL_RATE_LIMIT_ENABLED = True
-        m.FLOW_CONTROL_RATE_LIMIT_PER_MINUTE = 2
-        assert check_rate_limit("rl_a") is True
-        assert check_rate_limit("rl_a") is True
-        assert check_rate_limit("rl_a") is False
-        assert check_rate_limit("rl_b") is True
-        assert check_rate_limit("rl_b") is True
-        assert check_rate_limit("rl_b") is False
+        assert check_rate_limit("rl_a", limit=2) is True
+        assert check_rate_limit("rl_a", limit=2) is True
+        assert check_rate_limit("rl_a", limit=2) is False
+        assert check_rate_limit("rl_b", limit=2) is True
+        assert check_rate_limit("rl_b", limit=2) is True
+        assert check_rate_limit("rl_b", limit=2) is False

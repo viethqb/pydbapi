@@ -291,6 +291,7 @@ class ApiAssignmentCreate(SQLModel):
     datasource_id: uuid.UUID | None = None
     description: str | None = Field(default=None, max_length=512)
     access_type: ApiAccessTypeEnum = Field(default=ApiAccessTypeEnum.PRIVATE, description="public: no auth required, private: requires token")
+    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this API. None = no limit.")
     sort_order: int = Field(default=0)
     content: str | None = Field(default=None, description="SQL/script → ApiContext (1-1)")
     result_transform: str | None = Field(
@@ -314,6 +315,7 @@ class ApiAssignmentUpdate(SQLModel):
     datasource_id: uuid.UUID | None = None
     description: str | None = None
     access_type: ApiAccessTypeEnum | None = None
+    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this API. None = no limit.")
     sort_order: int | None = None
     content: str | None = None
     result_transform: str | None = None
@@ -352,6 +354,7 @@ class ApiAssignmentPublic(SQLModel):
     is_published: bool
     published_version_id: uuid.UUID | None
     access_type: ApiAccessTypeEnum
+    rate_limit_per_minute: int | None = None
     sort_order: int
     created_at: datetime
     updated_at: datetime
@@ -411,6 +414,7 @@ class AppClientCreate(SQLModel):
     name: str = Field(..., min_length=1, max_length=255)
     client_secret: str = Field(..., min_length=8, max_length=512, description="Plain secret; stored hashed")
     description: str | None = Field(default=None, max_length=512)
+    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this client. None = no limit.")
     is_active: bool = Field(default=True)
     group_ids: list[uuid.UUID] | None = Field(default=None, description="ApiGroups to allow API access; stored in app_client_group_link")
     api_assignment_ids: list[uuid.UUID] | None = Field(default=None, description="Direct APIs (outside groups) the client can call; stored in app_client_api_link")
@@ -422,6 +426,7 @@ class AppClientUpdate(SQLModel):
     id: uuid.UUID
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
+    rate_limit_per_minute: int | None = Field(default=None, description="Max requests/min for this client. None = no limit.")
     is_active: bool | None = None
     group_ids: list[uuid.UUID] | None = None
     api_assignment_ids: list[uuid.UUID] | None = None
@@ -434,6 +439,7 @@ class AppClientPublic(SQLModel):
     name: str
     client_id: str
     description: str | None
+    rate_limit_per_minute: int | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

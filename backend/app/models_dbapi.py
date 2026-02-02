@@ -226,6 +226,10 @@ class ApiAssignment(SQLModel, table=True):
         ),
         default=ApiAccessTypeEnum.PRIVATE,
     )
+    rate_limit_per_minute: int | None = Field(
+        default=None,
+        description="Max requests per minute for this API. None = no limit (call freely).",
+    )
     sort_order: int = Field(default=0)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
@@ -345,6 +349,10 @@ class AppClient(SQLModel, table=True):
     client_id: str = Field(max_length=255, unique=True, index=True)
     client_secret: str = Field(max_length=512)  # Hashed
     description: str | None = Field(default=None, max_length=512)
+    rate_limit_per_minute: int | None = Field(
+        default=None,
+        description="Max requests per minute for this client. None = no limit (call freely).",
+    )
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)

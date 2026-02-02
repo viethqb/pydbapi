@@ -112,6 +112,7 @@ class Settings(BaseSettings):
     GATEWAY_AUTH_X_API_KEY_ENABLED: bool = True
     GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True  # When no rule matches
     GATEWAY_ACCESS_LOG_BODY: bool = False  # Log request_body to AccessRecord
+    GATEWAY_CONFIG_CACHE_TTL_SECONDS: int = 300  # TTL for cached API config (content, params, validate, transform)
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

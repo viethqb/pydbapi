@@ -57,6 +57,11 @@ const formSchema = z.object({
       "Secret must be at least 8 characters",
     ), // Only validate if provided
   description: z.string().max(512).optional().nullable(),
+  rate_limit_per_minute: z
+    .union([z.number().int().positive(), z.null(), z.literal("")])
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   is_active: z.boolean().default(true),
   group_ids: z.array(z.string()).default([]),
   api_assignment_ids: z.array(z.string()).default([]),
@@ -150,6 +155,7 @@ export function ClientFormDialog({
       name: "",
       client_secret: "",
       description: null,
+      rate_limit_per_minute: null,
       is_active: true,
       group_ids: [],
       api_assignment_ids: [],
@@ -162,6 +168,7 @@ export function ClientFormDialog({
         name: client.name,
         client_secret: "", // Don't populate secret on edit
         description: client.description,
+        rate_limit_per_minute: (client as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
         is_active: client.is_active,
         group_ids: client.group_ids ?? [],
         api_assignment_ids: client.api_assignment_ids ?? [],
@@ -171,6 +178,7 @@ export function ClientFormDialog({
         name: "",
         client_secret: "",
         description: null,
+        rate_limit_per_minute: null,
         is_active: true,
         group_ids: [],
         api_assignment_ids: [],
@@ -214,6 +222,10 @@ export function ClientFormDialog({
         id: client.id,
         name: data.name,
         description: data.description || null,
+        rate_limit_per_minute:
+          data.rate_limit_per_minute === "" || data.rate_limit_per_minute == null
+            ? null
+            : Number(data.rate_limit_per_minute),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : [],
         api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : [],
@@ -227,6 +239,10 @@ export function ClientFormDialog({
         name: data.name,
         client_secret: data.client_secret,
         description: data.description,
+        rate_limit_per_minute:
+          data.rate_limit_per_minute === "" || data.rate_limit_per_minute == null
+            ? null
+            : Number(data.rate_limit_per_minute),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : undefined,
         api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : undefined,
@@ -302,6 +318,33 @@ export function ClientFormDialog({
                         value={field.value || ""}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="rate_limit_per_minute"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Rate limit (req/min)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="No limit"
+                        {...field}
+                        value={field.value === null || field.value === undefined ? "" : field.value}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          field.onChange(v === "" ? null : Number(v))
+                        }}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Max requests per minute for this client. Empty = no limit.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

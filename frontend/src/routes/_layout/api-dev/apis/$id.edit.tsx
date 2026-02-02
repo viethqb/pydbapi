@@ -96,6 +96,11 @@ const formSchema = z.object({
   datasource_id: z.string().optional().nullable(),
   description: z.string().max(512).optional().nullable(),
   access_type: z.enum(["public", "private"]).default("private"),
+  rate_limit_per_minute: z
+    .union([z.number().int().positive(), z.null(), z.literal("")])
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   content: z.string().optional().nullable(),
   result_transform: z.string().optional().nullable(),
   group_ids: z.array(z.string()).default([]),
@@ -181,6 +186,7 @@ function ApiEdit() {
       datasource_id: null,
       description: null,
       access_type: "private",
+      rate_limit_per_minute: null,
       content: "",
       result_transform: "",
       group_ids: [],
@@ -237,6 +243,7 @@ function ApiEdit() {
         datasource_id: datasourceId,
         description: apiDetail.description || null,
         access_type: apiDetail.access_type || "private",
+        rate_limit_per_minute: (apiDetail as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
         content: apiDetail.api_context?.content || "",
         result_transform: apiDetail.api_context?.result_transform || "",
         group_ids: apiDetail.group_ids?.map(id => String(id)) || [],
@@ -420,6 +427,10 @@ function ApiEdit() {
       datasource_id: values.datasource_id || null,
       description: values.description || null,
       access_type: values.access_type,
+      rate_limit_per_minute:
+        values.rate_limit_per_minute === "" || values.rate_limit_per_minute == null
+          ? null
+          : Number(values.rate_limit_per_minute),
       content: values.content || null,
       result_transform: values.result_transform || null,
       group_ids: values.group_ids,
@@ -597,6 +608,36 @@ function ApiEdit() {
                                 </Select>
                                 <FormDescription className="mt-1">
                                   Public APIs can be accessed without authentication. Private APIs require a token from /token/generate.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Rate limit (req/min)</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="rate_limit_per_minute"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    placeholder="No limit"
+                                    {...field}
+                                    value={field.value === null || field.value === undefined ? "" : field.value}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      field.onChange(v === "" ? null : Number(v))
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormDescription className="mt-1">
+                                  Max requests per minute for this API. Empty = no limit (call freely).
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>

@@ -73,20 +73,24 @@ def _check_memory(key: str, limit: int, window_sec: float) -> bool:
         return True
 
 
-def check_rate_limit(key: str) -> bool:
+def check_rate_limit(key: str, limit: int | None = None) -> bool:
     """
-    Rate limit by key (e.g. client_id or ip). True = allow, False = over limit (caller should return 429).
+    Rate limit by key. True = allow, False = over limit (caller should return 429).
 
-    - If FLOW_CONTROL_RATE_LIMIT_ENABLED is False: always True.
-    - Sliding window: FLOW_CONTROL_RATE_LIMIT_PER_MINUTE requests per 60 seconds.
-    - Redis: key ratelimit:gateway:{key}, sliding window via sorted set. Falls back to in-memory on error/unavailable.
+    - If limit is None or <= 0: always True (no limit).
+    - If FLOW_CONTROL_RATE_LIMIT_ENABLED is False: always True (kill switch).
+    - Sliding window: limit requests per 60 seconds.
+    - Redis: key ratelimit:gateway:{key}, sliding window via sorted set.
+    - Falls back to in-memory on Redis error/unavailable.
     - In-memory: dict of timestamps; not shared across processes.
     """
     if not settings.FLOW_CONTROL_RATE_LIMIT_ENABLED:
         return True
+    if limit is None or limit <= 0:
+        return True
     if not key or not isinstance(key, str):
         return True
-    limit = max(1, settings.FLOW_CONTROL_RATE_LIMIT_PER_MINUTE)
+    limit = max(1, limit)
     window_sec = 60.0
     if _get_redis() is not None:
         return _check_redis(key, limit, window_sec)

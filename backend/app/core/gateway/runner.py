@@ -1,19 +1,21 @@
 """
 Gateway runner (Phase 4, Task 4.1): run API via ApiExecutor, write AccessRecord.
+Uses config cache (Redis) to reduce DB load for content, params, validate, transform.
 """
 
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.core.config import settings
 from fastapi import HTTPException
 
+from app.core.gateway.config_cache import get_or_load_gateway_config
 from app.core.param_type import ParamTypeError, validate_and_coerce_params
 from app.core.param_validate import ParamValidateError, run_param_validates
 from app.core.result_transform import ResultTransformError, run_result_transform
 from app.engines import ApiExecutor
-from app.models_dbapi import AccessRecord, ApiAssignment, ApiContext, VersionCommit
+from app.models_dbapi import AccessRecord, ApiAssignment
 
 
 def _write_access_record(
@@ -55,13 +57,12 @@ def run(
     request_body: str | None = None,
 ) -> dict:
     """
-    Load ApiContext, run ApiExecutor, write AccessRecord. Returns result dict from executor.
+    Load ApiContext (from cache or DB), run ApiExecutor, write AccessRecord.
+    Returns result dict from executor.
     On success: AccessRecord 200. On exception: AccessRecord 500, then re-raise.
     """
-    ctx = session.exec(
-        select(ApiContext).where(ApiContext.api_assignment_id == api.id)
-    ).first()
-    if not ctx:
+    config = get_or_load_gateway_config(api, session)
+    if not config:
         _write_access_record(
             session,
             api_assignment_id=api.id,
@@ -74,40 +75,12 @@ def run(
         )
         raise RuntimeError("ApiContext not found for ApiAssignment")
 
-    # Use published version snapshot when available; otherwise dev (ApiContext).
-    # When using a version: always use snapshot for params, param_validates, result_transform.
-    # Snapshot None = empty / no-op (no fallback to dev).
-    content_to_run = ctx.content
-    params_definition: list[dict] | None = ctx.params if getattr(ctx, "params", None) else None
-    param_validates_definition: list[dict] | None = getattr(ctx, "param_validates", None)
-    result_transform_code: str | None = getattr(ctx, "result_transform", None)
+    content_to_run = config["content"]
+    params_definition: list[dict] = config.get("params_definition") or []
+    param_validates_definition: list[dict] = config.get("param_validates_definition") or []
+    result_transform_code: str | None = config.get("result_transform_code")
 
-    if api.published_version_id:
-        vc = session.exec(
-            select(VersionCommit).where(VersionCommit.id == api.published_version_id)
-        ).first()
-        if not vc:
-            _write_access_record(
-                session,
-                api_assignment_id=api.id,
-                app_client_id=app_client_id,
-                ip_address=ip or "0.0.0.0",
-                http_method=http_method,
-                path=request_path,
-                status_code=500,
-                request_body=request_body,
-            )
-            raise RuntimeError("Published VersionCommit not found for ApiAssignment")
-
-        content_to_run = vc.content_snapshot
-        params_snapshot = getattr(vc, "params_snapshot", None)
-        pv_snapshot = getattr(vc, "param_validates_snapshot", None)
-        rt_snapshot = getattr(vc, "result_transform_snapshot", None)
-        params_definition = params_snapshot if params_snapshot is not None else []
-        param_validates_definition = pv_snapshot if pv_snapshot is not None else []
-        result_transform_code = rt_snapshot if rt_snapshot is not None else None
-
-    # Validate required parameters if params definition exists on ApiContext
+    # Validate required parameters if params definition exists
     if params_definition:
         missing_params: list[str] = []
         for param_def in params_definition:

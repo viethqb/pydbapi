@@ -42,6 +42,7 @@ from app.schemas_dbapi import (
     VersionCommitPublic,
 )
 from app.core.result_transform import ResultTransformError, run_result_transform
+from app.core.gateway.config_cache import invalidate_gateway_config
 from app.core.gateway.request_response import normalize_api_result
 
 router = APIRouter(prefix="/api-assignments", tags=["api-assignments"])
@@ -61,6 +62,7 @@ def _to_public(a: ApiAssignment) -> ApiAssignmentPublic:
         is_published=a.is_published,
         published_version_id=a.published_version_id,
         access_type=a.access_type,
+        rate_limit_per_minute=getattr(a, "rate_limit_per_minute", None),
         sort_order=a.sort_order,
         created_at=a.created_at,
         updated_at=a.updated_at,
@@ -207,7 +209,14 @@ def update_api_assignment(
 
     update_data = body.model_dump(
         exclude_unset=True,
-        exclude={"id", "content", "group_ids", "params", "param_validates", "result_transform"},
+        exclude={
+            "id",
+            "content",
+            "group_ids",
+            "params",
+            "param_validates",
+            "result_transform",
+        },
     )
     if update_data:
         a.sqlmodel_update(update_data)
@@ -311,6 +320,13 @@ def update_api_assignment(
             )
 
     session.commit()
+    if (
+        "content" in body.model_fields_set
+        or "params" in body.model_fields_set
+        or "param_validates" in body.model_fields_set
+        or "result_transform" in body.model_fields_set
+    ):
+        invalidate_gateway_config(a.id)
     session.refresh(a)
     return _to_public(a)
 
@@ -341,6 +357,7 @@ def publish_api_assignment(
     a.updated_at = datetime.now(timezone.utc)
     session.add(a)
     session.commit()
+    invalidate_gateway_config(a.id)
     session.refresh(a)
     return _to_public(a)
 
@@ -360,6 +377,7 @@ def unpublish_api_assignment(
     a.updated_at = datetime.now(timezone.utc)
     session.add(a)
     session.commit()
+    invalidate_gateway_config(a.id)
     session.refresh(a)
     return _to_public(a)
 
@@ -696,6 +714,7 @@ def restore_version(
         )
 
     session.commit()
+    invalidate_gateway_config(a.id)
     a = session.get(ApiAssignment, id)
     return _to_detail(a)
 

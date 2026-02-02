@@ -12,6 +12,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.pool import get_pool_manager
+from app.core.redis_client import get_redis
 from app.engines.script import ScriptContext, ScriptExecutor
 from app.engines.sql import SQLTemplateEngine, execute_sql
 from app.models_dbapi import DataSource, ExecuteEngineEnum
@@ -79,7 +80,7 @@ class ApiExecutor:
                 datasource=ds,
                 req=_params,
                 pool_manager=pm,
-                cache_client=None,
+                cache_client=get_redis(),
                 settings=settings,
                 logger=_log,
             )
