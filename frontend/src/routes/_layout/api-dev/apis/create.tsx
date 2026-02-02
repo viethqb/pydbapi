@@ -47,6 +47,7 @@ import {
   type ApiAssignmentCreate,
 } from "@/services/api-assignments"
 import { ModulesService } from "@/services/modules"
+import { MacroDefsService } from "@/services/macro-defs"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
 import useCustomToast from "@/hooks/useCustomToast"
@@ -183,6 +184,7 @@ function ApiCreate() {
   })
 
   const executeEngine = form.watch("execute_engine")
+  const moduleId = form.watch("module_id")
   const paramNamesForContentSuggestions = (form.watch("params") ?? [])
     .map((p) => (typeof p?.name === "string" ? p.name.trim() : ""))
     .filter(Boolean)
@@ -205,6 +207,13 @@ function ApiCreate() {
     queryKey: ["groups-simple"],
     queryFn: () => GroupsService.list(),
   })
+
+  const { data: macroDefsData } = useQuery({
+    queryKey: ["macro-defs-in-scope", moduleId ?? "all"],
+    queryFn: () => MacroDefsService.listSimple(moduleId || undefined),
+    enabled: true,
+  })
+  const macroDefsForEditor = macroDefsData ?? []
 
   const createMutation = useMutation({
     mutationFn: (data: ApiAssignmentCreate) => ApiAssignmentsService.create(data),
@@ -993,6 +1002,7 @@ function ApiCreate() {
                                 onBlur={field.onBlur}
                                 placeholder={SQL_CONTENT_PLACEHOLDER}
                                 paramNames={paramNamesForContentSuggestions}
+                                macroDefs={macroDefsForEditor}
                               />
                             ) : (
                               <ApiContentEditor
@@ -1005,6 +1015,7 @@ function ApiCreate() {
                                 maxHeight={720}
                                 placeholder={SCRIPT_CONTENT_PLACEHOLDER}
                                 paramNames={paramNamesForContentSuggestions}
+                                macroDefs={macroDefsForEditor}
                               />
                             )}
                           </FormControl>
@@ -1037,6 +1048,7 @@ function ApiCreate() {
                                 maxHeight={720}
                                 placeholder={RESULT_TRANSFORM_PLACEHOLDER}
                                 paramNames={[]}
+                                macroDefs={macroDefsForEditor}
                               />
                             </FormControl>
                             <FormMessage />

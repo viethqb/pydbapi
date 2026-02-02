@@ -18,6 +18,42 @@ import useCustomToast from "@/hooks/useCustomToast"
 
 export type ApiContentEditorExecuteEngine = "SQL" | "SCRIPT"
 
+export type MacroDefForCompletion = {
+  name: string
+  macro_type: "JINJA" | "PYTHON"
+  content: string
+}
+
+// Shared ref for completion providers to read current in-scope macro defs
+let macroDefsForCompletionsRef: MacroDefForCompletion[] = []
+export function setMacroDefsForCompletions(defs: MacroDefForCompletion[] | null | undefined) {
+  macroDefsForCompletionsRef = Array.isArray(defs) ? defs : []
+}
+
+type PythonFuncInfo = { name: string; signature: string; params: string[] }
+function parsePythonFunctionSignatures(content: string): PythonFuncInfo[] {
+  const results: PythonFuncInfo[] = []
+  const re = /def\s+(\w+)\s*\(([^)]*)\)/g
+  let m = re.exec(content)
+  while (m !== null) {
+    const params = m[2].split(",").map((p) => p.trim().split("=")[0]?.trim() || "").filter(Boolean)
+    results.push({
+      name: m[1],
+      signature: m[2] || "",
+      params,
+    })
+    m = re.exec(content)
+  }
+  return results
+}
+
+function parseJinjaMacroParams(content: string, macroName: string): string[] {
+  const re = new RegExp(`{%\\s*macro\\s+${macroName}\\s*\\(([^)]*)\\)\\s*%}`, "i")
+  const m = content.match(re)
+  if (!m) return []
+  return m[1].split(",").map((p) => p.trim()).filter(Boolean)
+}
+
 type Props = {
   executeEngine: ApiContentEditorExecuteEngine
   value: string
@@ -30,6 +66,7 @@ type Props = {
   minHeight?: number
   maxHeight?: number
   disabled?: boolean
+  macroDefs?: MacroDefForCompletion[]
   // Expose editor ref so parent can sync value before unmount
   onEditorReady?: (getValue: () => string) => void
 }
@@ -138,7 +175,7 @@ function registerSqlCompletions(monaco: typeof Monaco) {
   ]
 
   const disposable = monaco.languages.registerCompletionItemProvider("sql", {
-    triggerCharacters: [".", " "],
+    triggerCharacters: [".", " ", "{"],
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position)
       const range = new monaco.Range(
@@ -147,6 +184,7 @@ function registerSqlCompletions(monaco: typeof Monaco) {
         position.lineNumber,
         word.endColumn
       )
+      const lineBefore = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
       const suggestions: Monaco.languages.CompletionItem[] = keywords.map(
         (k) => ({
           label: k,
@@ -155,6 +193,27 @@ function registerSqlCompletions(monaco: typeof Monaco) {
           range,
         })
       )
+      // Add Jinja macro def suggestions when inside {{ or {%
+      const inJinja = /\{\{|\{%/.test(lineBefore)
+      if (inJinja) {
+        for (const m of macroDefsForCompletionsRef) {
+          if (m.macro_type === "JINJA") {
+            const params = parseJinjaMacroParams(m.content, m.name)
+            const paramsStr = params.length > 0 ? params.join(", ") : ""
+            const insertParams = params.length > 0
+              ? params.map((p, i) => `\${${i + 1}:${p}}`).join(", ")
+              : "$1"
+            suggestions.push({
+              label: m.name,
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: `{{ ${m.name}(${insertParams}) }}`,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range,
+              detail: paramsStr ? `Macro: ${m.name}(${paramsStr})` : `Macro: ${m.name}`,
+            })
+          }
+        }
+      }
       return { suggestions }
     },
   })
@@ -241,6 +300,25 @@ function registerPythonCompletions(monaco: typeof Monaco) {
           { label: "rollback", insertText: "rollback()", range, kind: monaco.languages.CompletionItemKind.Method, detail: "Rollback transaction" },
         )
       } else {
+        // Macro def functions (Python macros)
+        for (const m of macroDefsForCompletionsRef) {
+          if (m.macro_type === "PYTHON") {
+            for (const fn of parsePythonFunctionSignatures(m.content)) {
+              const insertParams = fn.params.length > 0
+                ? fn.params.map((p, i) => `\${${i + 1}:${p}}`).join(", ")
+                : "$1"
+              const sigStr = fn.signature ? `(${fn.signature})` : "()"
+              suggestions.push({
+                label: fn.name,
+                kind: monaco.languages.CompletionItemKind.Function,
+                insertText: `${fn.name}(${insertParams})`,
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                range,
+                detail: `Macro ${m.name}: def ${fn.name}${sigStr}`,
+              })
+            }
+          }
+        }
         // Globals and snippets
         const kindModule = monaco.languages.CompletionItemKind.Module
         const kindVar = monaco.languages.CompletionItemKind.Variable
@@ -324,6 +402,7 @@ export default function ApiContentEditor({
   minHeight,
   maxHeight,
   disabled = false,
+  macroDefs,
   onEditorReady,
 }: Props) {
   const { resolvedTheme } = useTheme()
@@ -333,6 +412,11 @@ export default function ApiContentEditor({
   useEffect(() => {
     paramNamesRef.current = Array.isArray(paramNames) ? paramNames : []
   }, [paramNames])
+
+  useEffect(() => {
+    setMacroDefsForCompletions(macroDefs)
+    return () => setMacroDefsForCompletions(null)
+  }, [macroDefs])
 
   const language = useMemo(
     () => getMonacoLanguage(executeEngine),
@@ -520,13 +604,30 @@ export default function ApiContentEditor({
     return Math.max(minH, Math.min(maxH, computed))
   }, [autoHeight, height, maxHeight, minHeight, placeholder, value])
 
+  const jinjaTagsWithMacros = useMemo(() => {
+    const macros =
+      (macroDefs ?? [])
+        .filter((m) => m.macro_type === "JINJA")
+        .map((m) => {
+          const params = parseJinjaMacroParams(m.content, m.name)
+          const paramsLabel = params.length > 0 ? params.join(", ") : "..."
+          const insertVal = params.length > 0 ? params.join(", ") : ""
+          return {
+            id: `macro-${m.name}`,
+            label: `{{ ${m.name}(${paramsLabel}) }}`,
+            insert: `{{ ${m.name}(${insertVal}) }}`,
+          }
+        }) ?? []
+    return [...JINJA_TAGS, ...macros]
+  }, [macroDefs])
+
   const jinjaTagsFiltered = useMemo(() => {
     const q = jinjaSearch.trim().toLowerCase()
-    if (!q) return JINJA_TAGS
-    return JINJA_TAGS.filter(
+    if (!q) return jinjaTagsWithMacros
+    return jinjaTagsWithMacros.filter(
       (t) => t.id.toLowerCase().includes(q) || t.label.toLowerCase().includes(q)
     )
-  }, [jinjaSearch])
+  }, [jinjaSearch, jinjaTagsWithMacros])
 
   return (
     <div className="space-y-2">

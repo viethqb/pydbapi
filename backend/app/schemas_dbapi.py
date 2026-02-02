@@ -14,6 +14,7 @@ from app.models_dbapi import (
     ApiAccessTypeEnum,
     ExecuteEngineEnum,
     HttpMethodEnum,
+    MacroTypeEnum,
     ProductTypeEnum,
 )
 
@@ -157,6 +158,117 @@ class ApiModuleListOut(SQLModel):
     """Paginated list of ApiModule."""
 
     data: list[ApiModulePublic]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# ApiMacroDef - Jinja macro / Python function definitions for API content
+# ---------------------------------------------------------------------------
+
+
+class ApiMacroDefCreate(SQLModel):
+    """Body for POST /macro-defs/create."""
+
+    module_id: uuid.UUID | None = Field(default=None, description="Null = global macro_def")
+    name: str = Field(..., min_length=1, max_length=128)
+    macro_type: MacroTypeEnum
+    content: str = Field(..., min_length=1)
+    description: str | None = Field(default=None, max_length=512)
+    sort_order: int = Field(default=0)
+
+
+class ApiMacroDefUpdate(SQLModel):
+    """Body for POST /macro-defs/update; id required, others optional."""
+
+    id: uuid.UUID
+    module_id: uuid.UUID | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    macro_type: MacroTypeEnum | None = None
+    content: str | None = Field(default=None, min_length=1)
+    description: str | None = None
+    sort_order: int | None = None
+
+
+class ApiMacroDefPublic(SQLModel):
+    """Response schema for ApiMacroDef."""
+
+    id: uuid.UUID
+    module_id: uuid.UUID | None
+    name: str
+    macro_type: MacroTypeEnum
+    content: str
+    description: str | None
+    sort_order: int
+    is_published: bool = False
+    published_version_id: uuid.UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApiMacroDefDetail(ApiMacroDefPublic):
+    """Detail for GET /macro-defs/{id}; adds used_by_apis_count."""
+
+    used_by_apis_count: int = Field(default=0, description="Number of APIs in scope that use this macro_def")
+
+
+class MacroDefVersionCommitPublic(SQLModel):
+    """Minimal schema for MacroDefVersionCommit in list."""
+
+    id: uuid.UUID
+    api_macro_def_id: uuid.UUID
+    version: int
+    commit_message: str | None
+    committed_by_id: uuid.UUID | None
+    committed_by_email: str | None = None
+    committed_at: datetime
+
+
+class MacroDefVersionCommitDetail(SQLModel):
+    """Full schema for MacroDefVersionCommit including content_snapshot."""
+
+    id: uuid.UUID
+    api_macro_def_id: uuid.UUID
+    version: int
+    content_snapshot: str
+    commit_message: str | None
+    committed_by_id: uuid.UUID | None
+    committed_by_email: str | None = None
+    committed_at: datetime
+
+
+class MacroDefVersionCommitCreate(SQLModel):
+    """Body for POST /macro-defs/{id}/versions/create."""
+
+    commit_message: str | None = Field(default=None, max_length=512)
+
+
+class MacroDefVersionCommitListOut(SQLModel):
+    """Response for GET /macro-defs/{id}/versions."""
+
+    data: list[MacroDefVersionCommitPublic]
+
+
+class ApiMacroDefPublishIn(SQLModel):
+    """Body for POST /macro-defs/publish."""
+
+    id: uuid.UUID
+    version_id: uuid.UUID | None = Field(default=None, description="Required for publish.")
+
+
+class ApiMacroDefListIn(SQLModel):
+    """Body for POST /macro-defs/list; pagination and optional filters."""
+
+    page: int = Field(default=1, ge=1, description="1-based page number")
+    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    module_id: uuid.UUID | None = Field(default=None, description="Filter by module; null = global only")
+    macro_type: MacroTypeEnum | None = None
+    name__ilike: str | None = Field(default=None, max_length=128)
+
+
+class ApiMacroDefListOut(SQLModel):
+    """Paginated list of ApiMacroDef."""
+
+    data: list[ApiMacroDefPublic]
     total: int
 
 

@@ -29,14 +29,18 @@ import { Route as LayoutAboutSqlJinjaRouteImport } from './routes/_layout/about.
 import { Route as LayoutAboutPythonScriptRouteImport } from './routes/_layout/about.python-script'
 import { Route as LayoutSystemGroupsIndexRouteImport } from './routes/_layout/system/groups/index'
 import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
+import { Route as LayoutApiDevMacroDefsIndexRouteImport } from './routes/_layout/api-dev/macro-defs/index'
 import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
 import { Route as LayoutSystemGroupsIdRouteImport } from './routes/_layout/system/groups/$id'
 import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id/edit'
 import { Route as LayoutApiDevModulesCreateRouteImport } from './routes/_layout/api-dev/modules/create'
 import { Route as LayoutApiDevModulesIdRouteImport } from './routes/_layout/api-dev/modules/$id'
+import { Route as LayoutApiDevMacroDefsCreateRouteImport } from './routes/_layout/api-dev/macro-defs/create'
+import { Route as LayoutApiDevMacroDefsIdRouteImport } from './routes/_layout/api-dev/macro-defs/$id'
 import { Route as LayoutApiDevApisCreateRouteImport } from './routes/_layout/api-dev/apis/create'
 import { Route as LayoutApiDevApisIdRouteImport } from './routes/_layout/api-dev/apis/$id'
 import { Route as LayoutApiDevModulesIdEditRouteImport } from './routes/_layout/api-dev/modules/$id.edit'
+import { Route as LayoutApiDevMacroDefsIdEditRouteImport } from './routes/_layout/api-dev/macro-defs/$id.edit'
 import { Route as LayoutApiDevApisIdEditRouteImport } from './routes/_layout/api-dev/apis/$id.edit'
 
 const SignupRoute = SignupRouteImport.update({
@@ -140,6 +144,12 @@ const LayoutApiDevModulesIndexRoute =
     path: '/api-dev/modules/',
     getParentRoute: () => LayoutRoute,
   } as any)
+const LayoutApiDevMacroDefsIndexRoute =
+  LayoutApiDevMacroDefsIndexRouteImport.update({
+    id: '/api-dev/macro-defs/',
+    path: '/api-dev/macro-defs/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutApiDevApisIndexRoute = LayoutApiDevApisIndexRouteImport.update({
   id: '/api-dev/apis/',
   path: '/api-dev/apis/',
@@ -166,6 +176,17 @@ const LayoutApiDevModulesIdRoute = LayoutApiDevModulesIdRouteImport.update({
   path: '/api-dev/modules/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutApiDevMacroDefsCreateRoute =
+  LayoutApiDevMacroDefsCreateRouteImport.update({
+    id: '/api-dev/macro-defs/create',
+    path: '/api-dev/macro-defs/create',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutApiDevMacroDefsIdRoute = LayoutApiDevMacroDefsIdRouteImport.update({
+  id: '/api-dev/macro-defs/$id',
+  path: '/api-dev/macro-defs/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutApiDevApisCreateRoute = LayoutApiDevApisCreateRouteImport.update({
   id: '/api-dev/apis/create',
   path: '/api-dev/apis/create',
@@ -181,6 +202,12 @@ const LayoutApiDevModulesIdEditRoute =
     id: '/edit',
     path: '/edit',
     getParentRoute: () => LayoutApiDevModulesIdRoute,
+  } as any)
+const LayoutApiDevMacroDefsIdEditRoute =
+  LayoutApiDevMacroDefsIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => LayoutApiDevMacroDefsIdRoute,
   } as any)
 const LayoutApiDevApisIdEditRoute = LayoutApiDevApisIdEditRouteImport.update({
   id: '/edit',
@@ -208,14 +235,18 @@ export interface FileRoutesByFullPath {
   '/connection/': typeof LayoutConnectionIndexRoute
   '/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
   '/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
+  '/api-dev/macro-defs/$id': typeof LayoutApiDevMacroDefsIdRouteWithChildren
+  '/api-dev/macro-defs/create': typeof LayoutApiDevMacroDefsCreateRoute
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
+  '/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
   '/system/groups/': typeof LayoutSystemGroupsIndexRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
+  '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -238,14 +269,18 @@ export interface FileRoutesByTo {
   '/connection': typeof LayoutConnectionIndexRoute
   '/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
   '/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
+  '/api-dev/macro-defs/$id': typeof LayoutApiDevMacroDefsIdRouteWithChildren
+  '/api-dev/macro-defs/create': typeof LayoutApiDevMacroDefsCreateRoute
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/api-dev/apis': typeof LayoutApiDevApisIndexRoute
+  '/api-dev/macro-defs': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules': typeof LayoutApiDevModulesIndexRoute
   '/system/groups': typeof LayoutSystemGroupsIndexRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
+  '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
 }
 export interface FileRoutesById {
@@ -270,14 +305,18 @@ export interface FileRoutesById {
   '/_layout/connection/': typeof LayoutConnectionIndexRoute
   '/_layout/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
   '/_layout/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
+  '/_layout/api-dev/macro-defs/$id': typeof LayoutApiDevMacroDefsIdRouteWithChildren
+  '/_layout/api-dev/macro-defs/create': typeof LayoutApiDevMacroDefsCreateRoute
   '/_layout/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/_layout/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/_layout/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/_layout/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/_layout/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
+  '/_layout/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/_layout/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
   '/_layout/system/groups/': typeof LayoutSystemGroupsIndexRoute
   '/_layout/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
+  '/_layout/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/_layout/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
 }
 export interface FileRouteTypes {
@@ -302,14 +341,18 @@ export interface FileRouteTypes {
     | '/connection/'
     | '/api-dev/apis/$id'
     | '/api-dev/apis/create'
+    | '/api-dev/macro-defs/$id'
+    | '/api-dev/macro-defs/create'
     | '/api-dev/modules/$id'
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
     | '/system/groups/$id'
     | '/api-dev/apis/'
+    | '/api-dev/macro-defs/'
     | '/api-dev/modules/'
     | '/system/groups/'
     | '/api-dev/apis/$id/edit'
+    | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -332,14 +375,18 @@ export interface FileRouteTypes {
     | '/connection'
     | '/api-dev/apis/$id'
     | '/api-dev/apis/create'
+    | '/api-dev/macro-defs/$id'
+    | '/api-dev/macro-defs/create'
     | '/api-dev/modules/$id'
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
     | '/system/groups/$id'
     | '/api-dev/apis'
+    | '/api-dev/macro-defs'
     | '/api-dev/modules'
     | '/system/groups'
     | '/api-dev/apis/$id/edit'
+    | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
   id:
     | '__root__'
@@ -363,14 +410,18 @@ export interface FileRouteTypes {
     | '/_layout/connection/'
     | '/_layout/api-dev/apis/$id'
     | '/_layout/api-dev/apis/create'
+    | '/_layout/api-dev/macro-defs/$id'
+    | '/_layout/api-dev/macro-defs/create'
     | '/_layout/api-dev/modules/$id'
     | '/_layout/api-dev/modules/create'
     | '/_layout/connection/$id/edit'
     | '/_layout/system/groups/$id'
     | '/_layout/api-dev/apis/'
+    | '/_layout/api-dev/macro-defs/'
     | '/_layout/api-dev/modules/'
     | '/_layout/system/groups/'
     | '/_layout/api-dev/apis/$id/edit'
+    | '/_layout/api-dev/macro-defs/$id/edit'
     | '/_layout/api-dev/modules/$id/edit'
   fileRoutesById: FileRoutesById
 }
@@ -524,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiDevModulesIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/api-dev/macro-defs/': {
+      id: '/_layout/api-dev/macro-defs/'
+      path: '/api-dev/macro-defs'
+      fullPath: '/api-dev/macro-defs/'
+      preLoaderRoute: typeof LayoutApiDevMacroDefsIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/api-dev/apis/': {
       id: '/_layout/api-dev/apis/'
       path: '/api-dev/apis'
@@ -559,6 +617,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiDevModulesIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/api-dev/macro-defs/create': {
+      id: '/_layout/api-dev/macro-defs/create'
+      path: '/api-dev/macro-defs/create'
+      fullPath: '/api-dev/macro-defs/create'
+      preLoaderRoute: typeof LayoutApiDevMacroDefsCreateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/api-dev/macro-defs/$id': {
+      id: '/_layout/api-dev/macro-defs/$id'
+      path: '/api-dev/macro-defs/$id'
+      fullPath: '/api-dev/macro-defs/$id'
+      preLoaderRoute: typeof LayoutApiDevMacroDefsIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/api-dev/apis/create': {
       id: '/_layout/api-dev/apis/create'
       path: '/api-dev/apis/create'
@@ -579,6 +651,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api-dev/modules/$id/edit'
       preLoaderRoute: typeof LayoutApiDevModulesIdEditRouteImport
       parentRoute: typeof LayoutApiDevModulesIdRoute
+    }
+    '/_layout/api-dev/macro-defs/$id/edit': {
+      id: '/_layout/api-dev/macro-defs/$id/edit'
+      path: '/edit'
+      fullPath: '/api-dev/macro-defs/$id/edit'
+      preLoaderRoute: typeof LayoutApiDevMacroDefsIdEditRouteImport
+      parentRoute: typeof LayoutApiDevMacroDefsIdRoute
     }
     '/_layout/api-dev/apis/$id/edit': {
       id: '/_layout/api-dev/apis/$id/edit'
@@ -626,6 +705,20 @@ const LayoutApiDevApisIdRouteChildren: LayoutApiDevApisIdRouteChildren = {
 const LayoutApiDevApisIdRouteWithChildren =
   LayoutApiDevApisIdRoute._addFileChildren(LayoutApiDevApisIdRouteChildren)
 
+interface LayoutApiDevMacroDefsIdRouteChildren {
+  LayoutApiDevMacroDefsIdEditRoute: typeof LayoutApiDevMacroDefsIdEditRoute
+}
+
+const LayoutApiDevMacroDefsIdRouteChildren: LayoutApiDevMacroDefsIdRouteChildren =
+  {
+    LayoutApiDevMacroDefsIdEditRoute: LayoutApiDevMacroDefsIdEditRoute,
+  }
+
+const LayoutApiDevMacroDefsIdRouteWithChildren =
+  LayoutApiDevMacroDefsIdRoute._addFileChildren(
+    LayoutApiDevMacroDefsIdRouteChildren,
+  )
+
 interface LayoutApiDevModulesIdRouteChildren {
   LayoutApiDevModulesIdEditRoute: typeof LayoutApiDevModulesIdEditRoute
 }
@@ -653,10 +746,13 @@ interface LayoutRouteChildren {
   LayoutConnectionIndexRoute: typeof LayoutConnectionIndexRoute
   LayoutApiDevApisIdRoute: typeof LayoutApiDevApisIdRouteWithChildren
   LayoutApiDevApisCreateRoute: typeof LayoutApiDevApisCreateRoute
+  LayoutApiDevMacroDefsIdRoute: typeof LayoutApiDevMacroDefsIdRouteWithChildren
+  LayoutApiDevMacroDefsCreateRoute: typeof LayoutApiDevMacroDefsCreateRoute
   LayoutApiDevModulesIdRoute: typeof LayoutApiDevModulesIdRouteWithChildren
   LayoutApiDevModulesCreateRoute: typeof LayoutApiDevModulesCreateRoute
   LayoutSystemGroupsIdRoute: typeof LayoutSystemGroupsIdRoute
   LayoutApiDevApisIndexRoute: typeof LayoutApiDevApisIndexRoute
+  LayoutApiDevMacroDefsIndexRoute: typeof LayoutApiDevMacroDefsIndexRoute
   LayoutApiDevModulesIndexRoute: typeof LayoutApiDevModulesIndexRoute
   LayoutSystemGroupsIndexRoute: typeof LayoutSystemGroupsIndexRoute
 }
@@ -675,10 +771,13 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutConnectionIndexRoute: LayoutConnectionIndexRoute,
   LayoutApiDevApisIdRoute: LayoutApiDevApisIdRouteWithChildren,
   LayoutApiDevApisCreateRoute: LayoutApiDevApisCreateRoute,
+  LayoutApiDevMacroDefsIdRoute: LayoutApiDevMacroDefsIdRouteWithChildren,
+  LayoutApiDevMacroDefsCreateRoute: LayoutApiDevMacroDefsCreateRoute,
   LayoutApiDevModulesIdRoute: LayoutApiDevModulesIdRouteWithChildren,
   LayoutApiDevModulesCreateRoute: LayoutApiDevModulesCreateRoute,
   LayoutSystemGroupsIdRoute: LayoutSystemGroupsIdRoute,
   LayoutApiDevApisIndexRoute: LayoutApiDevApisIndexRoute,
+  LayoutApiDevMacroDefsIndexRoute: LayoutApiDevMacroDefsIndexRoute,
   LayoutApiDevModulesIndexRoute: LayoutApiDevModulesIndexRoute,
   LayoutSystemGroupsIndexRoute: LayoutSystemGroupsIndexRoute,
 }

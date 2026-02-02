@@ -6,6 +6,7 @@ from app.api.routes import (
     datasources,
     groups,
     login,
+    macro_defs,
     modules,
     overview,
     private,
@@ -20,6 +21,7 @@ api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(datasources.router)
 api_router.include_router(modules.router)
+api_router.include_router(macro_defs.router)
 api_router.include_router(groups.router)
 api_router.include_router(api_assignments.router)
 api_router.include_router(clients.router)

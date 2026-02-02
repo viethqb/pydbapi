@@ -60,6 +60,13 @@ class ApiAccessTypeEnum(str, Enum):
     PRIVATE = "private"
 
 
+class MacroTypeEnum(str, Enum):
+    """Macro type: Jinja2 for SQL templates, Python for script engine."""
+
+    JINJA = "JINJA"
+    PYTHON = "PYTHON"
+
+
 # ---------------------------------------------------------------------------
 # DataSource - Connection management
 # ---------------------------------------------------------------------------
@@ -115,6 +122,96 @@ class ApiModule(SQLModel, table=True):
 
     api_assignments: list["ApiAssignment"] = Relationship(
         back_populates="module", cascade_delete=True
+    )
+    macro_defs: list["ApiMacroDef"] = Relationship(
+        back_populates="module", cascade_delete=True
+    )
+
+
+# ---------------------------------------------------------------------------
+# ApiMacroDef - Jinja macro / Python function definitions for API content
+# ---------------------------------------------------------------------------
+
+
+class MacroDefVersionCommit(SQLModel, table=True):
+    """Version snapshot for macro_def content."""
+
+    __tablename__ = "macro_def_version_commit"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    api_macro_def_id: uuid.UUID = Field(
+        foreign_key="api_macro_def.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    version: int = Field(default=1)
+    content_snapshot: str = Field(sa_column=Column(Text, nullable=False))
+    commit_message: str | None = Field(default=None, max_length=512)
+    committed_by_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+    committed_at: datetime = Field(default_factory=_utc_now)
+
+    api_macro_def: "ApiMacroDef" = Relationship(
+        back_populates="version_commits",
+        sa_relationship_kwargs={"foreign_keys": "MacroDefVersionCommit.api_macro_def_id"},
+    )
+
+
+class ApiMacroDef(SQLModel, table=True):
+    """Jinja macro or Python function definition. module_id null = global."""
+
+    __tablename__ = "api_macro_def"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    module_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="api_module.id",
+        index=True,
+        ondelete="CASCADE",
+        description="Null = global macro; non-null = module-specific",
+    )
+    name: str = Field(max_length=128, index=True, description="Identifier for reference")
+    macro_type: MacroTypeEnum = Field(
+        sa_column=Column(
+            SQLEnum(
+                MacroTypeEnum,
+                name="macrotypeenum",
+                create_type=True,
+                values_callable=lambda x: [e.value for e in x],
+            ),
+            nullable=False,
+            index=True,
+        )
+    )
+    content: str = Field(sa_column=Column(Text, nullable=False))
+    description: str | None = Field(default=None, max_length=512)
+    sort_order: int = Field(default=0)
+    is_published: bool = Field(default=False)
+    published_version_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="macro_def_version_commit.id",
+        index=True,
+        ondelete="SET NULL",
+        description="Version that is currently published",
+    )
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
+
+    module: Optional["ApiModule"] = Relationship(back_populates="macro_defs")
+    version_commits: list["MacroDefVersionCommit"] = Relationship(
+        back_populates="api_macro_def",
+        sa_relationship_kwargs={"foreign_keys": "MacroDefVersionCommit.api_macro_def_id"},
+    )
+    published_version: Optional["MacroDefVersionCommit"] = Relationship(
+        sa_relationship_kwargs={
+            "foreign_keys": "ApiMacroDef.published_version_id",
+            "uselist": False,
+        },
     )
 
 

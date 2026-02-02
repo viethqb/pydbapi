@@ -24,18 +24,22 @@ class ParamValidateError(ValueError):
 def run_param_validates(
     param_validates: list[dict[str, Any]] | None,
     params: dict[str, Any] | None,
+    *,
+    macros_prepend: list[str] | None = None,
 ) -> None:
     """
     Run validation scripts for params.
 
     - param_validates: list of {name, validation_script, message_when_fail}
     - params: request params dict
+    - macros_prepend: optional Python macro definitions prepended to each script (helpers usable in validate)
 
     Raises ParamValidateError on first failure.
     """
     if not param_validates:
         return
     _params = params or {}
+    _macros = macros_prepend or []
 
     for rule in param_validates:
         if not isinstance(rule, dict):
@@ -47,7 +51,11 @@ def run_param_validates(
         if not isinstance(script, str) or script.strip() == "":
             # no script => skip
             continue
-        message = rule.get("message_when_fail") or f"Validation failed for param '{name}'"
+        if _macros:
+            script = "\n\n".join(_macros) + "\n\n" + script
+        message = (
+            rule.get("message_when_fail") or f"Validation failed for param '{name}'"
+        )
         if not isinstance(message, str) or message.strip() == "":
             message = f"Validation failed for param '{name}'"
 
@@ -72,4 +80,3 @@ def run_param_validates(
 
         if not ok:
             raise ParamValidateError(message)
-

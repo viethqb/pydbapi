@@ -31,6 +31,8 @@ def run_result_transform(
     script: str | None,
     result: Any,
     params: dict[str, Any] | None = None,
+    *,
+    macros_prepend: list[str] | None = None,
 ) -> Any:
     """
     Run the given transform script on result and return the transformed result.
@@ -38,9 +40,14 @@ def run_result_transform(
     - script: Python source code. If empty/None, result is returned unchanged.
     - result: raw result from ApiExecutor (dict or any JSON-serializable object).
     - params: request parameters dict (query/body/header/path) for context.
+    - macros_prepend: optional Python macro definitions prepended to script (helpers usable in transform).
     """
     if not script or not isinstance(script, str) or script.strip() == "":
         return result
+
+    _macros = macros_prepend or []
+    if _macros:
+        script = "\n\n".join(_macros) + "\n\n" + script
 
     try:
         code = compile_script(script, filename="<result_transform>")
@@ -58,4 +65,3 @@ def run_result_transform(
         return g.get("result", result)
     except Exception as e:  # pragma: no cover - error path mainly for runtime
         raise ResultTransformError(f"Result transform failed: {e}") from e
-

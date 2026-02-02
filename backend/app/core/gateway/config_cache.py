@@ -10,11 +10,19 @@ import logging
 from typing import Any
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.core.redis_client import get_redis
-from app.models_dbapi import ApiAssignment, ApiContext, VersionCommit
+from app.models_dbapi import (
+    ApiAssignment,
+    ApiContext,
+    ApiMacroDef,
+    MacroDefVersionCommit,
+    MacroTypeEnum,
+    VersionCommit,
+)
 
 _LOG = logging.getLogger(__name__)
 _KEY_PREFIX = "gateway:config:"
@@ -65,12 +73,56 @@ def invalidate_gateway_config(api_assignment_id: UUID) -> None:
         _LOG.debug("Cache invalidate failed for %s: %s", api_assignment_id, e)
 
 
+def _get_macro_content(m: ApiMacroDef, session: Session) -> str:
+    """Get macro content: published version snapshot. Macro must be published."""
+    if not m.published_version_id:
+        return ""
+    vc = session.exec(
+        select(MacroDefVersionCommit).where(MacroDefVersionCommit.id == m.published_version_id)
+    ).first()
+    if vc:
+        return vc.content_snapshot
+    return ""
+
+
+def load_macros_for_api(api: ApiAssignment, session: Session) -> tuple[list[str], list[str]]:
+    """
+    Load Jinja and Python macros for API (global + module-specific).
+    Only published macros are used. Raises HTTPException if any in-scope macro is unpublished.
+    """
+    stmt = select(ApiMacroDef).where(
+        (ApiMacroDef.module_id.is_(None)) | (ApiMacroDef.module_id == api.module_id)
+    ).order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
+    macros = session.exec(stmt).all()
+
+    unpublished = [m for m in macros if not getattr(m, "is_published", False)]
+    if unpublished:
+        names = ", ".join(f"'{m.name}'" for m in unpublished)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Macro(s) must be published before use: {names}. Publish in API Dev > Macros.",
+        )
+
+    jinja_contents: list[str] = []
+    python_contents: list[str] = []
+    for m in macros:
+        content = _get_macro_content(m, session)
+        if not content:
+            continue
+        if m.macro_type == MacroTypeEnum.JINJA:
+            jinja_contents.append(content)
+        else:
+            python_contents.append(content)
+    return jinja_contents, python_contents
+
+
 def load_gateway_config_from_db(
     api: ApiAssignment, session: Session
 ) -> dict[str, Any] | None:
     """
     Load gateway config from DB. Returns dict with content, params_definition,
-    param_validates_definition, result_transform_code. Returns None if ApiContext not found.
+    param_validates_definition, result_transform_code, macros_jinja, macros_python.
+    Returns None if ApiContext not found.
     """
     ctx = session.exec(
         select(ApiContext).where(ApiContext.api_assignment_id == api.id)
@@ -96,11 +148,15 @@ def load_gateway_config_from_db(
             params_definition = params_definition or []
             param_validates = param_validates or []
 
+    jinja_macros, python_macros = load_macros_for_api(api, session)
+
     return {
         "content": content,
         "params_definition": params_definition or [],
         "param_validates_definition": param_validates or [],
         "result_transform_code": result_transform,
+        "macros_jinja": jinja_macros,
+        "macros_python": python_macros,
     }
 
 

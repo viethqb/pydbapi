@@ -171,16 +171,24 @@ def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict
     Format executor result for API response. All responses use envelope:
     { "success": true|false, "message": str|null, "data": list }.
     Applied for all HTTP methods (GET, POST, PUT, PATCH, DELETE) in gateway and debug.
+    Preserves extra keys from result_transform (e.g. offset, limit, total).
     """
     # SQL mode: wrap in envelope { success, message, data }. Single statement -> data = rows (no extra list wrap).
     if execute_engine == "SQL":
         if isinstance(result, dict) and "data" in result:
             data = result["data"]
-            if isinstance(data, list) and len(data) == 1:
+            # Unwrap only when single result set [[row1, row2]] -> [row1, row2].
+            # Do NOT unwrap [row1] (already rows from result_transform) -> keep as [row1].
+            if isinstance(data, list) and len(data) == 1 and isinstance(data[0], list):
                 data = data[0]
             elif not isinstance(data, list):
                 data = [data] if data is not None else []
-            return {"success": True, "message": None, "data": data}
+            out = {"success": True, "message": None, "data": data}
+            # Preserve extra keys from result_transform (offset, limit, total, etc.)
+            for k, v in result.items():
+                if k not in ("data", "success", "message"):
+                    out[k] = v
+            return out
         raw = result if isinstance(result, list) else [result] if result is not None else []
         return {"success": True, "message": None, "data": raw}
 
@@ -204,12 +212,20 @@ def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict
         if not isinstance(data, list):
             data = [data] if data is not None else []
         return {"success": True, "message": None, "data": data}
-    # Result transform or raw
+    # Result transform or raw (result already has success, message, data)
     if isinstance(result, dict) and "success" in result and "message" in result and "data" in result:
         data = result["data"]
         if not isinstance(data, list):
             data = [data] if data is not None else []
-        return {"success": bool(result.get("success", True)), "message": result.get("message"), "data": data}
+        out = {
+            "success": bool(result.get("success", True)),
+            "message": result.get("message"),
+            "data": data,
+        }
+        for k, v in result.items():
+            if k not in ("success", "message", "data"):
+                out[k] = v
+        return out
     if isinstance(result, list):
         return {"success": True, "message": None, "data": result}
     return {"success": True, "message": None, "data": [result] if result is not None else []}

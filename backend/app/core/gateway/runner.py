@@ -76,8 +76,19 @@ def run(
         raise RuntimeError("ApiContext not found for ApiAssignment")
 
     content_to_run = config["content"]
+    macros_jinja: list[str] = config.get("macros_jinja") or []
+    macros_python: list[str] = config.get("macros_python") or []
+
+    # Prepend macros to content for SQL (Jinja) or SCRIPT (Python)
+    if api.execute_engine.value == "SQL" and macros_jinja:
+        content_to_run = "\n\n".join(macros_jinja) + "\n\n" + content_to_run
+    elif api.execute_engine.value == "SCRIPT" and macros_python:
+        content_to_run = "\n\n".join(macros_python) + "\n\n" + content_to_run
+
     params_definition: list[dict] = config.get("params_definition") or []
-    param_validates_definition: list[dict] = config.get("param_validates_definition") or []
+    param_validates_definition: list[dict] = (
+        config.get("param_validates_definition") or []
+    )
     result_transform_code: str | None = config.get("result_transform_code")
 
     # Validate required parameters if params definition exists
@@ -123,10 +134,14 @@ def run(
         )
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    # Param validate (Python scripts) if configured
+    # Param validate (Python scripts) if configured; prepend macros so validate can use macro helpers
     if param_validates_definition:
         try:
-            run_param_validates(param_validates_definition, params)
+            run_param_validates(
+                param_validates_definition,
+                params,
+                macros_prepend=macros_python,
+            )
         except ParamValidateError as e:
             _write_access_record(
                 session,
@@ -164,10 +179,15 @@ def run(
             datasource=api.datasource,
             session=session,
         )
-        # Result transform (Python) if configured
+        # Result transform (Python) if configured; prepend macros so transform can use macro helpers
         if result_transform_code:
             try:
-                result = run_result_transform(result_transform_code, result, params or {})
+                result = run_result_transform(
+                    result_transform_code,
+                    result,
+                    params or {},
+                    macros_prepend=macros_python,
+                )
             except ResultTransformError as e:
                 _write_access_record(
                     session,

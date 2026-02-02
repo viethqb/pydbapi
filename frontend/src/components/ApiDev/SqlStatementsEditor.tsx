@@ -3,7 +3,7 @@ import { Plus, X } from "lucide-react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
+import ApiContentEditor, { type MacroDefForCompletion } from "@/components/ApiDev/ApiContentEditor"
 
 /**
  * Split SQL string into statements by ';'.
@@ -33,6 +33,7 @@ type Props = {
   onBlur?: () => void
   placeholder?: string
   paramNames?: string[]
+  macroDefs?: MacroDefForCompletion[]
   disabled?: boolean
 }
 
@@ -42,6 +43,7 @@ export default function SqlStatementsEditor({
   onBlur,
   placeholder,
   paramNames = [],
+  macroDefs,
   disabled = false,
 }: Props) {
   const [statements, setStatements] = useState<string[]>(() => splitStatements(value ?? ""))
@@ -188,6 +190,7 @@ export default function SqlStatementsEditor({
                 onBlur={onBlur}
                 placeholder={placeholder}
                 paramNames={paramNames}
+                macroDefs={macroDefs}
                 disabled={disabled}
                 autoHeight
                 minHeight={220}

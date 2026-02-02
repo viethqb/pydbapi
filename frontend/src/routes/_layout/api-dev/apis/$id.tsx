@@ -38,6 +38,7 @@ import {
 import { LoadingButton } from "@/components/ui/loading-button"
 import { ApiAssignmentsService, type VersionCommitPublic, type VersionCommitDetail } from "@/services/api-assignments"
 import { ModulesService } from "@/services/modules"
+import { MacroDefsService } from "@/services/macro-defs"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
@@ -135,6 +136,13 @@ function ApiDetail() {
     queryKey: ["groups-simple"],
     queryFn: () => GroupsService.list(),
   })
+
+  const { data: macroDefsData } = useQuery({
+    queryKey: ["macro-defs-in-scope", apiDetail?.module_id],
+    queryFn: () => MacroDefsService.listSimple(apiDetail?.module_id || undefined),
+    enabled: !!apiDetail?.module_id,
+  })
+  const macroDefsForEditor = macroDefsData ?? []
 
   // Create version mutation
   const createVersionMutation = useMutation({
@@ -965,6 +973,7 @@ function ApiDetail() {
                                     + "    return True\n"
                                   }
                                   paramNames={[]}
+                                  macroDefs={macroDefsForEditor}
                                 />
                               ) : (
                                 <div className="text-sm text-muted-foreground">-</div>
@@ -1029,6 +1038,7 @@ function ApiDetail() {
                           ? apiDetail.api_context.params.map((p: { name?: string }) => p.name).filter(Boolean) as string[]
                           : []
                       }
+                      macroDefs={macroDefsForEditor}
                     />
                   ) : (
                     <ApiContentEditor
@@ -1041,6 +1051,7 @@ function ApiDetail() {
                       maxHeight={720}
                       placeholder={SCRIPT_CONTENT_PLACEHOLDER}
                       paramNames={[]}
+                      macroDefs={macroDefsForEditor}
                     />
                   )}
 
@@ -1064,6 +1075,7 @@ function ApiDetail() {
                           maxHeight={720}
                           placeholder={RESULT_TRANSFORM_PLACEHOLDER}
                           paramNames={[]}
+                          macroDefs={macroDefsForEditor}
                         />
                       ) : (
                         <div className="text-sm text-muted-foreground">-</div>
@@ -1833,6 +1845,7 @@ function ApiDetail() {
                                       + "    return True\n"
                                     }
                                     paramNames={[]}
+                                    macroDefs={macroDefsForEditor}
                                   />
                                 ) : (
                                   <div className="text-sm text-muted-foreground">-</div>
@@ -1869,6 +1882,7 @@ function ApiDetail() {
                   maxHeight={720}
                   placeholder={RESULT_TRANSFORM_PLACEHOLDER}
                   paramNames={[]}
+                  macroDefs={macroDefsForEditor}
                 />
               ) : (
                 <div className="text-sm text-muted-foreground">-</div>

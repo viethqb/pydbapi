@@ -42,7 +42,7 @@ from app.schemas_dbapi import (
     VersionCommitPublic,
 )
 from app.core.result_transform import ResultTransformError, run_result_transform
-from app.core.gateway.config_cache import invalidate_gateway_config
+from app.core.gateway.config_cache import invalidate_gateway_config, load_macros_for_api
 from app.core.gateway.request_response import normalize_api_result
 
 router = APIRouter(prefix="/api-assignments", tags=["api-assignments"])
@@ -114,9 +114,7 @@ def list_api_assignments(
     body: ApiAssignmentListIn,
 ) -> Any:
     """List API assignments with pagination and optional filters."""
-    count_stmt = _list_filters(
-        select(func.count()).select_from(ApiAssignment), body
-    )
+    count_stmt = _list_filters(select(func.count()).select_from(ApiAssignment), body)
     total = session.exec(count_stmt).one()
 
     stmt = _list_filters(select(ApiAssignment), body)
@@ -128,9 +126,7 @@ def list_api_assignments(
     )
     rows = session.exec(stmt).all()
 
-    return ApiAssignmentListOut(
-        data=[_to_public(r) for r in rows], total=total
-    )
+    return ApiAssignmentListOut(data=[_to_public(r) for r in rows], total=total)
 
 
 @router.post("/create", response_model=ApiAssignmentPublic)
@@ -140,13 +136,26 @@ def create_api_assignment(
     body: ApiAssignmentCreate,
 ) -> Any:
     """Create API assignment; if content provided, create ApiContext (1-1). Optionally link groups."""
-    assign_data = body.model_dump(exclude={"content", "group_ids", "params", "param_validates", "result_transform"})
+    assign_data = body.model_dump(
+        exclude={
+            "content",
+            "group_ids",
+            "params",
+            "param_validates",
+            "result_transform",
+        }
+    )
     a = ApiAssignment(**assign_data)
     session.add(a)
     session.flush()
 
     # Create ApiContext if content, params, validators or result_transform provided
-    if body.content is not None or body.params or body.param_validates or body.result_transform:
+    if (
+        body.content is not None
+        or body.params
+        or body.param_validates
+        or body.result_transform
+    ):
         # Store params as JSON in ApiContext if provided
         params_dict = None
         if body.params:
@@ -341,17 +350,19 @@ def publish_api_assignment(
     a = session.get(ApiAssignment, body.id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
-    
+
     # version_id is required for publish
     if not body.version_id:
         raise HTTPException(status_code=400, detail="version_id is required to publish")
-    
+
     version = session.get(VersionCommit, body.version_id)
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
     if version.api_assignment_id != a.id:
-        raise HTTPException(status_code=400, detail="Version does not belong to this API")
-    
+        raise HTTPException(
+            status_code=400, detail="Version does not belong to this API"
+        )
+
     a.published_version_id = body.version_id
     a.is_published = True
     a.updated_at = datetime.now(timezone.utc)
@@ -407,6 +418,8 @@ def debug_api_assignment(
     engine = body.execute_engine
     datasource_id = body.datasource_id
     params_definition: list[dict] | None = None
+    python_m: list[str] = []
+    a = None
 
     if body.id is not None:
         a = session.get(ApiAssignment, body.id)
@@ -416,7 +429,17 @@ def debug_api_assignment(
             select(ApiContext).where(ApiContext.api_assignment_id == a.id)
         ).first()
         # Use content from body if provided (for testing edited content), otherwise from DB
-        content = body.content if body.content is not None else ((ctx.content if ctx else "") or "")
+        content = (
+            body.content
+            if body.content is not None
+            else ((ctx.content if ctx else "") or "")
+        )
+        # Prepend macros (same as runtime) so content can call them
+        jinja_m, python_m = load_macros_for_api(a, session)
+        if engine and engine.value == "SQL" and jinja_m:
+            content = "\n\n".join(jinja_m) + "\n\n" + content
+        elif engine and engine.value == "SCRIPT" and python_m:
+            content = "\n\n".join(python_m) + "\n\n" + content
         if ctx and ctx.params:
             params_definition = ctx.params
         if engine is None:
@@ -428,18 +451,25 @@ def debug_api_assignment(
         if not content:
             return _debug_error_response(400, "Either id or content is required")
         if engine is None:
-            return _debug_error_response(400, "execute_engine is required when using inline content")
+            return _debug_error_response(
+                400, "execute_engine is required when using inline content"
+            )
 
     if (engine and engine.value == "SQL") or (engine and engine.value == "SCRIPT"):
         if datasource_id is None:
-            return _debug_error_response(400, "datasource_id is required for SQL and SCRIPT engines")
+            return _debug_error_response(
+                400, "datasource_id is required for SQL and SCRIPT engines"
+            )
         # Check if datasource is active
         from app.models_dbapi import DataSource
+
         datasource = session.get(DataSource, datasource_id)
         if not datasource:
             return _debug_error_response(404, "DataSource not found")
         if not datasource.is_active:
-            return _debug_error_response(400, "DataSource is inactive and cannot be used")
+            return _debug_error_response(
+                400, "DataSource is inactive and cannot be used"
+            )
 
     # Validate required parameters if params definition exists
     if params_definition:
@@ -468,10 +498,14 @@ def debug_api_assignment(
         except ParamTypeError as e:
             return _debug_error_response(400, str(e))
 
-    # Param validate (Python scripts) if configured on ApiContext
+    # Param validate (Python scripts) if configured on ApiContext; prepend macros (same as runtime)
     if body.id is not None and ctx and getattr(ctx, "param_validates", None):
         try:
-            run_param_validates(ctx.param_validates, params_to_use)
+            run_param_validates(
+                ctx.param_validates,
+                params_to_use,
+                macros_prepend=python_m,
+            )
         except ParamValidateError as e:
             return _debug_error_response(400, str(e))
 
@@ -483,10 +517,15 @@ def debug_api_assignment(
             datasource_id=datasource_id,
             session=session,
         )
-        # Result transform (Python) if configured on ApiContext (only when using id)
+        # Result transform (Python) if configured on ApiContext; prepend macros (same as runtime)
         if body.id is not None and ctx and getattr(ctx, "result_transform", None):
             try:
-                out = run_result_transform(ctx.result_transform, out, params_to_use)
+                out = run_result_transform(
+                    ctx.result_transform,
+                    out,
+                    params_to_use,
+                    macros_prepend=python_m,
+                )
             except ResultTransformError as e:
                 return _debug_error_response(400, str(e))
         # Same format as gateway: SQL -> { data: rows }; SCRIPT -> { success, message, data } at top level
@@ -547,24 +586,28 @@ def create_version(
     a = session.get(ApiAssignment, id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
-    
+
     # Get current content from ApiContext
     ctx = session.exec(
         select(ApiContext).where(ApiContext.api_assignment_id == a.id)
     ).first()
-    
+
     if not ctx or not ctx.content:
         raise HTTPException(
             status_code=400,
-            detail="API has no content to version. Please add content first."
+            detail="API has no content to version. Please add content first.",
         )
-    
+
     # Get the next version number
-    max_version = session.exec(
-        select(func.max(VersionCommit.version))
-        .where(VersionCommit.api_assignment_id == a.id)
-    ).one() or 0
-    
+    max_version = (
+        session.exec(
+            select(func.max(VersionCommit.version)).where(
+                VersionCommit.api_assignment_id == a.id
+            )
+        ).one()
+        or 0
+    )
+
     # Create new version
     version = VersionCommit(
         api_assignment_id=a.id,
@@ -579,7 +622,7 @@ def create_version(
     session.add(version)
     session.commit()
     session.refresh(version)
-    
+
     return VersionCommitDetail(
         id=version.id,
         api_assignment_id=version.api_assignment_id,
@@ -605,22 +648,20 @@ def list_versions(
     a = session.get(ApiAssignment, id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
-    
+
     versions = session.exec(
         select(VersionCommit)
         .where(VersionCommit.api_assignment_id == id)
         .order_by(VersionCommit.version.desc())
     ).all()
-    
+
     # Get user emails for all committed_by_ids
     user_ids = {v.committed_by_id for v in versions if v.committed_by_id}
     users = {}
     if user_ids:
-        user_rows = session.exec(
-            select(User).where(User.id.in_(user_ids))
-        ).all()
+        user_rows = session.exec(select(User).where(User.id.in_(user_ids))).all()
         users = {user.id: user.email for user in user_rows}
-    
+
     return VersionCommitListOut(
         data=[
             VersionCommitPublic(
@@ -629,7 +670,9 @@ def list_versions(
                 version=v.version,
                 commit_message=v.commit_message,
                 committed_by_id=v.committed_by_id,
-                committed_by_email=users.get(v.committed_by_id) if v.committed_by_id else None,
+                committed_by_email=(
+                    users.get(v.committed_by_id) if v.committed_by_id else None
+                ),
                 committed_at=v.committed_at,
             )
             for v in versions
@@ -647,14 +690,14 @@ def get_version(
     version = session.get(VersionCommit, version_id)
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
-    
+
     # Get user email if committed_by_id exists
     committed_by_email = None
     if version.committed_by_id:
         user = session.get(User, version.committed_by_id)
         if user:
             committed_by_email = user.email
-    
+
     return VersionCommitDetail(
         id=version.id,
         api_assignment_id=version.api_assignment_id,
@@ -685,7 +728,9 @@ def restore_version(
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
     if version.api_assignment_id != id:
-        raise HTTPException(status_code=400, detail="Version does not belong to this API")
+        raise HTTPException(
+            status_code=400, detail="Version does not belong to this API"
+        )
 
     ctx = session.exec(
         select(ApiContext).where(ApiContext.api_assignment_id == a.id)
@@ -729,15 +774,15 @@ def delete_version(
     version = session.get(VersionCommit, version_id)
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
-    
+
     # Check if this version is published
     api_assignment = session.get(ApiAssignment, version.api_assignment_id)
     if api_assignment and api_assignment.published_version_id == version_id:
         raise HTTPException(
             status_code=400,
-            detail="Cannot delete published version. Please unpublish or publish another version first."
+            detail="Cannot delete published version. Please unpublish or publish another version first.",
         )
-    
+
     session.delete(version)
     session.commit()
     return Message(message="Version deleted successfully")

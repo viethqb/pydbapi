@@ -29,6 +29,7 @@ export const baseNavItems: NavItem[] = [
     submenu: [
       { title: "Modules", path: "/api-dev/modules" },
       { title: "APIs", path: "/api-dev/apis" },
+      { title: "Macro definitions", path: "/api-dev/macro-defs" },
     ],
   },
   { icon: BookOpen, title: "API Repository", path: "/api-repository" },

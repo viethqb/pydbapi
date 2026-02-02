@@ -39,10 +39,15 @@ class SQLTemplateEngine:
             t = env.from_string(template)
             return t.render(**params)
         except Exception as e:
-            # Provide more context in error message
+            # Provide more context in error message (include full template for syntax errors)
+            snippet = template[:500] + "..." if len(template) > 500 else template
+            hint = (
+                "Tip: Don't nest {{ }} inside {% %} (e.g. use {% set x = paginate(limit, offset) %}, "
+                "not {% set x = {{ paginate(limit, offset) }} %})."
+            )
             raise ValueError(
                 f"Failed to render SQL template: {str(e)}. "
-                f"Template: {template[:100]}, Params: {list(params.keys())}"
+                f"Params: {list(params.keys())}. {hint} Template preview:\n{snippet}"
             ) from e
 
     def parse_parameters(self, template: str) -> list[str]:

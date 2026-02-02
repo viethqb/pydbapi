@@ -18,13 +18,15 @@ function ApiDevLayout() {
   
   const isModulesRoute = matchRoute({ to: "/api-dev/modules" }) || matchRoute({ to: "/api-dev/modules/" })
   const isApisRoute = matchRoute({ to: "/api-dev/apis" }) || matchRoute({ to: "/api-dev/apis/" })
-  
-  // Default to APIs if no specific route matched
-  const activeTab = isModulesRoute ? "modules" : "apis"
+  const isMacroDefsRoute = matchRoute({ to: "/api-dev/macro-defs" }) || matchRoute({ to: "/api-dev/macro-defs/" })
+
+  const activeTab = isModulesRoute ? "modules" : isMacroDefsRoute ? "macro-defs" : "apis"
 
   const handleTabChange = (value: string) => {
     if (value === "modules") {
       navigate({ to: "/api-dev/modules" })
+    } else if (value === "macro-defs") {
+      navigate({ to: "/api-dev/macro-defs" })
     } else {
       navigate({ to: "/api-dev/apis" })
     }
@@ -43,6 +45,7 @@ function ApiDevLayout() {
         <TabsList>
           <TabsTrigger value="modules">Modules</TabsTrigger>
           <TabsTrigger value="apis">APIs</TabsTrigger>
+          <TabsTrigger value="macro-defs">Macro definitions</TabsTrigger>
         </TabsList>
       </Tabs>
 

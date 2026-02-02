@@ -54,57 +54,86 @@ function CodeExample({ title, description, code }: Example) {
 const EXAMPLES: Example[] = [
   {
     title: "Passthrough",
-    description: "Function: transform(result, params=None). Input: result, params. Output: result unchanged.",
+    description: "Return result unchanged. Can use macro functions.",
     code:
       "def transform(result, params=None):\n" +
       '    """Transform raw executor result. params = request params dict."""\n' +
       "    return result\n",
   },
   {
-    title: "Wrap in {data}",
-    description: "Function: transform(result, params=None). Input: result. Output: {\"data\": result, \"ok\": true}.",
-    code:
-      "def transform(result, params=None):\n" +
-      "    return {\"data\": result, \"ok\": True}\n",
-  },
-  {
-    title: "Pick fields",
-    description: "Function: transform(result, params=None). Input: result (list or dict). Output: list/dict with only id and name keys.",
-    code:
-      "def transform(result, params=None):\n" +
-      "    if isinstance(result, list):\n" +
-      "        return [{\"id\": r.get(\"id\"), \"name\": r.get(\"name\")} for r in result]\n" +
-      "    return {\"id\": result.get(\"id\"), \"name\": result.get(\"name\")}\n",
-  },
-  {
-    title: "Add computed field",
-    description: "Function: transform(result, params=None). Input: result (list of dicts). Output: same list with full_name added to each row.",
-    code:
-      "def transform(result, params=None):\n" +
-      "    if isinstance(result, list):\n" +
-      "        for r in result:\n" +
-      "            r[\"full_name\"] = f\"{r.get('first_name', '')} {r.get('last_name', '')}\".strip()\n" +
-      "    return result\n",
-  },
-  {
-    title: "Filter rows",
-    description: "Function: transform(result, params=None). Input: result (list of dicts). Output: list with only rows where is_active is true.",
-    code:
-      "def transform(result, params=None):\n" +
-      "    if isinstance(result, list):\n" +
-      "        return [r for r in result if r.get(\"is_active\", True)]\n" +
-      "    return result\n",
-  },
-  {
-    title: "Paginate in transform",
-    description: "Function: transform(result, params=None). Input: result (list), params (limit, offset). Output: result[offset:offset+limit].",
+    title: "Add offset/limit + flatten 2-statement SQL",
+    description: "SQL 2 SELECTs: [[rows], [{total}]]. Flatten, add offset/limit. Can use safe_int from macro.",
     code:
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
       "    limit = int(p.get(\"limit\", 10))\n" +
       "    offset = int(p.get(\"offset\", 0))\n" +
-      "    if isinstance(result, list):\n" +
-      "        return result[offset : offset + limit]\n" +
+      "    d = result.get(\"data\", [])\n" +
+      "    if isinstance(d, list) and len(d) >= 2:\n" +
+      "        rows = d[0] if isinstance(d[0], list) else d[0]\n" +
+      "        total_val = d[1][0].get(\"total\", len(rows)) if d[1] else len(rows)\n" +
+      "        result[\"data\"] = rows\n" +
+      "        result[\"total\"] = total_val\n" +
+      "    result[\"offset\"] = offset\n" +
+      "    result[\"limit\"] = limit\n" +
+      "    return result\n",
+  },
+  {
+    title: "Use macro helper (safe_int from macro_def)",
+    description: "Call safe_int from macro_def. Macros auto-prepended.",
+    code:
+      "def transform(result, params=None):\n" +
+      "    p = params or {}\n" +
+      "    # safe_int() defined in a Python macro_def\n" +
+      "    result[\"limit\"] = safe_int(p.get(\"limit\"), 10)\n" +
+      "    result[\"offset\"] = safe_int(p.get(\"offset\"), 0)\n" +
+      "    return result\n",
+  },
+  {
+    title: "Add offset/limit (single SELECT)",
+    description: "Single SELECT: [[rows]]. Unwrap, add offset/limit. Can use macro (e.g. safe_int).",
+    code:
+      "def transform(result, params=None):\n" +
+      "    p = params or {}\n" +
+      "    limit = int(p.get(\"limit\", 10))\n" +
+      "    offset = int(p.get(\"offset\", 0))\n" +
+      "    d = result.get(\"data\", [])\n" +
+      "    if isinstance(d, list) and len(d) == 1 and isinstance(d[0], list):\n" +
+      "        result[\"data\"] = d[0]\n" +
+      "    result[\"offset\"] = offset\n" +
+      "    result[\"limit\"] = limit\n" +
+      "    return result\n",
+  },
+  {
+    title: "Pick fields from rows",
+    description: "Pick only id, name. Can use macro (e.g. pick_keys).",
+    code:
+      "def transform(result, params=None):\n" +
+      "    d = result.get(\"data\", [])\n" +
+      "    rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else (d if isinstance(d, list) else [])\n" +
+      "    result[\"data\"] = [{\"id\": r.get(\"id\"), \"name\": r.get(\"name\")} for r in rows]\n" +
+      "    return result\n",
+  },
+  {
+    title: "Add computed field",
+    description: "Add full_name. Can use macro (e.g. build_full_name).",
+    code:
+      "def transform(result, params=None):\n" +
+      "    d = result.get(\"data\", [])\n" +
+      "    rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else (d if isinstance(d, list) else [])\n" +
+      "    for r in rows:\n" +
+      '        r[\"full_name\"] = f\"{r.get(\"first_name\", \"\")} {r.get(\"last_name\", \"\")}\".strip()\n' +
+      "    result[\"data\"] = rows\n" +
+      "    return result\n",
+  },
+  {
+    title: "Filter rows",
+    description: "Keep only is_active=true. Can use macro (e.g. filter_active).",
+    code:
+      "def transform(result, params=None):\n" +
+      "    d = result.get(\"data\", [])\n" +
+      "    rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else (d if isinstance(d, list) else [])\n" +
+      "    result[\"data\"] = [r for r in rows if r.get(\"is_active\", True)]\n" +
       "    return result\n",
   },
 ]
@@ -122,7 +151,7 @@ export default function ResultTransformExamples() {
         <div>
           <div className="text-sm font-medium">Result transform (Python) examples</div>
           <div className="text-xs text-muted-foreground">
-            Function: transform(result, params=None). Input: result (raw executor output: list of dicts or single dict), params (request params dict). Output: transformed value returned as API response body.
+            transform(result, params=None) → result. Can call functions from macro_def (type Python); macros auto-prepended.
           </div>
         </div>
         <ChevronDown
