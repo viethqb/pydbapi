@@ -74,14 +74,24 @@ function PythonScriptGuide() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-3">Important: Result Variable</h3>
+            <h3 className="text-lg font-semibold mb-3">Important: Return Value</h3>
             <div className="p-4 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-md">
               <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-2">
-                ⚠️ Your script must assign a <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">result</code> variable
+                ⚠️ Your script must return a value
               </p>
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                The API returns whatever value is assigned to <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">result</code>. 
-                If <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">result</code> is not set, the API returns <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">null</code>.
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                You can return data in two ways:
+              </p>
+              <ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1 ml-4 list-disc">
+                <li>
+                  <strong>Option 1:</strong> Define a function <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">def execute(params=None):</code> that returns the result
+                </li>
+                <li>
+                  <strong>Option 2:</strong> Assign to a global variable <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">result</code>
+                </li>
+              </ul>
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-2">
+                If neither is set, the API returns <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">null</code>.
               </p>
             </div>
           </div>
@@ -113,30 +123,35 @@ all_params = req  # Access all params as dict`} />
                 <div className="space-y-2">
                   <div>
                     <code className="text-xs font-mono">db.query(sql, params?)</code>
-                    <p className="text-xs text-muted-foreground">Returns list[dict] - multiple rows</p>
+                    <p className="text-xs text-muted-foreground">Returns list[dict] - multiple rows. params can be tuple/list/dict.</p>
                   </div>
                   <div>
                     <code className="text-xs font-mono">db.query_one(sql, params?)</code>
-                    <p className="text-xs text-muted-foreground">Returns dict | None - single row</p>
+                    <p className="text-xs text-muted-foreground">Returns dict | None - single row (first result)</p>
                   </div>
                   <div>
                     <code className="text-xs font-mono">db.execute(sql, params?)</code>
-                    <p className="text-xs text-muted-foreground">Returns int - rowcount for DML</p>
+                    <p className="text-xs text-muted-foreground">Returns int - rowcount for INSERT/UPDATE/DELETE</p>
                   </div>
                   <div>
                     <code className="text-xs font-mono">db.insert/update/delete(sql, params?)</code>
-                    <p className="text-xs text-muted-foreground">Aliases for execute()</p>
+                    <p className="text-xs text-muted-foreground">Aliases for execute() - same behavior</p>
                   </div>
                 </div>
                 <CodeBlock
-                  code={`# Query multiple rows
+                  code={`# Query multiple rows (params as tuple)
 users = db.query("SELECT id, name FROM users WHERE status = %s", (1,))
+
+# Query with list params
+users = db.query("SELECT * FROM users WHERE id IN (%s, %s)", [1, 2])
 
 # Query single row
 user = db.query_one("SELECT * FROM users WHERE id = %s", (user_id,))
 
-# Execute DML
-rowcount = db.execute("UPDATE users SET status = %s WHERE id = %s", (1, user_id))`}
+# Execute DML (INSERT/UPDATE/DELETE)
+rowcount = db.execute("UPDATE users SET status = %s WHERE id = %s", (1, user_id))
+
+# Auto-commit: Each query/execute auto-commits unless inside tx.begin()...tx.commit()`}
                 />
               </div>
 
@@ -170,15 +185,20 @@ except Exception as e:
                   Make HTTP requests to external APIs:
                 </p>
                 <CodeBlock
-                  code={`# GET request
+                  code={`# GET request (returns JSON or text automatically)
 data = http.get("https://api.example.com/users", params={"page": 1})
 
-# POST request
+# POST request with JSON body
 response = http.post("https://api.example.com/data", json={"key": "value"})
+
+# POST with form data
+response = http.post("https://api.example.com/data", data={"key": "value"})
 
 # PUT/DELETE also available
 http.put(url, json=data)
-http.delete(url)`}
+http.delete(url)
+
+# Default timeout: 30 seconds (configurable)`}
                 />
               </div>
 
@@ -191,19 +211,24 @@ http.delete(url)`}
                   Cache data with TTL (time-to-live):
                 </p>
                 <CodeBlock
-                  code={`# Get from cache
+                  code={`# Get from cache (returns None if not found)
 cached = cache.get("user_123")
 
-# Set cache (TTL in seconds)
-cache.set("user_123", user_data, ttl=300)  # 5 minutes
+# Set cache with TTL (ttl_seconds parameter)
+cache.set("user_123", user_data, ttl_seconds=300)  # 5 minutes
+
+# Set without TTL (no expiration)
+cache.set("user_123", user_data)
 
 # Check existence
 if cache.exists("key"):
     value = cache.get("key")
 
-# Increment/decrement
-cache.incr("counter")
-cache.decr("counter")`}
+# Increment/decrement (returns new value)
+new_count = cache.incr("counter", amount=1)
+new_count = cache.decr("counter", amount=1)
+
+# Note: Keys are prefixed with "script:" automatically`}
                 />
               </div>
 
@@ -216,10 +241,14 @@ cache.decr("counter")`}
                   Log messages for debugging and monitoring:
                 </p>
                 <CodeBlock
-                  code={`log.info("Processing request", extra={"user_id": user_id})
+                  code={`# Logging levels: info, warn, error, debug
+log.info("Processing request", extra={"user_id": user_id})
 log.warning("User not found", extra={"user_id": user_id})
 log.error("Database error", extra={"error": str(e)})
-log.debug("Debug information")`}
+log.debug("Debug information")
+
+# extra parameter adds context to log entries
+# Logs are written to backend logger with script context`}
                 />
               </div>
 
@@ -232,9 +261,13 @@ log.debug("Debug information")`}
                   Access whitelisted environment variables:
                 </p>
                 <CodeBlock
-                  code={`api_key = env.get("EXTERNAL_API_KEY")
-max_results = env.get_int("MAX_RESULTS", 100)
-debug_mode = env.get_bool("DEBUG", False)`}
+                  code={`# Access whitelisted environment variables only
+api_key = env.get("EXTERNAL_API_KEY", default=None)
+max_results = env.get_int("MAX_RESULTS", default=100)
+debug_mode = env.get_bool("DEBUG", default=False)
+
+# Only keys in whitelist are accessible (prevents leaking secrets)
+# Default whitelist includes: PROJECT_NAME, ENVIRONMENT, API_V1_STR, etc.`}
                 />
               </div>
 
@@ -266,12 +299,17 @@ port = ds["port"]`}
                 </p>
                 <CodeBlock
                   code={`# When SCRIPT_EXTRA_MODULES includes "pandas":
+# pandas is injected as a global (no import needed)
+rows = db.query("SELECT id, name, score FROM users")
+df = pandas.DataFrame(rows)
+summary = df["score"].mean()
+result = {"mean_score": float(summary), "count": len(rows)}
+
+# OR use execute() function pattern:
 def execute(params=None):
-    params = params or {}
     rows = db.query("SELECT id, name, score FROM users")
     df = pandas.DataFrame(rows)
-    summary = df["score"].mean()
-    return {"mean_score": float(summary), "count": len(rows)}`}
+    return {"mean_score": float(df["score"].mean()), "count": len(rows)}`}
                   title="Example: pandas (if enabled)"
                 />
               </div>
@@ -282,7 +320,7 @@ def execute(params=None):
             <h3 className="text-lg font-semibold mb-3">Examples</h3>
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium mb-2">Example 1: Simple Query</h4>
+                <h4 className="font-medium mb-2">Example 1: Simple Query (using result variable)</h4>
                 <CodeBlock
                   code={`user_id = req.get("user_id")
 if not user_id:
@@ -293,6 +331,23 @@ else:
         (user_id,)
     )
     result = {"user": user} if user else {"error": "User not found"}`}
+                />
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-2">Example 1b: Simple Query (using execute function)</h4>
+                <CodeBlock
+                  code={`def execute(params=None):
+    params = params or {}
+    user_id = params.get("user_id")
+    if not user_id:
+        return {"error": "user_id is required"}
+    
+    user = db.query_one(
+        "SELECT id, name, email FROM users WHERE id = %s",
+        (user_id,)
+    )
+    return {"user": user} if user else {"error": "User not found"}`}
                 />
               </div>
 
@@ -330,7 +385,7 @@ try:
         (req.get("name"), req.get("email"))
     )
     
-    # Update status
+    # Update status (within same transaction)
     db.update(
         "UPDATE users SET status = 1 WHERE email = %s",
         (req.get("email"),)
@@ -341,7 +396,9 @@ try:
 except Exception as e:
     tx.rollback()
     log.error(f"Transaction failed: {str(e)}")
-    result = {"error": str(e)}`}
+    result = {"error": str(e)}
+
+# Note: Without tx.begin(), each db.execute() auto-commits`}
                 />
               </div>
 
@@ -358,11 +415,13 @@ else:
     user = db.query_one("SELECT * FROM users WHERE id = %s", (req.get("user_id"),))
     
     if user:
-        # Cache for 5 minutes (300 seconds)
-        cache.set(cache_key, user, ttl=300)
+        # Cache for 5 minutes (300 seconds) - note: ttl_seconds parameter
+        cache.set(cache_key, user, ttl_seconds=300)
         result = user
     else:
-        result = {"error": "User not found"}`}
+        result = {"error": "User not found"}
+
+# Note: Cache keys are automatically prefixed with "script:"`}
                 />
               </div>
 
@@ -403,9 +462,11 @@ except Exception as e:
               <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-4 list-disc">
                 <li>Scripts run in RestrictedPython sandbox</li>
                 <li>No file system access (no <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">open()</code>)</li>
-                <li>No unrestricted imports</li>
-                <li>No dangerous operations (exec, eval, etc.)</li>
-                <li>Only safe built-ins available: dict, list, str, int, float, bool, range, enumerate, zip, sorted, len, round, min, max, sum, abs</li>
+                <li>No unrestricted imports (only whitelisted modules via SCRIPT_EXTRA_MODULES)</li>
+                <li>No dangerous operations (exec, eval, compile, etc.)</li>
+                <li>Safe built-ins: dict, list, str, int, float, bool, range, enumerate, zip, sorted, len, round, min, max, sum, abs, json.loads, json.dumps, datetime, date, time, timedelta</li>
+                <li>Optional timeout: SCRIPT_EXEC_TIMEOUT (seconds) uses SIGALRM on Unix to abort long-running scripts</li>
+                <li>Macro support: Python macros from Macro Defs (same module) are auto-prepended before your script</li>
               </ul>
             </div>
           </div>
@@ -415,7 +476,7 @@ except Exception as e:
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">✓</span>
-                <span><strong className="text-foreground">Always set result:</strong> Your script must assign a <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">result</code> variable to return data.</span>
+                <span><strong className="text-foreground">Return data:</strong> Either define <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">def execute(params=None):</code> that returns a value, or assign to global <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">result</code> variable.</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">✓</span>

@@ -55,7 +55,7 @@ function CodeExample({ title, description, code }: Example) {
 const PARAM_VALIDATE_EXAMPLES: Example[] = [
   {
     title: "Param validate – Always pass",
-    description: "Always pass. Can use macro functions.",
+    description: "Minimal example: always returns True. Useful as a starting point; you can call macro helpers from here.",
     code:
       "def validate(value, params=None):\n" +
       '    """Return True if valid, otherwise False."""\n' +
@@ -63,7 +63,7 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – Numeric range",
-    description: "0 ≤ value ≤ 100. Can use macro (e.g. safe_float).",
+    description: "Ensure the numeric value is between 0 and 100 (inclusive). You can replace the raw cast with a macro helper such as safe_float.",
     code:
       "def validate(value, params=None):\n" +
       "    try:\n" +
@@ -76,7 +76,7 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – String length",
-    description: "1 ≤ len(str(value)) ≤ 255. Can use macro functions.",
+    description: "Require a non-empty string with reasonable length (1 ≤ len(str(value)) ≤ 255). Good for names, codes, etc.",
     code:
       "def validate(value, params=None):\n" +
       "    if value is None:\n" +
@@ -86,7 +86,7 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – Regex pattern",
-    description: "Value matches ^[a-zA-Z0-9_-]+$. Can use macro (e.g. is_valid_slug).",
+    description: "Validate an identifier-like field using regex ^[a-zA-Z0-9_-]+$. Can be combined with a macro helper like is_valid_slug.",
     code:
       "import re\n\n" +
       "def validate(value, params=None):\n" +
@@ -96,7 +96,7 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – Use macro helper (is_valid_email)",
-    description: "Call is_valid_email from macro_def. Macros auto-prepended.",
+    description: "Show how to call is_valid_email defined in a Python macro_def. Macro code is auto-prepended before validate() runs.",
     code:
       "def validate(value, params=None):\n" +
       "    # is_valid_email() defined in a Python macro_def\n" +
@@ -104,7 +104,8 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – Use other params",
-    description: "Value within params.start/end. Can use macro (e.g. safe_range).",
+    description:
+      "Use other parameters from the same request (params dict) to implement cross-field rules, e.g. value between params.start and params.end. You can move common logic into a macro helper such as safe_range.",
     code:
       "def validate(value, params=None):\n" +
       "    if value is None or params is None:\n" +
@@ -134,7 +135,7 @@ export default function ParamValidateExamples() {
         <div>
           <div className="text-sm font-medium">Validation examples</div>
           <div className="text-xs text-muted-foreground">
-            validate(value, params=None) → True/False. Can call functions from macro_def (type Python); macros auto-prepended.
+            validate(value, params=None) → True/False. Called per-parameter before executing SQL/Python. You can call functions from Python macro_defs; macro code is auto-prepended.
           </div>
         </div>
         <ChevronDown

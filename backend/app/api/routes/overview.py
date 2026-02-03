@@ -11,6 +11,7 @@ from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep, require_permission
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
+from app.models import User
 from app.models_dbapi import (
     AccessRecord,
     ApiAssignment,
@@ -181,13 +182,37 @@ def get_recent_access(
     return RecentAccessOut(data=[_to_access_public(r) for r in rows])
 
 
-def _to_version_commit_public(v: VersionCommit) -> VersionCommitPublic:
+def _to_version_commit_public(
+    v: VersionCommit,
+    api: ApiAssignment | None = None,
+    module: ApiModule | None = None,
+    user: User | None = None,
+) -> VersionCommitPublic:
+    """Convert VersionCommit to public schema with API and user info."""
+    http_method = None
+    full_path = None
+
+    if api and module:
+        http_method = api.http_method.value if api.http_method else None
+        # Build full path: /{module_path_prefix}/{api_path} (gateway pattern, not full URL)
+        module_prefix = (module.path_prefix or "/").strip("/")
+        api_path = api.path.strip("/")
+        if module_prefix:
+            full_path = f"/{module_prefix}/{api_path}"
+        else:
+            full_path = f"/{api_path}"
+
+    committed_by_email = user.email if user else None
+
     return VersionCommitPublic(
         id=v.id,
         api_assignment_id=v.api_assignment_id,
         version=v.version,
         commit_message=v.commit_message,
         committed_by_id=v.committed_by_id,
+        committed_by_email=committed_by_email,
+        http_method=http_method,
+        full_path=full_path,
         committed_at=v.committed_at,
     )
 
@@ -212,4 +237,36 @@ def get_recent_commits(
         select(VersionCommit).order_by(VersionCommit.committed_at.desc()).limit(limit)
     )
     rows = session.exec(stmt).all()
-    return RecentCommitsOut(data=[_to_version_commit_public(v) for v in rows])
+
+    # Load related data: ApiAssignment, ApiModule, User
+    api_ids = {v.api_assignment_id for v in rows if v.api_assignment_id}
+    apis = {}
+    modules = {}
+    if api_ids:
+        api_rows = session.exec(
+            select(ApiAssignment).where(ApiAssignment.id.in_(api_ids))
+        ).all()
+        apis = {a.id: a for a in api_rows}
+
+        module_ids = {a.module_id for a in api_rows}
+        if module_ids:
+            module_rows = session.exec(
+                select(ApiModule).where(ApiModule.id.in_(module_ids))
+            ).all()
+            modules = {m.id: m for m in module_rows}
+
+    user_ids = {v.committed_by_id for v in rows if v.committed_by_id}
+    users = {}
+    if user_ids:
+        user_rows = session.exec(select(User).where(User.id.in_(user_ids))).all()
+        users = {u.id: u for u in user_rows}
+
+    # Build public versions with related data
+    public_versions = []
+    for v in rows:
+        api = apis.get(v.api_assignment_id) if v.api_assignment_id else None
+        module = modules.get(api.module_id) if api else None
+        user = users.get(v.committed_by_id) if v.committed_by_id else None
+        public_versions.append(_to_version_commit_public(v, api, module, user))
+
+    return RecentCommitsOut(data=public_versions)

@@ -6,28 +6,31 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 import useCustomToast from "@/hooks/useCustomToast"
 
 const DATA_TYPES_TEXT =
-  "Data types (used for validation and coercion):\n\n" +
+  "Data types (DBAPI converts raw HTTP input to these before your SQL/Jinja or Python runs):\n\n" +
   "  string   — Text; leading/trailing spaces trimmed.\n" +
-  "            Example: \"hello\", \"  abc  \" → \"abc\"\n\n" +
+  "            Example: \"hello\", \"  abc  \" → \"abc\".\n\n" +
   "  integer  — Whole number. Accepts int or numeric string.\n" +
-  "            Example: 42, \"100\"\n\n" +
+  "            Example: 42, \"100\".\n\n" +
   "  number   — Float. Accepts int, float or numeric string.\n" +
-  "            Example: 3.14, \"1.5\"\n\n" +
+  "            Example: 3.14, \"1.5\".\n\n" +
   "  boolean  — true/false. Accepts: true, false, 1, 0, \"true\", \"false\", \"yes\", \"no\".\n" +
-  "            Example: true, \"yes\", 1\n\n" +
+  "            Example: true, \"yes\", 1.\n\n" +
   "  array    — List. Accepts JSON array string or comma-separated string.\n" +
-  "            Example: [1, 2, 3], \"[1,2,3]\", \"a,b,c\"\n\n" +
+  "            Example: [1, 2, 3], \"[1,2,3]\", \"a,b,c\".\n\n" +
   "  object   — Key-value. Accepts JSON object string only.\n" +
-  "            Example: {\"a\": 1, \"b\": 2}, \"{\\\"key\\\": \\\"value\\\"}\""
+  "            Example: {\"a\": 1, \"b\": 2}, \"{\\\"key\\\": \\\"value\\\"}\".\n\n" +
+  "If a value cannot be converted to the selected type, DBAPI returns a 400 validation error before executing your engine."
 
 const EXAMPLE_PARAMS_TEXT =
-  "Example parameter definitions:\n\n" +
-  "  • limit   (query, integer, required=false, default=10)\n" +
-  "  • offset  (query, integer, required=false, default=0)\n" +
-  "  • id      (query, integer, required=true)\n" +
-  "  • q       (query, string, required=false) — search text\n" +
-  "  • active  (query, boolean, required=false, default=true)\n" +
-  "  • ids     (query, array, required=false) — e.g. [1,2,3]"
+  "Example parameter definitions (as you would configure them in Basic Info → Parameters):\n\n" +
+  "  • limit      (query,  integer, required=false, default=10)\n" +
+  "  • offset     (query,  integer, required=false, default=0)\n" +
+  "  • id         (query,  integer, required=true)\n" +
+  "  • q          (query,  string,  required=false) — search text\n" +
+  "  • active     (query,  boolean, required=false, default=true)\n" +
+  "  • ids        (query,  array,   required=false) — e.g. [1,2,3]\n" +
+  "  • X-User-Id  (header, string,  required=false) — current user id\n" +
+  "  • payload    (body,   object,  required=false) — JSON body with nested fields"
 
 const EXAMPLE_DATA_JSON =
   '{\n  "limit": 10,\n  "offset": 0,\n  "id": 1,\n  "q": "search text",\n  "active": true,\n  "ids": [1, 2, 3]\n}'

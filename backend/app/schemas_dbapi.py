@@ -695,6 +695,12 @@ class VersionCommitPublic(SQLModel):
     committed_by_email: str | None = Field(
         default=None, description="Email of user who created this version"
     )
+    http_method: str | None = Field(
+        default=None, description="HTTP method of the API (GET, POST, etc.)"
+    )
+    full_path: str | None = Field(
+        default=None, description="Full API path pattern: /{module}/{path}"
+    )
     committed_at: datetime
 
 

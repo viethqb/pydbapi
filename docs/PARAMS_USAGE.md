@@ -91,9 +91,13 @@ When creating/editing an API, you can define parameters with these attributes:
 
 ## Practical Examples
 
+These scenarios show how **frontend parameter definitions** (location + type) map to **real gateway requests** and how the values are available inside SQL (Jinja2) or Python scripts.
+
 ### Example 1: API GET with query and header params
 
-**Parameter definitions:**
+**Goal:** Simple read-only API that requires an `id` in the query string and optionally receives a `X-User-Id` header for auditing.
+
+**Parameter definitions (Basic Info → Parameters):**
 
 - `id` (query, required, integer)
 - `X-User-Id` (header, optional, string)
@@ -126,7 +130,9 @@ result = db.query(query, params)
 
 ### Example 2: API POST with body params
 
-**Parameter definitions:**
+**Goal:** Create a user from JSON body fields and handle optional `age`.
+
+**Parameter definitions (Basic Info → Parameters):**
 
 - `name` (body, required, string)
 - `email` (body, required, string)
@@ -243,6 +249,8 @@ In the **Debug** tab of the API editor you can test the API with parameters. The
 ```
 
 ### Practical examples
+
+The following examples show how **Debug JSON**, **SQL templates**, and **Python scripts** work together when you test APIs from the UI.
 
 #### Example 1: SQL with query parameters
 

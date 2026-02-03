@@ -328,8 +328,12 @@ LIMIT {{ lim }} OFFSET {{ off }};`}
                     <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"sql_int"}</code>) instead of manual quoting.
                   </li>
                   <li>
-                    Template is rendered from a <strong className="text-foreground">string</strong>, so typical Jinja file-based features like{" "}
-                    <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% include %}"}</code> may not be available.
+                    Template is rendered from a <strong className="text-foreground">string</strong>, so file-based features like{" "}
+                    <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% include %}"}</code> are not available. Use macros from Macro Defs instead.
+                  </li>
+                  <li>
+                    <strong className="text-foreground">Macro support:</strong> You can call Jinja macros defined in Macro Defs (same module) using{" "}
+                    <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ macro_name(args) }}"}</code>.
                   </li>
                 </ul>
               </div>
@@ -370,7 +374,19 @@ LIMIT {{ lim }} OFFSET {{ off }};`}
                 </div>
                 <div className="p-3 border rounded-md">
                   <code className="text-sm font-mono">sql_like</code>
-                  <p className="text-xs text-muted-foreground mt-1">Wraps with % for LIKE queries</p>
+                  <p className="text-xs text-muted-foreground mt-1">Escapes % and _ for LIKE patterns</p>
+                </div>
+                <div className="p-3 border rounded-md">
+                  <code className="text-sm font-mono">sql_like_start</code>
+                  <p className="text-xs text-muted-foreground mt-1">Prefix match: escapes input + adds trailing %</p>
+                </div>
+                <div className="p-3 border rounded-md">
+                  <code className="text-sm font-mono">sql_like_end</code>
+                  <p className="text-xs text-muted-foreground mt-1">Suffix match: escapes input + adds leading %</p>
+                </div>
+                <div className="p-3 border rounded-md">
+                  <code className="text-sm font-mono">json</code>
+                  <p className="text-xs text-muted-foreground mt-1">Serializes to JSON string for JSONB/JSON columns</p>
                 </div>
               </div>
             </div>

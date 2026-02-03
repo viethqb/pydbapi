@@ -24,6 +24,7 @@ function Dashboard() {
   const [requestsDays, setRequestsDays] = useState(14)
   const [topPathsLimit, setTopPathsLimit] = useState(10)
   const [recentAccessLimit, setRecentAccessLimit] = useState(20)
+  const [recentCommitsLimit, setRecentCommitsLimit] = useState(20)
 
   const statsQuery = useQuery({
     queryKey: ["overview", "stats"],
@@ -46,8 +47,8 @@ function Dashboard() {
   })
 
   const recentCommitsQuery = useQuery({
-    queryKey: ["overview", "recent-commits", 20],
-    queryFn: () => OverviewService.getRecentCommits(20),
+    queryKey: ["overview", "recent-commits", recentCommitsLimit],
+    queryFn: () => OverviewService.getRecentCommits(recentCommitsLimit),
   })
 
   return (
@@ -85,7 +86,19 @@ function Dashboard() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-6">
+        {recentCommitsQuery.isError ? (
+          <div className="text-sm text-destructive">
+            Failed to load recent commits: {recentCommitsQuery.error.message}
+          </div>
+        ) : (
+          <RecentCommitsTable
+            rows={recentCommitsQuery.data?.data ?? []}
+            limit={recentCommitsLimit}
+            onLimitChange={setRecentCommitsLimit}
+          />
+        )}
+
         {recentAccessQuery.isError ? (
           <div className="text-sm text-destructive">
             Failed to load recent access: {recentAccessQuery.error.message}
@@ -96,14 +109,6 @@ function Dashboard() {
             limit={recentAccessLimit}
             onLimitChange={setRecentAccessLimit}
           />
-        )}
-
-        {recentCommitsQuery.isError ? (
-          <div className="text-sm text-destructive">
-            Failed to load recent commits: {recentCommitsQuery.error.message}
-          </div>
-        ) : (
-          <RecentCommitsTable rows={recentCommitsQuery.data?.data ?? []} />
         )}
       </div>
     </div>

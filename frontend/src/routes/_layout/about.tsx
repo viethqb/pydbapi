@@ -62,13 +62,18 @@ function OverviewContent() {
             What is DBAPI?
           </CardTitle>
           <CardDescription>
-            Database API Management System
+            Database API platform for turning SQL and Python into secure, versioned HTTP APIs
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            DBAPI is a comprehensive platform for managing database connections, API development, and system configuration. 
-            It allows you to create RESTful APIs from SQL queries and Python scripts without writing backend code.
+            DBAPI is a platform for managing database connections and publishing them as HTTP APIs. You model{" "}
+            <strong className="text-foreground">DataSources</strong>, organize them into{" "}
+            <strong className="text-foreground">Modules</strong>, implement logic with{" "}
+            <strong className="text-foreground">SQL (Jinja2)</strong> or{" "}
+            <strong className="text-foreground">Python scripts</strong>, and expose everything through a{" "}
+            <strong className="text-foreground">gateway</strong> with authentication, rate limiting, and
+            version control.
           </p>
           
           <div className="grid gap-4 md:grid-cols-2 mt-6">
@@ -168,10 +173,10 @@ function OverviewContent() {
                 4
               </div>
               <div>
-                <h4 className="font-semibold">Publish & Use</h4>
+                <h4 className="font-semibold">Publish & Call via Gateway</h4>
                 <p className="text-sm text-muted-foreground">
-                  Create a version of your API content, publish it, and access it via the generated endpoint. 
-                  Private APIs require authentication tokens.
+                  Create a version of your API content, publish it, and access it via the generated endpoint on the gateway. 
+                  For private APIs, create a Client and token, then call the API with the configured headers.
                 </p>
               </div>
             </div>
@@ -187,27 +192,27 @@ function OverviewContent() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Dynamic SQL Templates:</strong> Use Jinja2 syntax for conditional queries, loops, and parameter injection</span>
+              <span><strong className="text-foreground">Dynamic SQL Templates:</strong> Use Jinja2 syntax, custom filters, and helper tags to build safe, dynamic SQL from request parameters.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Python Script Execution:</strong> Run Python code in a secure sandbox with database, HTTP, and cache access</span>
+              <span><strong className="text-foreground">Python Script Engine:</strong> Run Python in a sandbox with helpers for database access, HTTP calls, caching, logging, and environment variables.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Version Control:</strong> Track changes to your API content with versioning and commit messages</span>
+              <span><strong className="text-foreground">Versioned API Content:</strong> Track changes with commits and published versions so you can roll out or roll back behavior safely.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Parameter Validation:</strong> Define parameters with types, validation rules, and default values</span>
+              <span><strong className="text-foreground">Strong Parameter Model:</strong> Define query/header/body parameters with data types, defaults, and validation (regex or Python) before they reach your engine.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Access Control:</strong> Public APIs (no auth) or Private APIs (token-based authentication)</span>
+              <span><strong className="text-foreground">Gateway & Access Control:</strong> Expose APIs via a gateway with public or private access, JWT-based clients, and per-client configuration.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Debug & Test:</strong> Test your APIs with custom parameters before publishing</span>
+              <span><strong className="text-foreground">Debug & Observability:</strong> Use the built-in Debug tab to test with parameters and inspect behavior before exposing APIs to consumers.</span>
             </li>
           </ul>
         </CardContent>

@@ -29,6 +29,10 @@ export type VersionCommitPublic = {
   api_assignment_id: string
   version: number
   commit_message: string | null
+  committed_by_id: string | null
+  committed_by_email: string | null
+  http_method: string | null
+  full_path: string | null
   committed_at: string
 }
 

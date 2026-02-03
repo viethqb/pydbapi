@@ -55,7 +55,7 @@ function CodeExample({ title, description, code }: Example) {
 const MACRO_EXAMPLES: Example[] = [
   {
     title: "Jinja – Macro definition",
-    description: "{% macro name(args) %} ... {% endmacro %}. Usable in SQL content.",
+    description: "Define a reusable block of SQL with {% macro name(args) %} ... {% endmacro %}. Macros live in Macro Defs and can be used by any SQL API in the same module.",
     code:
       "{% macro paginate(limit, offset) %}\n" +
       "LIMIT {{ limit }} OFFSET {{ offset }}\n" +
@@ -63,7 +63,8 @@ const MACRO_EXAMPLES: Example[] = [
   },
   {
     title: "Jinja – Usage in SQL API content",
-    description: "limit | sql_int, offset | sql_int. Call macro {{ paginate(limit, offset) }}. Do not nest {{ }} inside {% set %}.",
+    description:
+      "Inside API content, call the macro with {{ paginate(limit, offset) }} after cleaning inputs via filters (limit | sql_int, offset | sql_int). Avoid nesting {{ }} inside {% set %}; assign filtered values first, then call the macro.",
     code:
       "{% set limit = limit | sql_int %}\n" +
       "{% set offset = offset | sql_int %}\n" +
@@ -71,7 +72,8 @@ const MACRO_EXAMPLES: Example[] = [
   },
   {
     title: "Python – Function definition (macro)",
-    description: "Has http, db, cache, req. Usable in Script content, param validate, result transform (pure helpers).",
+    description:
+      "Define Python helpers that can call http, db, cache, req. These functions can be reused in Script API content, parameter validate functions, and result transform scripts.",
     code:
       "def fetch_from_api(url):\n" +
       "    resp = http.get(url)\n" +
@@ -79,7 +81,8 @@ const MACRO_EXAMPLES: Example[] = [
   },
   {
     title: "Python – Helpers for validate/transform",
-    description: "Pure helpers (no http/db) for param validate and result transform. Macros auto-prepended.",
+    description:
+      "Pure helpers (no http/db) for parameter validate and result transform. Macro code is auto-prepended before each validate/transform, so these functions are always available there.",
     code:
       "def safe_int(val, default=0):\n" +
       "    try:\n" +
@@ -91,7 +94,8 @@ const MACRO_EXAMPLES: Example[] = [
   },
   {
     title: "Python – Usage in Script API content",
-    description: "Call functions from macro. req.get(), db.query(). Macro functions usable in validate/transform.",
+    description:
+      "In Script API content you can call functions defined in macro_defs (e.g. fetch_from_api). Use req.get() for parameters and db.query() for database access; the same helpers can also be called from validate/transform.",
     code:
       'config = fetch_from_api("https://api.example.com/config")\n' +
       'rows = db.query("SELECT * FROM users WHERE type = %s", [config.get("type")])\n' +
@@ -110,10 +114,9 @@ export default function MacroExamples() {
         onClick={() => setOpen((v) => !v)}
       >
         <div>
-          <div className="text-sm font-medium">Examples & usage guide</div>
+          <div className="text-sm font-medium">Macro examples & usage guide</div>
           <div className="text-xs text-muted-foreground">
-            JINJA for SQL APIs; PYTHON for Script APIs (http, db, cache, req).
-            Macro functions can be used in param validate and result transform.
+            Jinja macros are reused across SQL APIs; Python macros expose shared helpers for Script APIs, parameter validate, and result transform.
           </div>
         </div>
         <ChevronDown

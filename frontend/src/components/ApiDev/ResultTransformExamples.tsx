@@ -54,7 +54,7 @@ function CodeExample({ title, description, code }: Example) {
 const EXAMPLES: Example[] = [
   {
     title: "Passthrough",
-    description: "Return result unchanged. Can use macro functions.",
+    description: "Smallest possible transform: return the executor result as-is. Useful as a template; you can still call macro helpers here.",
     code:
       "def transform(result, params=None):\n" +
       '    """Transform raw executor result. params = request params dict."""\n' +
@@ -62,7 +62,8 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Add offset/limit + flatten 2-statement SQL",
-    description: "SQL 2 SELECTs: [[rows], [{total}]]. Flatten, add offset/limit. Can use safe_int from macro.",
+    description:
+      "Typical pattern for paginated SQL that returns [[rows], [{total}]]. Unwrap both parts into a flat result, then attach offset/limit. You can refactor numeric parsing into a macro helper (e.g. safe_int).",
     code:
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
@@ -80,7 +81,8 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Use macro helper (safe_int from macro_def)",
-    description: "Call safe_int from macro_def. Macros auto-prepended.",
+    description:
+      "Demonstrates how to call safe_int defined in a Python macro_def to normalize numeric parameters before using them in the final payload.",
     code:
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
@@ -91,7 +93,8 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Add offset/limit (single SELECT)",
-    description: "Single SELECT: [[rows]]. Unwrap, add offset/limit. Can use macro (e.g. safe_int).",
+    description:
+      "For a single SELECT that returns [[rows]], unwrap the inner list and attach offset/limit metadata. Works well with SQL that does not compute total separately.",
     code:
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
@@ -106,7 +109,8 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Pick fields from rows",
-    description: "Pick only id, name. Can use macro (e.g. pick_keys).",
+    description:
+      "Transform each row to a lighter shape (id, name only). You can move the projection logic into a macro helper like pick_keys for reuse.",
     code:
       "def transform(result, params=None):\n" +
       "    d = result.get(\"data\", [])\n" +
@@ -116,19 +120,21 @@ const EXAMPLES: Example[] = [
   },
   {
     title: "Add computed field",
-    description: "Add full_name. Can use macro (e.g. build_full_name).",
+    description:
+      "Attach a new field derived from existing columns (e.g. full_name from first_name + last_name). This logic is also a good candidate for a macro helper such as build_full_name.",
     code:
       "def transform(result, params=None):\n" +
       "    d = result.get(\"data\", [])\n" +
       "    rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else (d if isinstance(d, list) else [])\n" +
       "    for r in rows:\n" +
-      '        r[\"full_name\"] = f\"{r.get(\"first_name\", \"\")} {r.get(\"last_name\", \"\")}\".strip()\n' +
+      "        r['full_name'] = f\"{r.get('first_name', '')} {r.get('last_name', '')}\".strip()\n" +
       "    result[\"data\"] = rows\n" +
       "    return result\n",
   },
   {
     title: "Filter rows",
-    description: "Keep only is_active=true. Can use macro (e.g. filter_active).",
+    description:
+      "Filter the data returned by the executor (e.g. keep only rows where is_active is true). For complex conditions, extract them into a macro helper like filter_active.",
     code:
       "def transform(result, params=None):\n" +
       "    d = result.get(\"data\", [])\n" +
@@ -151,7 +157,7 @@ export default function ResultTransformExamples() {
         <div>
           <div className="text-sm font-medium">Result transform (Python) examples</div>
           <div className="text-xs text-muted-foreground">
-            transform(result, params=None) → result. Can call functions from macro_def (type Python); macros auto-prepended.
+            transform(result, params=None) → result. Runs after SQL/Jinja or Script execution, before sending the response. You can call functions from Python macro_defs; macro code is auto-prepended.
           </div>
         </div>
         <ChevronDown
