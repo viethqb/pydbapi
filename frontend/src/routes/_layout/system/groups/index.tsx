@@ -48,6 +48,9 @@ export const Route = createFileRoute("/_layout/system/groups/")({
 function GroupsPage() {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+
+  const canCreate = hasPermission("group", "create")
 
   // Filters state
   const [filters, setFilters] = useState<ApiGroupListIn>({
@@ -144,8 +147,8 @@ function GroupsPage() {
       onEdit: handleEdit,
       onDelete: handleDelete,
       onToggleStatus: handleToggleStatus,
-      canUpdate,
-      canDelete,
+      canUpdate: hasPermission("group", "update", group.id),
+      canDelete: hasPermission("group", "delete", group.id),
     })) || []
 
   return (

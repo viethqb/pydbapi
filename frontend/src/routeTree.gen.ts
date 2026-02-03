@@ -21,10 +21,12 @@ import { Route as LayoutAboutRouteImport } from './routes/_layout/about'
 import { Route as LayoutConnectionIndexRouteImport } from './routes/_layout/connection/index'
 import { Route as LayoutApiRepositoryIndexRouteImport } from './routes/_layout/api-repository/index'
 import { Route as LayoutApiDevIndexRouteImport } from './routes/_layout/api-dev/index'
+import { Route as LayoutAdminIndexRouteImport } from './routes/_layout/admin/index'
 import { Route as LayoutSystemClientsRouteImport } from './routes/_layout/system/clients'
 import { Route as LayoutConnectionCreateRouteImport } from './routes/_layout/connection/create'
 import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connection/$id'
 import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
+import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin/users'
 import { Route as LayoutAboutSqlJinjaRouteImport } from './routes/_layout/about.sql-jinja'
 import { Route as LayoutAboutPythonScriptRouteImport } from './routes/_layout/about.python-script'
 import { Route as LayoutSystemGroupsIndexRouteImport } from './routes/_layout/system/groups/index'
@@ -32,6 +34,7 @@ import { Route as LayoutSecurityRolesIndexRouteImport } from './routes/_layout/s
 import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
 import { Route as LayoutApiDevMacroDefsIndexRouteImport } from './routes/_layout/api-dev/macro-defs/index'
 import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
+import { Route as LayoutAdminRolesIndexRouteImport } from './routes/_layout/admin/roles/index'
 import { Route as LayoutSystemGroupsIdRouteImport } from './routes/_layout/system/groups/$id'
 import { Route as LayoutSecurityRolesIdRouteImport } from './routes/_layout/security/roles/$id'
 import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id/edit'
@@ -41,9 +44,12 @@ import { Route as LayoutApiDevMacroDefsCreateRouteImport } from './routes/_layou
 import { Route as LayoutApiDevMacroDefsIdRouteImport } from './routes/_layout/api-dev/macro-defs/$id'
 import { Route as LayoutApiDevApisCreateRouteImport } from './routes/_layout/api-dev/apis/create'
 import { Route as LayoutApiDevApisIdRouteImport } from './routes/_layout/api-dev/apis/$id'
+import { Route as LayoutAdminRolesCreateRouteImport } from './routes/_layout/admin/roles/create'
+import { Route as LayoutAdminRolesIdRouteImport } from './routes/_layout/admin/roles/$id'
 import { Route as LayoutApiDevModulesIdEditRouteImport } from './routes/_layout/api-dev/modules/$id.edit'
 import { Route as LayoutApiDevMacroDefsIdEditRouteImport } from './routes/_layout/api-dev/macro-defs/$id.edit'
 import { Route as LayoutApiDevApisIdEditRouteImport } from './routes/_layout/api-dev/apis/$id.edit'
+import { Route as LayoutAdminRolesIdEditRouteImport } from './routes/_layout/admin/roles/$id.edit'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -105,6 +111,11 @@ const LayoutApiDevIndexRoute = LayoutApiDevIndexRouteImport.update({
   path: '/api-dev/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAdminIndexRoute = LayoutAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
 const LayoutSystemClientsRoute = LayoutSystemClientsRouteImport.update({
   id: '/system/clients',
   path: '/system/clients',
@@ -124,6 +135,11 @@ const LayoutApiRepositoryIdRoute = LayoutApiRepositoryIdRouteImport.update({
   id: '/api-repository/$id',
   path: '/api-repository/$id',
   getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAdminUsersRoute = LayoutAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => LayoutAdminRoute,
 } as any)
 const LayoutAboutSqlJinjaRoute = LayoutAboutSqlJinjaRouteImport.update({
   id: '/sql-jinja',
@@ -162,6 +178,11 @@ const LayoutApiDevApisIndexRoute = LayoutApiDevApisIndexRouteImport.update({
   id: '/api-dev/apis/',
   path: '/api-dev/apis/',
   getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAdminRolesIndexRoute = LayoutAdminRolesIndexRouteImport.update({
+  id: '/roles/',
+  path: '/roles/',
+  getParentRoute: () => LayoutAdminRoute,
 } as any)
 const LayoutSystemGroupsIdRoute = LayoutSystemGroupsIdRouteImport.update({
   id: '/system/groups/$id',
@@ -210,6 +231,16 @@ const LayoutApiDevApisIdRoute = LayoutApiDevApisIdRouteImport.update({
   path: '/api-dev/apis/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAdminRolesCreateRoute = LayoutAdminRolesCreateRouteImport.update({
+  id: '/roles/create',
+  path: '/roles/create',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminRolesIdRoute = LayoutAdminRolesIdRouteImport.update({
+  id: '/roles/$id',
+  path: '/roles/$id',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
 const LayoutApiDevModulesIdEditRoute =
   LayoutApiDevModulesIdEditRouteImport.update({
     id: '/edit',
@@ -227,6 +258,11 @@ const LayoutApiDevApisIdEditRoute = LayoutApiDevApisIdEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => LayoutApiDevApisIdRoute,
 } as any)
+const LayoutAdminRolesIdEditRoute = LayoutAdminRolesIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => LayoutAdminRolesIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -235,17 +271,21 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/about': typeof LayoutAboutRouteWithChildren
-  '/admin': typeof LayoutAdminRoute
+  '/admin': typeof LayoutAdminRouteWithChildren
   '/settings': typeof LayoutSettingsRoute
   '/about/python-script': typeof LayoutAboutPythonScriptRoute
   '/about/sql-jinja': typeof LayoutAboutSqlJinjaRoute
+  '/admin/users': typeof LayoutAdminUsersRoute
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
   '/system/clients': typeof LayoutSystemClientsRoute
+  '/admin/': typeof LayoutAdminIndexRoute
   '/api-dev/': typeof LayoutApiDevIndexRoute
   '/api-repository/': typeof LayoutApiRepositoryIndexRoute
   '/connection/': typeof LayoutConnectionIndexRoute
+  '/admin/roles/$id': typeof LayoutAdminRolesIdRouteWithChildren
+  '/admin/roles/create': typeof LayoutAdminRolesCreateRoute
   '/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
   '/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
   '/api-dev/macro-defs/$id': typeof LayoutApiDevMacroDefsIdRouteWithChildren
@@ -255,11 +295,13 @@ export interface FileRoutesByFullPath {
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/security/roles/$id': typeof LayoutSecurityRolesIdRoute
   '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
+  '/admin/roles/': typeof LayoutAdminRolesIndexRoute
   '/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
   '/security/roles/': typeof LayoutSecurityRolesIndexRoute
   '/system/groups/': typeof LayoutSystemGroupsIndexRoute
+  '/admin/roles/$id/edit': typeof LayoutAdminRolesIdEditRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
@@ -270,18 +312,21 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/about': typeof LayoutAboutRouteWithChildren
-  '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
   '/about/python-script': typeof LayoutAboutPythonScriptRoute
   '/about/sql-jinja': typeof LayoutAboutSqlJinjaRoute
+  '/admin/users': typeof LayoutAdminUsersRoute
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
   '/system/clients': typeof LayoutSystemClientsRoute
+  '/admin': typeof LayoutAdminIndexRoute
   '/api-dev': typeof LayoutApiDevIndexRoute
   '/api-repository': typeof LayoutApiRepositoryIndexRoute
   '/connection': typeof LayoutConnectionIndexRoute
+  '/admin/roles/$id': typeof LayoutAdminRolesIdRouteWithChildren
+  '/admin/roles/create': typeof LayoutAdminRolesCreateRoute
   '/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
   '/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
   '/api-dev/macro-defs/$id': typeof LayoutApiDevMacroDefsIdRouteWithChildren
@@ -291,11 +336,13 @@ export interface FileRoutesByTo {
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/security/roles/$id': typeof LayoutSecurityRolesIdRoute
   '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
+  '/admin/roles': typeof LayoutAdminRolesIndexRoute
   '/api-dev/apis': typeof LayoutApiDevApisIndexRoute
   '/api-dev/macro-defs': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules': typeof LayoutApiDevModulesIndexRoute
   '/security/roles': typeof LayoutSecurityRolesIndexRoute
   '/system/groups': typeof LayoutSystemGroupsIndexRoute
+  '/admin/roles/$id/edit': typeof LayoutAdminRolesIdEditRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
@@ -308,18 +355,22 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/about': typeof LayoutAboutRouteWithChildren
-  '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/admin': typeof LayoutAdminRouteWithChildren
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/about/python-script': typeof LayoutAboutPythonScriptRoute
   '/_layout/about/sql-jinja': typeof LayoutAboutSqlJinjaRoute
+  '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/_layout/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/_layout/connection/create': typeof LayoutConnectionCreateRoute
   '/_layout/system/clients': typeof LayoutSystemClientsRoute
+  '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/api-dev/': typeof LayoutApiDevIndexRoute
   '/_layout/api-repository/': typeof LayoutApiRepositoryIndexRoute
   '/_layout/connection/': typeof LayoutConnectionIndexRoute
+  '/_layout/admin/roles/$id': typeof LayoutAdminRolesIdRouteWithChildren
+  '/_layout/admin/roles/create': typeof LayoutAdminRolesCreateRoute
   '/_layout/api-dev/apis/$id': typeof LayoutApiDevApisIdRouteWithChildren
   '/_layout/api-dev/apis/create': typeof LayoutApiDevApisCreateRoute
   '/_layout/api-dev/macro-defs/$id': typeof LayoutApiDevMacroDefsIdRouteWithChildren
@@ -329,11 +380,13 @@ export interface FileRoutesById {
   '/_layout/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/_layout/security/roles/$id': typeof LayoutSecurityRolesIdRoute
   '/_layout/system/groups/$id': typeof LayoutSystemGroupsIdRoute
+  '/_layout/admin/roles/': typeof LayoutAdminRolesIndexRoute
   '/_layout/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/_layout/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/_layout/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
   '/_layout/security/roles/': typeof LayoutSecurityRolesIndexRoute
   '/_layout/system/groups/': typeof LayoutSystemGroupsIndexRoute
+  '/_layout/admin/roles/$id/edit': typeof LayoutAdminRolesIdEditRoute
   '/_layout/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/_layout/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/_layout/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
@@ -351,13 +404,17 @@ export interface FileRouteTypes {
     | '/settings'
     | '/about/python-script'
     | '/about/sql-jinja'
+    | '/admin/users'
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
     | '/system/clients'
+    | '/admin/'
     | '/api-dev/'
     | '/api-repository/'
     | '/connection/'
+    | '/admin/roles/$id'
+    | '/admin/roles/create'
     | '/api-dev/apis/$id'
     | '/api-dev/apis/create'
     | '/api-dev/macro-defs/$id'
@@ -367,11 +424,13 @@ export interface FileRouteTypes {
     | '/connection/$id/edit'
     | '/security/roles/$id'
     | '/system/groups/$id'
+    | '/admin/roles/'
     | '/api-dev/apis/'
     | '/api-dev/macro-defs/'
     | '/api-dev/modules/'
     | '/security/roles/'
     | '/system/groups/'
+    | '/admin/roles/$id/edit'
     | '/api-dev/apis/$id/edit'
     | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
@@ -382,18 +441,21 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/about'
-    | '/admin'
     | '/settings'
     | '/'
     | '/about/python-script'
     | '/about/sql-jinja'
+    | '/admin/users'
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
     | '/system/clients'
+    | '/admin'
     | '/api-dev'
     | '/api-repository'
     | '/connection'
+    | '/admin/roles/$id'
+    | '/admin/roles/create'
     | '/api-dev/apis/$id'
     | '/api-dev/apis/create'
     | '/api-dev/macro-defs/$id'
@@ -403,11 +465,13 @@ export interface FileRouteTypes {
     | '/connection/$id/edit'
     | '/security/roles/$id'
     | '/system/groups/$id'
+    | '/admin/roles'
     | '/api-dev/apis'
     | '/api-dev/macro-defs'
     | '/api-dev/modules'
     | '/security/roles'
     | '/system/groups'
+    | '/admin/roles/$id/edit'
     | '/api-dev/apis/$id/edit'
     | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
@@ -424,13 +488,17 @@ export interface FileRouteTypes {
     | '/_layout/'
     | '/_layout/about/python-script'
     | '/_layout/about/sql-jinja'
+    | '/_layout/admin/users'
     | '/_layout/api-repository/$id'
     | '/_layout/connection/$id'
     | '/_layout/connection/create'
     | '/_layout/system/clients'
+    | '/_layout/admin/'
     | '/_layout/api-dev/'
     | '/_layout/api-repository/'
     | '/_layout/connection/'
+    | '/_layout/admin/roles/$id'
+    | '/_layout/admin/roles/create'
     | '/_layout/api-dev/apis/$id'
     | '/_layout/api-dev/apis/create'
     | '/_layout/api-dev/macro-defs/$id'
@@ -440,11 +508,13 @@ export interface FileRouteTypes {
     | '/_layout/connection/$id/edit'
     | '/_layout/security/roles/$id'
     | '/_layout/system/groups/$id'
+    | '/_layout/admin/roles/'
     | '/_layout/api-dev/apis/'
     | '/_layout/api-dev/macro-defs/'
     | '/_layout/api-dev/modules/'
     | '/_layout/security/roles/'
     | '/_layout/system/groups/'
+    | '/_layout/admin/roles/$id/edit'
     | '/_layout/api-dev/apis/$id/edit'
     | '/_layout/api-dev/macro-defs/$id/edit'
     | '/_layout/api-dev/modules/$id/edit'
@@ -544,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiDevIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/admin/': {
+      id: '/_layout/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof LayoutAdminIndexRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
     '/_layout/system/clients': {
       id: '/_layout/system/clients'
       path: '/system/clients'
@@ -571,6 +648,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api-repository/$id'
       preLoaderRoute: typeof LayoutApiRepositoryIdRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admin/users': {
+      id: '/_layout/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof LayoutAdminUsersRouteImport
+      parentRoute: typeof LayoutAdminRoute
     }
     '/_layout/about/sql-jinja': {
       id: '/_layout/about/sql-jinja'
@@ -620,6 +704,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api-dev/apis/'
       preLoaderRoute: typeof LayoutApiDevApisIndexRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admin/roles/': {
+      id: '/_layout/admin/roles/'
+      path: '/roles'
+      fullPath: '/admin/roles/'
+      preLoaderRoute: typeof LayoutAdminRolesIndexRouteImport
+      parentRoute: typeof LayoutAdminRoute
     }
     '/_layout/system/groups/$id': {
       id: '/_layout/system/groups/$id'
@@ -684,6 +775,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiDevApisIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/admin/roles/create': {
+      id: '/_layout/admin/roles/create'
+      path: '/roles/create'
+      fullPath: '/admin/roles/create'
+      preLoaderRoute: typeof LayoutAdminRolesCreateRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/roles/$id': {
+      id: '/_layout/admin/roles/$id'
+      path: '/roles/$id'
+      fullPath: '/admin/roles/$id'
+      preLoaderRoute: typeof LayoutAdminRolesIdRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
     '/_layout/api-dev/modules/$id/edit': {
       id: '/_layout/api-dev/modules/$id/edit'
       path: '/edit'
@@ -705,6 +810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutApiDevApisIdEditRouteImport
       parentRoute: typeof LayoutApiDevApisIdRoute
     }
+    '/_layout/admin/roles/$id/edit': {
+      id: '/_layout/admin/roles/$id/edit'
+      path: '/edit'
+      fullPath: '/admin/roles/$id/edit'
+      preLoaderRoute: typeof LayoutAdminRolesIdEditRouteImport
+      parentRoute: typeof LayoutAdminRolesIdRoute
+    }
   }
 }
 
@@ -720,6 +832,37 @@ const LayoutAboutRouteChildren: LayoutAboutRouteChildren = {
 
 const LayoutAboutRouteWithChildren = LayoutAboutRoute._addFileChildren(
   LayoutAboutRouteChildren,
+)
+
+interface LayoutAdminRolesIdRouteChildren {
+  LayoutAdminRolesIdEditRoute: typeof LayoutAdminRolesIdEditRoute
+}
+
+const LayoutAdminRolesIdRouteChildren: LayoutAdminRolesIdRouteChildren = {
+  LayoutAdminRolesIdEditRoute: LayoutAdminRolesIdEditRoute,
+}
+
+const LayoutAdminRolesIdRouteWithChildren =
+  LayoutAdminRolesIdRoute._addFileChildren(LayoutAdminRolesIdRouteChildren)
+
+interface LayoutAdminRouteChildren {
+  LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
+  LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
+  LayoutAdminRolesIdRoute: typeof LayoutAdminRolesIdRouteWithChildren
+  LayoutAdminRolesCreateRoute: typeof LayoutAdminRolesCreateRoute
+  LayoutAdminRolesIndexRoute: typeof LayoutAdminRolesIndexRoute
+}
+
+const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
+  LayoutAdminUsersRoute: LayoutAdminUsersRoute,
+  LayoutAdminIndexRoute: LayoutAdminIndexRoute,
+  LayoutAdminRolesIdRoute: LayoutAdminRolesIdRouteWithChildren,
+  LayoutAdminRolesCreateRoute: LayoutAdminRolesCreateRoute,
+  LayoutAdminRolesIndexRoute: LayoutAdminRolesIndexRoute,
+}
+
+const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(
+  LayoutAdminRouteChildren,
 )
 
 interface LayoutConnectionIdRouteChildren {
@@ -773,7 +916,7 @@ const LayoutApiDevModulesIdRouteWithChildren =
 
 interface LayoutRouteChildren {
   LayoutAboutRoute: typeof LayoutAboutRouteWithChildren
-  LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutApiRepositoryIdRoute: typeof LayoutApiRepositoryIdRoute
@@ -800,7 +943,7 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAboutRoute: LayoutAboutRouteWithChildren,
-  LayoutAdminRoute: LayoutAdminRoute,
+  LayoutAdminRoute: LayoutAdminRouteWithChildren,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutApiRepositoryIdRoute: LayoutApiRepositoryIdRoute,

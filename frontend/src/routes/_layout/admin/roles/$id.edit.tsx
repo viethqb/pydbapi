@@ -1,12 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Plus, Save, Search, UserMinus } from "lucide-react"
+import { ChevronDown, Plus, Save, UserMinus, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { UsersService, type UserPublic as ClientUserPublic } from "@/client"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
   SelectContent,
@@ -24,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Table,
   TableBody,
@@ -33,59 +39,59 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import useCustomToast from "@/hooks/useCustomToast"
 import { PermissionsService } from "@/services/permissions"
 import { RolesService, type UserPublic as RoleUserPublic } from "@/services/roles"
 import { UserPermissionsService } from "@/services/user-permissions"
-import useCustomToast from "@/hooks/useCustomToast"
 
-const ROLES_BASE = "/security/roles"
+const ROLES_BASE = "/admin/roles"
 const ROLES_LIST = `${ROLES_BASE}/`
 
-export const Route = createFileRoute("/_layout/security/roles/$id")({
-  component: RoleDetailPage,
-  head: () => ({ meta: [{ title: "Edit Role - Security" }] }),
-})
-
-/** Group key: "resource_type:all" or "resource_type:resource_id" for scope (all vs specific). */
-function groupByResourceAndScope(
-  perms: {
-    id: string
-    resource_type: string
-    action: string
-    resource_id: string | null
-  }[],
-): Map<string, { id: string; action: string; resource_id: string | null }[]> {
-  const map = new Map<
-    string,
-    { id: string; action: string; resource_id: string | null }[]
-  >()
-  for (const p of perms) {
-    const scope = p.resource_id == null ? "all" : p.resource_id
-    const key = `${p.resource_type}:${scope}`
-    const list = map.get(key) ?? []
-    list.push({ id: p.id, action: p.action, resource_id: p.resource_id })
-    map.set(key, list)
-  }
-  return map
+function normId(id: string) {
+  return String(id).replace(/-/g, "").toLowerCase()
 }
 
-/**
- * Edit role page – Superset-style:
- * Name, Permissions (recommend role / copy from role + search + grid), Users (list + add/remove).
- */
-function RoleDetailPage() {
+export const Route = createFileRoute("/_layout/admin/roles/$id/edit")({
+  component: RoleEditPage,
+  head: () => ({ meta: [{ title: "Edit Role - Admin" }] }),
+})
+
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  datasource: "Datasource",
+  module: "Module",
+  group: "Group",
+  api_assignment: "API Assignment",
+  macro_def: "Macro definition",
+  client: "Client",
+  user: "User",
+  overview: "Overview",
+}
+
+function RoleEditPage() {
   const { id } = Route.useParams()
+  const navigate = useNavigate()
+  const router = useRouter()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  // Debug: log once when edit page mounts
+  useEffect(() => {
+    console.log("[Role edit page] mounted", {
+      id,
+      pathname: typeof window !== "undefined" ? window.location.pathname : "",
+      routeId: router.state.location.routeId,
+      fullPath: router.state.location.pathname,
+    })
+  }, [id, router.state.location.routeId, router.state.location.pathname])
+
+  const { data: rolesData } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => RolesService.list(),
+  })
 
   const { data: role, isLoading: roleLoading } = useQuery({
     queryKey: ["role", id],
     queryFn: () => RolesService.get(id),
-  })
-
-  const { data: rolesList } = useQuery({
-    queryKey: ["roles"],
-    queryFn: () => RolesService.list(),
   })
 
   const { data: permsData, isLoading: permsLoading } = useQuery({
@@ -104,7 +110,19 @@ function RoleDetailPage() {
     enabled: !!id,
   })
 
-  const normId = (id: string) => String(id).replace(/-/g, "").toLowerCase()
+  const [name, setName] = useState("")
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [addUserOpen, setAddUserOpen] = useState(false)
+  const [addUserSelectedId, setAddUserSelectedId] = useState<string>("")
+  const syncedRoleIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!role) return
+    if (syncedRoleIdRef.current === role.id) return
+    syncedRoleIdRef.current = role.id
+    setName(role.name)
+    setSelectedIds(new Set(role.permission_ids ?? []))
+  }, [role])
 
   const moduleNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -154,63 +172,70 @@ function RoleDetailPage() {
     return map
   }, [resourceNames])
 
-  const [name, setName] = useState("")
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [permSearch, setPermSearch] = useState("")
-  const [recommendRoleId, setRecommendRoleId] = useState<string>("")
-  const [addUserOpen, setAddUserOpen] = useState(false)
-  const [addUserSelectedId, setAddUserSelectedId] = useState<string>("")
-  const syncedRoleIdRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!role) return
-    if (syncedRoleIdRef.current === role.id) return
-    syncedRoleIdRef.current = role.id
-    setName(role.name)
-    setSelectedIds(new Set(role.permission_ids ?? []))
-  }, [role])
-
-  const permissionGroups = useMemo(() => {
-    if (!permsData?.data)
-      return new Map<
-        string,
-        { id: string; action: string; resource_id: string | null }[]
-      >()
-    return groupByResourceAndScope(permsData.data)
-  }, [permsData])
-
-  const filteredPermissionEntries = useMemo(() => {
-    const entries = Array.from(permissionGroups.entries()).sort(([a], [b]) =>
-      a.localeCompare(b),
-    )
-    if (!permSearch.trim()) return entries
-    const q = permSearch.trim().toLowerCase()
-    return entries.filter(([groupKey]) => {
-      const [resourceType, scopePart] = groupKey.split(":", 2)
-      const scope =
-        scopePart === "all" ? "all" : scopePart
-      const label = `${resourceType} ${scope}`.toLowerCase()
-      return label.includes(q)
-    })
-  }, [permissionGroups, permSearch])
-
-  const applyRecommendRole = (roleId: string) => {
-    const r = rolesList?.data?.find((x) => x.id === roleId)
-    if (!r) return
-    const detail = queryClient.getQueryData<{ permission_ids: string[] }>([
-      "role",
-      roleId,
-    ])
-    if (detail?.permission_ids) {
-      setSelectedIds(new Set(detail.permission_ids))
-      showSuccessToast(`Permissions copied from role "${r.name}"`)
-    } else {
-      RolesService.get(roleId).then((res) => {
-        setSelectedIds(new Set(res.permission_ids ?? []))
-        showSuccessToast(`Permissions copied from role "${res.name}"`)
-      })
+  const getResourceName = useMemo(() => {
+    return (resourceType: string, resourceId: string | null): string => {
+      if (!resourceId) return "All"
+      const key = normId(resourceId)
+      switch (resourceType) {
+        case "module":
+          return moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "datasource":
+          return datasourceNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "group":
+          return groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "api_assignment":
+          return apiAssignmentNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "macro_def":
+          return macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "client":
+          return clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        default:
+          return `ID:${String(resourceId).slice(0, 8)}…`
+      }
     }
-  }
+  }, [
+    moduleNameById,
+    datasourceNameById,
+    groupNameById,
+    apiAssignmentNameById,
+    macroDefNameById,
+    clientNameById,
+  ])
+
+  /** Flat list of permissions as resource_type:name:action */
+  const permissionRows = useMemo(() => {
+    const list = permsData?.data ?? []
+    return list
+      .map((p) => ({
+        id: p.id,
+        resource_type: p.resource_type,
+        action: p.action,
+        label: `${p.resource_type}:${getResourceName(p.resource_type, p.resource_id)}:${p.action}`,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [permsData, getResourceName])
+
+  const permissionRowsByType = useMemo(() => {
+    const order = [
+      "datasource",
+      "module",
+      "group",
+      "api_assignment",
+      "macro_def",
+      "client",
+      "user",
+      "overview",
+    ]
+    const byType = new Map<string, typeof permissionRows>()
+    for (const row of permissionRows) {
+      const list = byType.get(row.resource_type) ?? []
+      list.push(row)
+      byType.set(row.resource_type, list)
+    }
+    return order
+      .filter((t) => byType.has(t))
+      .map((t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const)
+  }, [permissionRows])
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -235,19 +260,8 @@ function RoleDetailPage() {
     })
   }
 
-  const toggleAllForGroup = (groupKey: string, checked: boolean) => {
-    const list = permissionGroups.get(groupKey) ?? []
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      for (const p of list) {
-        if (checked) next.add(p.id)
-        else next.delete(p.id)
-      }
-      return next
-    })
-  }
-
   const roleUsers = roleUsersData?.data ?? []
+  const rolesList = rolesData?.data ?? []
 
   if (roleLoading || !role) {
     return (
@@ -257,30 +271,46 @@ function RoleDetailPage() {
     )
   }
 
+  const handleRoleSelect = (value: string) => {
+    if (value === "__new__") {
+      navigate({ to: "/admin/roles/create" })
+      return
+    }
+    if (value !== id) {
+      navigate({ to: "/admin/roles/$id/edit", params: { id: value } })
+    }
+  }
+
   return (
     <div className="flex flex-col gap-0">
-      {/* SubMenu-style bar */}
       <div className="bg-muted/50 border-b px-4 py-3 mb-4 rounded-t-lg">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <Link to={ROLES_LIST}>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight">
-                Edit role: {role.name}
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {role.user_count} user(s) · Update name, permissions and users
-              </p>
-            </div>
+          <div className="flex flex-col gap-2 min-w-0 flex-1">
+            <Label className="text-xs text-muted-foreground">Role</Label>
+            <Select value={id} onValueChange={handleRoleSelect}>
+              <SelectTrigger className="w-full max-w-md h-10 font-medium">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__new__">+ Create new role</SelectItem>
+                {rolesList.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                    {r.description ? ` — ${r.description}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/admin/roles/$id" params={{ id }}>
+              <Button variant="outline" size="sm">
+                View details
+              </Button>
+            </Link>
             <Link to={ROLES_LIST}>
               <Button variant="outline" size="sm">
-                Cancel
+                Back to list
               </Button>
             </Link>
             <LoadingButton
@@ -293,9 +323,13 @@ function RoleDetailPage() {
             </LoadingButton>
           </div>
         </div>
+        {role && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {role.user_count} user(s) · Update name, permissions and users
+          </p>
+        )}
       </div>
 
-      {/* Section: Name (Details) */}
       <Card className="rounded-t-lg border-b-0">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Details</CardTitle>
@@ -319,50 +353,13 @@ function RoleDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Section: Permissions – Superset-style: recommend role + search + grid */}
       <Card className="border-b-0">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Permissions</CardTitle>
           <p className="text-sm text-muted-foreground font-normal mt-0.5">
-            Copy from a recommended role or search and select below. By resource
-            and scope: All = entire type; ID = specific resource.
+            Select permissions by group (Datasource, Module, …). When closed, only selected
+            permissions are shown.
           </p>
-          <div className="flex flex-wrap items-center gap-3 mt-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground whitespace-nowrap">
-                Copy from role:
-              </Label>
-              <Select
-                value={recommendRoleId}
-                onValueChange={(value) => {
-                  setRecommendRoleId(value)
-                  if (value) applyRecommendRole(value)
-                }}
-              >
-                <SelectTrigger className="w-[180px] h-9">
-                  <SelectValue placeholder="Select role…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(rolesList?.data ?? [])
-                    .filter((r) => r.id !== id)
-                    .map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search permissions (resource or scope)…"
-                value={permSearch}
-                onChange={(e) => setPermSearch(e.target.value)}
-                className="pl-8 h-9"
-              />
-            </div>
-          </div>
         </CardHeader>
         <CardContent className="pt-0">
           {permsLoading ? (
@@ -370,69 +367,86 @@ function RoleDetailPage() {
               Loading permissions…
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredPermissionEntries.map(([groupKey, perms]) => {
-                const [resourceType, scopePart] = groupKey.split(":", 2)
-                const key = normId(scopePart)
-                const scope =
-                  scopePart === "all"
-                    ? "All"
-                    : resourceType === "module"
-                      ? moduleNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                      : resourceType === "datasource"
-                        ? datasourceNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                        : resourceType === "group"
-                          ? groupNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                          : resourceType === "api_assignment"
-                            ? apiAssignmentNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                            : resourceType === "macro_def"
-                              ? macroDefNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                              : resourceType === "client"
-                                ? clientNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                                : `ID: ${scopePart.slice(0, 8)}…`
-                const label = `${resourceType.replace(/_/g, " ")} · ${scope}`
+            <div className="space-y-3">
+              {permissionRowsByType.map(([typeKey, typeLabel, rows]) => {
+                const selectedInType = rows.filter((r) => selectedIds.has(r.id))
                 return (
-                  <div
-                    key={groupKey}
-                    className="rounded-md border bg-muted/20 p-3 space-y-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`grp-${groupKey}`}
-                        checked={perms.every((p) => selectedIds.has(p.id))}
-                        onCheckedChange={(v) =>
-                          toggleAllForGroup(groupKey, v === true)
-                        }
-                      />
-                      <Label
-                        htmlFor={`grp-${groupKey}`}
-                        className="text-sm font-medium capitalize leading-none"
-                      >
-                        {label}
-                      </Label>
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 pl-6">
-                      {perms.map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center gap-1.5"
-                        >
-                          <Checkbox
-                            id={p.id}
-                            checked={selectedIds.has(p.id)}
-                            onCheckedChange={(v) =>
-                              togglePermission(p.id, v === true)
-                            }
-                          />
-                          <Label
-                            htmlFor={p.id}
-                            className="text-xs font-normal text-muted-foreground cursor-pointer"
-                          >
-                            {p.action}
-                          </Label>
+                  <div key={typeKey} className="space-y-1.5">
+                    <Label className="text-sm font-medium">{typeLabel}</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <div className="flex min-h-[40px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer">
+                          <div className="flex flex-wrap gap-1 flex-1">
+                            {selectedInType.length > 0 ? (
+                              selectedInType.map((row) => (
+                                <Badge
+                                  key={row.id}
+                                  variant="secondary"
+                                  className="mr-1 font-mono text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    togglePermission(row.id, false)
+                                  }}
+                                >
+                                  {row.label}
+                                  <button
+                                    type="button"
+                                    className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        togglePermission(row.id, false)
+                                      }
+                                    }}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                    }}
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      togglePermission(row.id, false)
+                                    }}
+                                  >
+                                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                  </button>
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Select {typeLabel.toLowerCase()}…
+                              </span>
+                            )}
+                          </div>
+                          <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                         </div>
-                      ))}
-                    </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-auto"
+                        align="start"
+                      >
+                        {rows.map((row) => (
+                          <DropdownMenuItem
+                            key={row.id}
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              togglePermission(row.id, !selectedIds.has(row.id))
+                            }}
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(row.id)}
+                                readOnly
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                              <span className="font-mono text-xs truncate" title={row.label}>
+                                {row.label}
+                              </span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )
               })}
@@ -441,7 +455,6 @@ function RoleDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Section: Users – list + add / remove */}
       <Card className="rounded-b-lg">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -657,3 +670,4 @@ function AddUserToRoleDialog({
     </Dialog>
   )
 }
+

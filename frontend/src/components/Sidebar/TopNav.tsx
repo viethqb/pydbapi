@@ -26,7 +26,17 @@ export function TopNav() {
   const [sheetOpen, setSheetOpen] = useState(false)
 
   const items: NavItem[] = currentUser?.is_superuser
-    ? [...baseNavItems, { icon: Users, title: "Admin", path: "/admin" }]
+    ? [
+        ...baseNavItems,
+        {
+          icon: Users,
+          title: "Admin",
+          submenu: [
+            { title: "Users", path: "/admin/users" },
+            { title: "Roles", path: "/admin/roles" },
+          ],
+        },
+      ]
     : baseNavItems
 
   const navLinkClass = (path: string) =>

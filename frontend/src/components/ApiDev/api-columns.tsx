@@ -186,7 +186,7 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
                   Detail
                 </DropdownMenuItem>
               </Link>
-              {api.canUpdate !== false && (
+              {api.canUpdate !== false ? (
                 <Link
                   to="/api-dev/apis/$id/edit"
                   params={{ id: api.id }}
@@ -197,6 +197,11 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
                     Edit
                   </DropdownMenuItem>
                 </Link>
+              ) : (
+                <DropdownMenuItem disabled>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
               )}
               {api.onPublish && !api.is_published && (
                 <DropdownMenuItem
@@ -207,15 +212,18 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {api.canDelete !== false && api.onDelete && (
-                <DropdownMenuItem
-                  onClick={() => api.onDelete?.(api.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                disabled={api.canDelete === false || !api.onDelete}
+                onClick={
+                  api.canDelete === false || !api.onDelete
+                    ? undefined
+                    : () => api.onDelete?.(api.id)
+                }
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

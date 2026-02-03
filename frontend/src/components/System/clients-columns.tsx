@@ -109,14 +109,17 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {client.canUpdate !== false && client.onEdit && (
-                <DropdownMenuItem
-                  onClick={() => client.onEdit?.(client.id)}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                disabled={client.canUpdate === false || !client.onEdit}
+                onClick={
+                  client.canUpdate === false || !client.onEdit
+                    ? undefined
+                    : () => client.onEdit?.(client.id)
+                }
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
               {client.onRegenerateSecret && (
                 <DropdownMenuItem
                   onClick={() => client.onRegenerateSecret?.(client.id)}
@@ -126,15 +129,18 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {client.canDelete !== false && client.onDelete && (
-                <DropdownMenuItem
-                  onClick={() => client.onDelete?.(client.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                disabled={client.canDelete === false || !client.onDelete}
+                onClick={
+                  client.canDelete === false || !client.onDelete
+                    ? undefined
+                    : () => client.onDelete?.(client.id)
+                }
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

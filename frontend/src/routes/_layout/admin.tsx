@@ -1,4 +1,5 @@
-import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router"
+import { createFileRoute, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const Route = createFileRoute("/_layout/admin")({
   component: AdminLayout,
@@ -6,34 +7,42 @@ export const Route = createFileRoute("/_layout/admin")({
 })
 
 function AdminLayout() {
-  const location = useLocation()
-  const path = location.pathname
+  const navigate = useNavigate()
+  const matchRoute = useMatchRoute()
+
+  const isRolesRoute =
+    matchRoute({ to: "/admin/roles" }) ||
+    matchRoute({ to: "/admin/roles/" }) ||
+    matchRoute({ to: "/admin/roles/create" }) ||
+    matchRoute({ to: "/admin/roles/$id" }) ||
+    matchRoute({ to: "/admin/roles/$id/edit" })
+
+  const activeTab = isRolesRoute ? "roles" : "users"
+
+  const handleTabChange = (value: string) => {
+    if (value === "roles") {
+      navigate({ to: "/admin/roles" })
+    } else {
+      navigate({ to: "/admin/users" })
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-2 border-b pb-3">
-        <Link
-          to="/admin/users"
-          className={`text-sm font-medium transition-colors hover:text-primary ${
-            path === "/admin/users" || path.startsWith("/admin/users")
-              ? "text-primary"
-              : "text-muted-foreground"
-          }`}
-        >
-          Users
-        </Link>
-        <span className="text-muted-foreground">·</span>
-        <Link
-          to="/admin/roles"
-          className={`text-sm font-medium transition-colors hover:text-primary ${
-            path === "/admin/roles" || path.startsWith("/admin/roles")
-              ? "text-primary"
-              : "text-muted-foreground"
-          }`}
-        >
-          Roles
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold">Admin</h1>
+        <p className="text-muted-foreground">
+          Manage users and roles
+        </p>
       </div>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="roles">Roles</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <Outlet />
     </div>
   )

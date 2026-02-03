@@ -12,9 +12,20 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete
-from sqlmodel import func, select
+from sqlmodel import Session, func, select
 
-from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    require_permission,
+    require_permission_for_body_resource,
+    require_permission_for_resource,
+)
+from app.core.permission import get_user_permissions, has_permission
+from app.core.permission_resources import (
+    ensure_resource_permissions,
+    remove_resource_permissions,
+)
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.engines import ApiExecutor
 from app.models import Message
@@ -47,6 +58,39 @@ from app.core.gateway.config_cache import invalidate_gateway_config, load_macros
 from app.core.gateway.request_response import normalize_api_result
 
 router = APIRouter(prefix="/api-assignments", tags=["api-assignments"])
+
+API_ASSIGNMENT_RESOURCE_ACTIONS = (
+    PermissionActionEnum.READ,
+    PermissionActionEnum.CREATE,
+    PermissionActionEnum.UPDATE,
+    PermissionActionEnum.DELETE,
+    PermissionActionEnum.EXECUTE,
+)
+
+
+def _api_assignment_resource_id_from_path(
+    *,
+    session: Session,
+    id: uuid.UUID | None = None,
+    version_id: uuid.UUID | None = None,
+    **_: Any,
+) -> uuid.UUID | None:
+    """Resolve api_assignment id from path: id directly, or from version_id via VersionCommit."""
+    if id is not None:
+        return id
+    if version_id is not None:
+        version = session.get(VersionCommit, version_id)
+        return version.api_assignment_id if version else None
+    return None
+
+
+def _api_assignment_resource_id_from_body(
+    *,
+    body: Any,
+    **_: Any,
+) -> uuid.UUID | None:
+    """Get api_assignment id from body (update/publish/debug)."""
+    return getattr(body, "id", None)
 
 
 def _to_public(a: ApiAssignment) -> ApiAssignmentPublic:
@@ -121,14 +165,40 @@ def _list_filters(stmt: Any, body: ApiAssignmentListIn) -> Any:
 )
 def list_api_assignments(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     body: ApiAssignmentListIn,
 ) -> Any:
     """List API assignments with pagination and optional filters."""
+    allowed_ids: list[uuid.UUID] | None = None
+    if not has_permission(
+        session,
+        current_user,
+        ResourceTypeEnum.API_ASSIGNMENT,
+        PermissionActionEnum.READ,
+        None,
+    ):
+        perms = get_user_permissions(session, current_user.id)
+        allowed_ids = [
+            p.resource_id
+            for p in perms
+            if p.resource_type == ResourceTypeEnum.API_ASSIGNMENT
+            and p.action == PermissionActionEnum.READ
+            and p.resource_id is not None
+        ]
+        if not allowed_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="Permission required: api_assignment.read",
+            )
+
     count_stmt = _list_filters(select(func.count()).select_from(ApiAssignment), body)
+    if allowed_ids is not None:
+        count_stmt = count_stmt.where(ApiAssignment.id.in_(allowed_ids))
     total = session.exec(count_stmt).one()
 
     stmt = _list_filters(select(ApiAssignment), body)
+    if allowed_ids is not None:
+        stmt = stmt.where(ApiAssignment.id.in_(allowed_ids))
     offset = (body.page - 1) * body.page_size
     stmt = (
         stmt.order_by(ApiAssignment.sort_order, ApiAssignment.name)
@@ -221,6 +291,12 @@ def create_api_assignment(
             )
         )
 
+    ensure_resource_permissions(
+        session,
+        ResourceTypeEnum.API_ASSIGNMENT,
+        a.id,
+        API_ASSIGNMENT_RESOURCE_ACTIONS,
+    )
     session.commit()
     session.refresh(a)
     return _to_public(a)
@@ -229,18 +305,18 @@ def create_api_assignment(
 @router.post(
     "/update",
     response_model=ApiAssignmentPublic,
-    dependencies=[
-        Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
-            )
-        )
-    ],
 )
 def update_api_assignment(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: ApiAssignmentUpdate,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.API_ASSIGNMENT,
+            PermissionActionEnum.UPDATE,
+            ApiAssignmentUpdate,
+            _api_assignment_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Update API assignment; if content sent, update or create ApiContext. If group_ids sent, replace links."""
     a = session.get(ApiAssignment, body.id)
@@ -374,18 +450,18 @@ def update_api_assignment(
 @router.post(
     "/publish",
     response_model=ApiAssignmentPublic,
-    dependencies=[
-        Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
-            )
-        )
-    ],
 )
 def publish_api_assignment(
     session: SessionDep,
-    current_user: CurrentUser,
     body: ApiAssignmentPublishIn,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.API_ASSIGNMENT,
+            PermissionActionEnum.UPDATE,
+            ApiAssignmentPublishIn,
+            _api_assignment_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Set is_published=True for the given API assignment. Must provide version_id."""
     a = session.get(ApiAssignment, body.id)
@@ -417,18 +493,18 @@ def publish_api_assignment(
 @router.post(
     "/unpublish",
     response_model=ApiAssignmentPublic,
-    dependencies=[
-        Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
-            )
-        )
-    ],
 )
 def unpublish_api_assignment(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: ApiAssignmentPublishIn,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.API_ASSIGNMENT,
+            PermissionActionEnum.UPDATE,
+            ApiAssignmentPublishIn,
+            _api_assignment_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Set is_published=False for the given API assignment."""
     a = session.get(ApiAssignment, body.id)
@@ -454,18 +530,18 @@ def _debug_error_response(status_code: int, detail: str) -> JSONResponse:
 
 @router.post(
     "/debug",
-    dependencies=[
-        Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
-            )
-        )
-    ],
 )
 def debug_api_assignment(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: ApiAssignmentDebugIn,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.API_ASSIGNMENT,
+            PermissionActionEnum.EXECUTE,
+            ApiAssignmentDebugIn,
+            _api_assignment_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """
     Run API (SQL or Script) for testing. Phase 3: uses ApiExecutor.
@@ -612,8 +688,10 @@ def debug_api_assignment(
     response_model=Message,
     dependencies=[
         Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.DELETE
+            require_permission_for_resource(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.DELETE,
+                _api_assignment_resource_id_from_path,
             )
         )
     ],
@@ -627,6 +705,7 @@ def delete_api_assignment(
     a = session.get(ApiAssignment, id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    remove_resource_permissions(session, ResourceTypeEnum.API_ASSIGNMENT, a.id)
     session.delete(a)
     session.commit()
     return Message(message="ApiAssignment deleted successfully")
@@ -637,8 +716,10 @@ def delete_api_assignment(
     response_model=ApiAssignmentDetail,
     dependencies=[
         Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
+            require_permission_for_resource(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.READ,
+                _api_assignment_resource_id_from_path,
             )
         )
     ],
@@ -660,8 +741,10 @@ def get_api_assignment(
     response_model=VersionCommitDetail,
     dependencies=[
         Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            require_permission_for_resource(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.UPDATE,
+                _api_assignment_resource_id_from_path,
             )
         )
     ],
@@ -785,8 +868,10 @@ def list_versions(
     response_model=VersionCommitDetail,
     dependencies=[
         Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
+            require_permission_for_resource(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.READ,
+                _api_assignment_resource_id_from_path,
             )
         )
     ],
@@ -828,8 +913,10 @@ def get_version(
     response_model=ApiAssignmentDetail,
     dependencies=[
         Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            require_permission_for_resource(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.UPDATE,
+                _api_assignment_resource_id_from_path,
             )
         )
     ],
@@ -889,8 +976,10 @@ def restore_version(
     response_model=Message,
     dependencies=[
         Depends(
-            require_permission(
-                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.DELETE
+            require_permission_for_resource(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.DELETE,
+                _api_assignment_resource_id_from_path,
             )
         )
     ],

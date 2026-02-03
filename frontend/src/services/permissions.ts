@@ -52,6 +52,10 @@ export type ResourceName = { id: string; name: string }
 export type ResourceNamesOut = {
   datasources: ResourceName[]
   modules: ResourceName[]
+  api_assignments: ResourceName[]
+  groups: ResourceName[]
+  macro_defs: ResourceName[]
+  clients: ResourceName[]
 }
 
 export const PermissionsService = {

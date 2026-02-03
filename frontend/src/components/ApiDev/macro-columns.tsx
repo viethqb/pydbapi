@@ -118,7 +118,7 @@ export const macroDefColumns: ColumnDef<MacroDefTableData>[] = [
                   View
                 </DropdownMenuItem>
               </Link>
-              {macro.canUpdate !== false && (
+              {macro.canUpdate !== false ? (
                 <Link
                   to="/api-dev/macro-defs/$id/edit"
                   params={{ id: macro.id }}
@@ -129,17 +129,25 @@ export const macroDefColumns: ColumnDef<MacroDefTableData>[] = [
                     Edit
                   </DropdownMenuItem>
                 </Link>
-              )}
-              <DropdownMenuSeparator />
-              {macro.canDelete !== false && macro.onDelete && (
-                <DropdownMenuItem
-                  onClick={() => macro.onDelete?.(macro.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+              ) : (
+                <DropdownMenuItem disabled>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={macro.canDelete === false || !macro.onDelete}
+                onClick={
+                  macro.canDelete === false || !macro.onDelete
+                    ? undefined
+                    : () => macro.onDelete?.(macro.id)
+                }
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

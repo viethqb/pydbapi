@@ -2,7 +2,6 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "@tanstack/react-router"
 import { MoreHorizontal, Trash2, Eye, Pencil } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -119,7 +118,7 @@ export const moduleColumns: ColumnDef<ModuleTableData>[] = [
                   View
                 </DropdownMenuItem>
               </Link>
-              {module.canUpdate !== false && (
+              {module.canUpdate !== false ? (
                 <Link
                   to="/api-dev/modules/$id/edit"
                   params={{ id: module.id }}
@@ -130,17 +129,25 @@ export const moduleColumns: ColumnDef<ModuleTableData>[] = [
                     Edit
                   </DropdownMenuItem>
                 </Link>
-              )}
-              <DropdownMenuSeparator />
-              {module.canDelete !== false && module.onDelete && (
-                <DropdownMenuItem
-                  onClick={() => module.onDelete?.(module.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+              ) : (
+                <DropdownMenuItem disabled>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={module.canDelete === false || !module.onDelete}
+                onClick={
+                  module.canDelete === false || !module.onDelete
+                    ? undefined
+                    : () => module.onDelete?.(module.id)
+                }
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

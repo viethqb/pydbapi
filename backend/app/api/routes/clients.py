@@ -13,10 +13,21 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    require_permission,
+    require_permission_for_body_resource,
+    require_permission_for_resource,
+)
+from app.core.permission import get_user_permissions, has_permission
+from app.core.permission_resources import (
+    ensure_resource_permissions,
+    remove_resource_permissions,
+)
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.core.security import get_password_hash
-from app.models import Message
+from app.models import Message, User
 from app.models_dbapi import AppClient, AppClientApiLink, AppClientGroupLink
 from app.schemas_dbapi import (
     AppClientCreate,
@@ -29,6 +40,23 @@ from app.schemas_dbapi import (
 )
 
 router = APIRouter(prefix="/clients", tags=["clients"])
+
+CLIENT_RESOURCE_ACTIONS = (
+    PermissionActionEnum.READ,
+    PermissionActionEnum.CREATE,
+    PermissionActionEnum.UPDATE,
+    PermissionActionEnum.DELETE,
+)
+
+
+def _client_resource_id_from_path(*, id: uuid.UUID, **_: object) -> uuid.UUID | None:
+    return id
+
+
+def _client_resource_id_from_body(
+    *, body: AppClientUpdate, **_: object
+) -> uuid.UUID | None:
+    return body.id
 
 
 def _to_public(c: AppClient) -> AppClientPublic:
@@ -64,14 +92,36 @@ def _list_filters(stmt: Any, body: AppClientListIn) -> Any:
 )
 def list_clients(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     body: AppClientListIn,
 ) -> Any:
     """List clients with pagination and optional filters (name, is_active)."""
+    allowed_ids: list[uuid.UUID] | None = None
+    if not has_permission(
+        session, current_user, ResourceTypeEnum.CLIENT, PermissionActionEnum.READ, None
+    ):
+        perms = get_user_permissions(session, current_user.id)
+        allowed_ids = [
+            p.resource_id
+            for p in perms
+            if p.resource_type == ResourceTypeEnum.CLIENT
+            and p.action == PermissionActionEnum.READ
+            and p.resource_id is not None
+        ]
+        if not allowed_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="Permission required: client.read",
+            )
+
     count_stmt = _list_filters(select(func.count()).select_from(AppClient), body)
+    if allowed_ids is not None:
+        count_stmt = count_stmt.where(AppClient.id.in_(allowed_ids))
     total = session.exec(count_stmt).one()
 
     stmt = _list_filters(select(AppClient), body)
+    if allowed_ids is not None:
+        stmt = stmt.where(AppClient.id.in_(allowed_ids))
     offset = (body.page - 1) * body.page_size
     stmt = (
         stmt.order_by(AppClient.created_at.desc()).offset(offset).limit(body.page_size)
@@ -108,6 +158,10 @@ def create_client(
         is_active=body.is_active,
     )
     session.add(c)
+    session.flush()
+    ensure_resource_permissions(
+        session, ResourceTypeEnum.CLIENT, c.id, CLIENT_RESOURCE_ACTIONS
+    )
     session.commit()
     session.refresh(c)
     for gid in body.group_ids or []:
@@ -122,16 +176,18 @@ def create_client(
 @router.post(
     "/update",
     response_model=AppClientPublic,
-    dependencies=[
-        Depends(
-            require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.UPDATE)
-        )
-    ],
 )
 def update_client(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: AppClientUpdate,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.CLIENT,
+            PermissionActionEnum.UPDATE,
+            AppClientUpdate,
+            _client_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Update an existing client (client_id and client_secret not changed here). If group_ids is set, replace links."""
     c = session.get(AppClient, body.id)
@@ -164,7 +220,11 @@ def update_client(
     response_model=Message,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.DELETE)
+            require_permission_for_resource(
+                ResourceTypeEnum.CLIENT,
+                PermissionActionEnum.DELETE,
+                _client_resource_id_from_path,
+            )
         )
     ],
 )
@@ -177,6 +237,7 @@ def delete_client(
     c = session.get(AppClient, id)
     if not c:
         raise HTTPException(status_code=404, detail="AppClient not found")
+    remove_resource_permissions(session, ResourceTypeEnum.CLIENT, c.id)
     session.delete(c)
     session.commit()
     return Message(message="AppClient deleted successfully")
@@ -187,7 +248,11 @@ def delete_client(
     response_model=AppClientRegenerateSecretOut,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.UPDATE)
+            require_permission_for_resource(
+                ResourceTypeEnum.CLIENT,
+                PermissionActionEnum.UPDATE,
+                _client_resource_id_from_path,
+            )
         )
     ],
 )
@@ -230,7 +295,13 @@ def _to_detail(c: AppClient) -> AppClientDetail:
     "/{id}",
     response_model=AppClientDetail,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.READ))
+        Depends(
+            require_permission_for_resource(
+                ResourceTypeEnum.CLIENT,
+                PermissionActionEnum.READ,
+                _client_resource_id_from_path,
+            )
+        )
     ],
 )
 def get_client(

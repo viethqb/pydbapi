@@ -39,6 +39,7 @@ import { ModulesService } from "@/services/modules"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 
 export const Route = createFileRoute("/_layout/api-dev/macro-defs/$id")({
   component: MacroDetail,
@@ -63,6 +64,9 @@ function MacroDetail() {
   const isEditRoute = matchRoute({ to: "/api-dev/macro-defs/$id/edit" })
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canUpdate = hasPermission("macro_def", "update", id)
+  const canDelete = hasPermission("macro_def", "delete", id)
 
   const [versions, setVersions] = useState<MacroDefVersionCommitPublic[]>([])
   const [selectedVersion, setSelectedVersion] = useState<MacroDefVersionCommitDetail | null>(null)
@@ -89,6 +93,19 @@ function MacroDetail() {
   useEffect(() => {
     if (versionsData?.data) setVersions(versionsData.data)
   }, [versionsData])
+
+  // When Publish dialog opens, set default selected version so the form is valid immediately
+  useEffect(() => {
+    if (publishVersionDialogOpen && versions.length > 0) {
+      setSelectedVersionForPublish(
+        (prev) =>
+          prev ||
+          macro?.published_version_id ||
+          versions[0]?.id ||
+          null,
+      )
+    }
+  }, [publishVersionDialogOpen, versions, macro?.published_version_id])
 
   const { data: modules } = useQuery({
     queryKey: ["modules-simple"],
@@ -241,9 +258,11 @@ function MacroDetail() {
               Publish
             </Button>
           )}
-          <Link to="/api-dev/macro-defs/$id/edit" params={{ id }}>
-            <Button variant="outline">Edit</Button>
-          </Link>
+          {canUpdate && (
+            <Link to="/api-dev/macro-defs/$id/edit" params={{ id }}>
+              <Button variant="outline">Edit</Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -364,7 +383,7 @@ function MacroDetail() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteVersion(version.id)}
-                                  disabled={macro?.published_version_id === version.id}
+                                  disabled={!canDelete || macro?.published_version_id === version.id}
                                   className="text-destructive hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -420,7 +439,13 @@ function MacroDetail() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={publishVersionDialogOpen} onOpenChange={setPublishVersionDialogOpen}>
+      <Dialog
+        open={publishVersionDialogOpen}
+        onOpenChange={(open) => {
+          setPublishVersionDialogOpen(open)
+          if (!open) setSelectedVersionForPublish(null)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Publish macro definition</DialogTitle>

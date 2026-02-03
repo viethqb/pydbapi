@@ -10,9 +10,20 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    require_permission,
+    require_permission_for_body_resource,
+    require_permission_for_resource,
+)
+from app.core.permission import get_user_permissions, has_permission
+from app.core.permission_resources import (
+    ensure_resource_permissions,
+    remove_resource_permissions,
+)
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
-from app.models import Message
+from app.models import Message, User
 from app.models_dbapi import ApiAssignmentGroupLink, ApiGroup
 from app.schemas_dbapi import (
     ApiGroupCreate,
@@ -24,6 +35,23 @@ from app.schemas_dbapi import (
 )
 
 router = APIRouter(prefix="/groups", tags=["groups"])
+
+GROUP_RESOURCE_ACTIONS = (
+    PermissionActionEnum.READ,
+    PermissionActionEnum.CREATE,
+    PermissionActionEnum.UPDATE,
+    PermissionActionEnum.DELETE,
+)
+
+
+def _group_resource_id_from_path(*, id: uuid.UUID, **_: object) -> uuid.UUID | None:
+    return id
+
+
+def _group_resource_id_from_body(
+    *, body: ApiGroupUpdate, **_: object
+) -> uuid.UUID | None:
+    return body.id
 
 
 def _to_public(g: ApiGroup) -> ApiGroupPublic:
@@ -56,14 +84,36 @@ def _list_filters(stmt: Any, body: ApiGroupListIn) -> Any:
 )
 def list_groups(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     body: ApiGroupListIn,
 ) -> Any:
     """List groups with pagination and optional filters (name, is_active)."""
+    allowed_ids: list[uuid.UUID] | None = None
+    if not has_permission(
+        session, current_user, ResourceTypeEnum.GROUP, PermissionActionEnum.READ, None
+    ):
+        perms = get_user_permissions(session, current_user.id)
+        allowed_ids = [
+            p.resource_id
+            for p in perms
+            if p.resource_type == ResourceTypeEnum.GROUP
+            and p.action == PermissionActionEnum.READ
+            and p.resource_id is not None
+        ]
+        if not allowed_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="Permission required: group.read",
+            )
+
     count_stmt = _list_filters(select(func.count()).select_from(ApiGroup), body)
+    if allowed_ids is not None:
+        count_stmt = count_stmt.where(ApiGroup.id.in_(allowed_ids))
     total = session.exec(count_stmt).one()
 
     stmt = _list_filters(select(ApiGroup), body)
+    if allowed_ids is not None:
+        stmt = stmt.where(ApiGroup.id.in_(allowed_ids))
     offset = (body.page - 1) * body.page_size
     stmt = stmt.order_by(ApiGroup.name).offset(offset).limit(body.page_size)
     rows = session.exec(stmt).all()
@@ -86,6 +136,10 @@ def create_group(
     """Create a new group."""
     g = ApiGroup.model_validate(body)
     session.add(g)
+    session.flush()
+    ensure_resource_permissions(
+        session, ResourceTypeEnum.GROUP, g.id, GROUP_RESOURCE_ACTIONS
+    )
     session.commit()
     session.refresh(g)
     return _to_public(g)
@@ -94,14 +148,18 @@ def create_group(
 @router.post(
     "/update",
     response_model=ApiGroupPublic,
-    dependencies=[
-        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.UPDATE))
-    ],
 )
 def update_group(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: ApiGroupUpdate,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.GROUP,
+            PermissionActionEnum.UPDATE,
+            ApiGroupUpdate,
+            _group_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Update an existing group."""
     g = session.get(ApiGroup, body.id)
@@ -119,7 +177,13 @@ def update_group(
     "/delete/{id}",
     response_model=Message,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.DELETE))
+        Depends(
+            require_permission_for_resource(
+                ResourceTypeEnum.GROUP,
+                PermissionActionEnum.DELETE,
+                _group_resource_id_from_path,
+            )
+        )
     ],
 )
 def delete_group(
@@ -131,6 +195,7 @@ def delete_group(
     g = session.get(ApiGroup, id)
     if not g:
         raise HTTPException(status_code=404, detail="ApiGroup not found")
+    remove_resource_permissions(session, ResourceTypeEnum.GROUP, g.id)
     session.delete(g)
     session.commit()
     return Message(message="ApiGroup deleted successfully")
@@ -140,7 +205,13 @@ def delete_group(
     "/{id}",
     response_model=ApiGroupDetail,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.READ))
+        Depends(
+            require_permission_for_resource(
+                ResourceTypeEnum.GROUP,
+                PermissionActionEnum.READ,
+                _group_resource_id_from_path,
+            )
+        )
     ],
 )
 def get_group(

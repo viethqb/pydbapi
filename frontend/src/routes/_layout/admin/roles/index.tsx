@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query"
-import { Pencil, ShieldCheck, Trash2 } from "lucide-react"
+import { Eye, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 
-import CreateRoleDialog from "@/components/Security/CreateRoleDialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -68,7 +67,12 @@ function RolesListContent() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-lg font-semibold tracking-tight">Roles</h1>
           <div className="flex items-center gap-2">
-            <CreateRoleDialog />
+            <Link to="/admin/roles/create">
+              <Button size="sm">
+                <Plus className="mr-1.5 h-4 w-4" />
+                Create role
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -90,13 +94,21 @@ function RolesListContent() {
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-[80px] text-right">Users</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableHead className="w-[140px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {roles.map((role: RolePublic) => (
                 <TableRow key={role.id}>
-                  <TableCell className="font-medium">{role.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      to="/admin/roles/$id"
+                      params={{ id: role.id }}
+                      className="hover:underline"
+                    >
+                      {role.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted-foreground max-w-md">
                     {role.description ?? "—"}
                   </TableCell>
@@ -110,6 +122,32 @@ function RolesListContent() {
                           <Link
                             to="/admin/roles/$id"
                             params={{ id: role.id }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          View details
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link
+                            to="/admin/roles/$id/edit"
+                            params={{ id: role.id }}
+                            onClick={() => {
+                              console.log("[Roles list] Edit clicked, navigating to /admin/roles/$id/edit", {
+                                roleId: role.id,
+                                roleName: role.name,
+                                targetPath: `/admin/roles/${role.id}/edit`,
+                              })
+                            }}
                           >
                             <Button
                               variant="ghost"

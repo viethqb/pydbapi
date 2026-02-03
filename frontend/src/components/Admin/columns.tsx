@@ -7,6 +7,8 @@ import { UserActionsMenu } from "./UserActionsMenu"
 
 export type UserTableData = UserPublic & {
   isCurrentUser: boolean
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export const columns: ColumnDef<UserTableData>[] = [
@@ -42,9 +44,9 @@ export const columns: ColumnDef<UserTableData>[] = [
     accessorKey: "is_superuser",
     header: "Role",
     cell: ({ row }) => (
-      <Badge variant={row.original.is_superuser ? "default" : "secondary"}>
+      <span className="text-muted-foreground">
         {row.original.is_superuser ? "Superuser" : "User"}
-      </Badge>
+      </span>
     ),
   },
   {
@@ -69,7 +71,11 @@ export const columns: ColumnDef<UserTableData>[] = [
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <UserActionsMenu user={row.original} />
+        <UserActionsMenu
+          user={row.original}
+          canUpdate={row.original.canUpdate}
+          canDelete={row.original.canDelete}
+        />
       </div>
     ),
   },

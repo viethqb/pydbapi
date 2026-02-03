@@ -231,17 +231,21 @@ Superset uses RLS to filter query results:
 
 ### Phase 6 (Optional): Object-level Permission & RLS
 
-| Task | Description                                                   |
-| ---- | ------------------------------------------------------------- | ----------------------- |
-| 6.1  | Support `resource_id` in Permission: grant per datasource/api | Backend + UI            |
-| 6.2  | RLS: table `rls_filter` (datasource_id, role_id, clause)      | Backend                 |
-| 6.3  | Executor injects clause when running SQL                      | engines/sql/executor.py |
+| Task | Description                                              | Status               |
+| ---- | -------------------------------------------------------- | -------------------- |
+| 6.1  | Support `resource_id` in Permission: grant per resource  | Done (all resources) |
+| 6.2  | RLS: table `rls_filter` (datasource_id, role_id, clause) | Not implemented      |
+| 6.3  | Executor injects clause when running SQL                 | Not implemented      |
 
-**Module object permissions (completed 2026-02-03):**
+**Object-level permissions (implemented; RLS not implemented):**
 
-- Helpers `ensure_resource_permissions` / `remove_resource_permissions` manage scoped module permissions.
-- `require_permission_for_resource` falls back to `resource_id` after global check.
-- Module CRUD endpoints call these helpers to provision and revoke permissions automatically.
+- **Datasource, Module**: Completed earlier; list/get/update/delete/test enforce object-level; ensure/remove on create/delete.
+- **ApiAssignment, Group, MacroDef, Client** (Phase 6 object-level only, 2026-02):
+  - Migration `011_obj_perms_agmc`: backfill object-level permissions for existing api_assignment, api_group, api_macro_def, app_client.
+  - Routes: `api_assignments.py`, `groups.py`, `macro_defs.py`, `clients.py` use `ensure_resource_permissions` on create, `remove_resource_permissions` on delete.
+  - List endpoints filter by user’s object-level read when user lacks global read.
+  - Get/update/delete (and publish/debug/versions where applicable) use `require_permission_for_resource` or `require_permission_for_body_resource`.
+- Helpers: `ensure_resource_permissions` / `remove_resource_permissions` in `core/permission_resources.py`; `require_permission_for_resource` / `require_permission_for_body_resource` in `api/deps.py`.
 
 ---
 
@@ -283,7 +287,7 @@ Superset uses RLS to filter query results:
 - [x] Phase 3: Apply require_permission to all routes (datasources, modules, groups, macro_defs, api_assignments, clients, overview; users: superuser for CRUD, read by id = self or user read or superuser)
 - [x] Phase 4: API roles, permissions, user-roles (GET /roles/list, GET /roles/{id}, PUT /roles/{id}; GET /permissions/list; PUT /users/{id}/roles; Admin only)
 - [x] Phase 5: Frontend Security (Roles, User roles)
-- [ ] Phase 6 (optional): Object-level + RLS
+- [x] Phase 6 (optional): Object-level for all resources (datasource, module, api_assignment, group, macro_def, client); RLS not implemented
 - [x] Module-level scoped permissions (auto-provision + enforcement) for resource `module`
 
 ---

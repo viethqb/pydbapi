@@ -47,8 +47,6 @@ function MacroDefsList() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { hasPermission } = usePermissions()
   const canCreate = hasPermission("macro_def", "create")
-  const canUpdate = hasPermission("macro_def", "update")
-  const canDelete = hasPermission("macro_def", "delete")
 
   const [filters, setFilters] = useState<ApiMacroDefListIn>({
     page: 1,
@@ -106,6 +104,8 @@ function MacroDefsList() {
     ...m,
     moduleName: m.module_id ? moduleMap.get(m.module_id) ?? null : null,
     onDelete: handleDelete,
+    canUpdate: hasPermission("macro_def", "update", m.id),
+    canDelete: hasPermission("macro_def", "delete", m.id),
   }))
 
   return (

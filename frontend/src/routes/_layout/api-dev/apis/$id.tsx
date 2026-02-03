@@ -53,6 +53,7 @@ import {
 import ResultTransformExamples from "@/components/ApiDev/ResultTransformExamples"
 import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import { getGatewayApiKey } from "@/lib/gatewayApiKey"
 
 export const Route = createFileRoute("/_layout/api-dev/apis/$id")({
@@ -72,6 +73,9 @@ function ApiDetail() {
   const matchRoute = useMatchRoute()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canUpdate = hasPermission("api_assignment", "update", id)
+  const canDelete = hasPermission("api_assignment", "delete", id)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedContent, setCopiedContent] = useState(false)
@@ -718,19 +722,23 @@ function ApiDetail() {
               Publish
             </Button>
           )}
-          <Link to="/api-dev/apis/$id/edit" params={{ id }}>
-            <Button variant="outline">
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
+          {canUpdate && (
+            <Link to="/api-dev/apis/$id/edit" params={{ id }}>
+              <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+          )}
+          {canDelete && (
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
             </Button>
-          </Link>
-          <Button
-            variant="destructive"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+          )}
         </div>
       </div>
 
@@ -1170,7 +1178,7 @@ function ApiDetail() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteVersion(version.id)}
-                                  disabled={apiDetail?.published_version_id === version.id}
+                                  disabled={!canDelete || apiDetail?.published_version_id === version.id}
                                   className="text-destructive hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />

@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus } from "lucide-react"
+import { ChevronDown, Plus, X } from "lucide-react"
 import { useNavigate } from "@tanstack/react-router"
 import { useMemo, useState } from "react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -16,12 +16,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
@@ -30,23 +29,19 @@ import { PermissionsService } from "@/services/permissions"
 import { RolesService } from "@/services/roles"
 import useCustomToast from "@/hooks/useCustomToast"
 
-function groupByResourceAndScope(
-  perms: {
-    id: string
-    resource_type: string
-    action: string
-    resource_id: string | null
-  }[],
-): Map<string, { id: string; action: string }[]> {
-  const map = new Map<string, { id: string; action: string }[]>()
-  for (const p of perms) {
-    const scope = p.resource_id == null ? "all" : p.resource_id
-    const key = `${p.resource_type}:${scope}`
-    const list = map.get(key) ?? []
-    list.push({ id: p.id, action: p.action })
-    map.set(key, list)
-  }
-  return map
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  datasource: "Datasource",
+  module: "Module",
+  group: "Group",
+  api_assignment: "API Assignment",
+  macro_def: "Macro definition",
+  client: "Client",
+  user: "User",
+  overview: "Overview",
+}
+
+function normId(id: string) {
+  return String(id).replace(/-/g, "").toLowerCase()
 }
 
 export default function CreateRoleDialog() {
@@ -54,7 +49,6 @@ export default function CreateRoleDialog() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [resourceTypeFilter, setResourceTypeFilter] = useState<string>("")
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -71,15 +65,10 @@ export default function CreateRoleDialog() {
     enabled: open,
   })
 
-  const permissionGroups = useMemo(() => {
-    if (!permsData?.data) return new Map<string, { id: string; action: string }[]>()
-    return groupByResourceAndScope(permsData.data)
-  }, [permsData])
-
   const moduleNameById = useMemo(() => {
     const map = new Map<string, string>()
     for (const m of resourceNames?.modules ?? []) {
-      map.set(String(m.id).toLowerCase(), m.name)
+      map.set(normId(m.id), m.name)
     }
     return map
   }, [resourceNames])
@@ -87,23 +76,86 @@ export default function CreateRoleDialog() {
   const datasourceNameById = useMemo(() => {
     const map = new Map<string, string>()
     for (const ds of resourceNames?.datasources ?? []) {
-      map.set(String(ds.id).toLowerCase(), ds.name)
+      map.set(normId(ds.id), ds.name)
     }
     return map
   }, [resourceNames])
 
-  const filteredPermissionEntries = useMemo(() => {
-    let entries = Array.from(permissionGroups.entries())
-    if (resourceTypeFilter) {
-      entries = entries.filter(([groupKey]) => {
-        const [resourceType] = groupKey.split(":", 2)
-        return resourceType === resourceTypeFilter
-      })
+  const groupNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const g of resourceNames?.groups ?? []) {
+      map.set(normId(g.id), g.name)
     }
-    return entries.sort(([a], [b]) => a.localeCompare(b))
-  }, [permissionGroups, resourceTypeFilter])
+    return map
+  }, [resourceNames])
 
-  const permissionsByType = useMemo(() => {
+  const apiAssignmentNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const a of resourceNames?.api_assignments ?? []) {
+      map.set(normId(a.id), a.name)
+    }
+    return map
+  }, [resourceNames])
+
+  const macroDefNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const m of resourceNames?.macro_defs ?? []) {
+      map.set(normId(m.id), m.name)
+    }
+    return map
+  }, [resourceNames])
+
+  const clientNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of resourceNames?.clients ?? []) {
+      map.set(normId(c.id), c.name)
+    }
+    return map
+  }, [resourceNames])
+
+  const getResourceName = useMemo(() => {
+    return (resourceType: string, resourceId: string | null): string => {
+      if (!resourceId) return "All"
+      const key = normId(resourceId)
+      switch (resourceType) {
+        case "module":
+          return moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "datasource":
+          return datasourceNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "group":
+          return groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "api_assignment":
+          return apiAssignmentNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "macro_def":
+          return macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        case "client":
+          return clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+        default:
+          return `ID:${String(resourceId).slice(0, 8)}…`
+      }
+    }
+  }, [
+    moduleNameById,
+    datasourceNameById,
+    groupNameById,
+    apiAssignmentNameById,
+    macroDefNameById,
+    clientNameById,
+  ])
+
+  const permissionRows = useMemo(() => {
+    const list = permsData?.data ?? []
+    return list
+      .map((p) => ({
+        id: p.id,
+        resource_type: p.resource_type,
+        action: p.action,
+        label: `${p.resource_type}:${getResourceName(p.resource_type, p.resource_id)}:${p.action}`,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [permsData, getResourceName])
+
+  const permissionRowsByType = useMemo(() => {
     const order = [
       "datasource",
       "module",
@@ -114,29 +166,16 @@ export default function CreateRoleDialog() {
       "user",
       "overview",
     ]
-    const typeLabel: Record<string, string> = {
-      datasource: "Datasource",
-      module: "Module",
-      group: "Group",
-      api_assignment: "API Assignment",
-      macro_def: "Macro definition",
-      client: "Client",
-      user: "User",
-      overview: "Overview",
-    }
-    const byType = new Map<string, [string, { id: string; action: string }[]][]>()
-    for (const entry of filteredPermissionEntries) {
-      const [resourceType] = entry[0].split(":", 2)
-      const list = byType.get(resourceType) ?? []
-      list.push(entry)
-      byType.set(resourceType, list)
+    const byType = new Map<string, typeof permissionRows>()
+    for (const row of permissionRows) {
+      const list = byType.get(row.resource_type) ?? []
+      list.push(row)
+      byType.set(row.resource_type, list)
     }
     return order
       .filter((t) => byType.has(t))
-      .map(
-        (t) => [t, typeLabel[t] ?? t, byType.get(t) ?? []] as const,
-      )
-  }, [filteredPermissionEntries])
+      .map((t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const)
+  }, [permissionRows])
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -152,7 +191,7 @@ export default function CreateRoleDialog() {
       setName("")
       setDescription("")
       setSelectedIds(new Set())
-      navigate({ to: "/admin/roles/$id", params: { id: created.id } })
+      navigate({ to: "/admin/roles/$id/edit", params: { id: created.id } })
     },
     onError: (e: Error) => showErrorToast(e.message),
   })
@@ -166,25 +205,12 @@ export default function CreateRoleDialog() {
     })
   }
 
-  const toggleAllForGroup = (groupKey: string, checked: boolean) => {
-    const list = permissionGroups.get(groupKey) ?? []
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      for (const p of list) {
-        if (checked) next.add(p.id)
-        else next.delete(p.id)
-      }
-      return next
-    })
-  }
-
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (!next) {
       setName("")
       setDescription("")
       setSelectedIds(new Set())
-      setResourceTypeFilter("")
     }
   }
 
@@ -200,7 +226,7 @@ export default function CreateRoleDialog() {
         <DialogHeader>
           <DialogTitle>Create custom role</DialogTitle>
           <DialogDescription>
-            Set name, description, and permissions. Scope: All = entire resource type; ID = specific resource.
+            Set name, description, and permissions. Format: <code className="text-xs">resource_type:name:action</code>.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -226,113 +252,97 @@ export default function CreateRoleDialog() {
           <Card>
             <CardHeader className="py-3">
               <CardTitle className="text-sm">Permissions</CardTitle>
-              <div className="pt-2">
-                <Label className="text-xs text-muted-foreground">
-                  Resource type:
-                </Label>
-                <Select
-                  value={resourceTypeFilter || "all"}
-                  onValueChange={(v) =>
-                    setResourceTypeFilter(v === "all" ? "" : v)
-                  }
-                >
-                  <SelectTrigger className="mt-1 h-8 w-[180px]">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="datasource">Datasource</SelectItem>
-                    <SelectItem value="module">Module</SelectItem>
-                    <SelectItem value="group">Group</SelectItem>
-                    <SelectItem value="api_assignment">API Assignment</SelectItem>
-                    <SelectItem value="macro_def">Macro definition</SelectItem>
-                    <SelectItem value="client">Client</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="overview">Overview</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Select permissions by group (Datasource, Module, …). When closed, only selected
+                permissions are shown.
+              </p>
             </CardHeader>
-            <CardContent className="max-h-[280px] overflow-y-auto">
+            <CardContent className="space-y-3">
               {permsLoading ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
               ) : (
-                <div className="space-y-4">
-                  {permissionsByType.map(([typeKey, typeLabel, entries]) => (
-                    <div key={typeKey}>
-                      <h4 className="text-xs font-semibold mb-2">
-                        {typeLabel}
-                      </h4>
-                      <div className="border-t pt-2">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {entries.map(([groupKey, perms]) => {
-                            const [resourceType, scopePart] =
-                              groupKey.split(":", 2)
-                            const scope =
-                              scopePart === "all"
-                                ? "All"
-                                : resourceType === "module"
-                                  ? moduleNameById.get(
-                                        String(scopePart).toLowerCase(),
-                                      ) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                                  : resourceType === "datasource"
-                                    ? datasourceNameById.get(
-                                          String(scopePart).toLowerCase(),
-                                        ) ?? `ID: ${String(scopePart).slice(0, 8)}…`
-                                    : `ID: ${scopePart.slice(0, 8)}…`
-                            const label = `${resourceType.replace(/_/g, " ")} · ${scope}`
-                            return (
-                              <div
-                                key={groupKey}
-                                className="rounded border p-2 space-y-1"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Checkbox
-                                    id={`cr-${groupKey}`}
-                                    checked={perms.every((p) =>
-                                      selectedIds.has(p.id),
-                                    )}
-                                    onCheckedChange={(v) =>
-                                      toggleAllForGroup(groupKey, v === true)
-                                    }
-                                  />
-                                  <Label
-                                    htmlFor={`cr-${groupKey}`}
-                                    className="text-xs font-medium"
+                permissionRowsByType.map(([typeKey, typeLabel, rows]) => {
+                  const selectedInType = rows.filter((r) => selectedIds.has(r.id))
+                  return (
+                    <div key={typeKey} className="space-y-1.5">
+                      <Label className="text-sm font-medium">{typeLabel}</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <div className="flex min-h-[40px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer">
+                            <div className="flex flex-wrap gap-1 flex-1">
+                              {selectedInType.length > 0 ? (
+                                selectedInType.map((row) => (
+                                  <Badge
+                                    key={row.id}
+                                    variant="secondary"
+                                    className="mr-1 font-mono text-xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      togglePermission(row.id, false)
+                                    }}
                                   >
-                                    {label}
-                                  </Label>
-                                </div>
-                                <div className="flex flex-wrap gap-2 pl-5">
-                                  {perms.map((p) => (
-                                    <div
-                                      key={p.id}
-                                      className="flex items-center gap-1"
-                                    >
-                                      <Checkbox
-                                        id={`cr-${p.id}`}
-                                        checked={selectedIds.has(p.id)}
-                                        onCheckedChange={(v) =>
-                                          togglePermission(p.id, v === true)
+                                    {row.label}
+                                    <button
+                                      type="button"
+                                      className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          togglePermission(row.id, false)
                                         }
-                                      />
-                                      <Label
-                                        htmlFor={`cr-${p.id}`}
-                                        className="text-xs text-muted-foreground"
-                                      >
-                                        {p.action}
-                                      </Label>
-                                    </div>
-                                  ))}
-                                </div>
+                                      }}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                      }}
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        togglePermission(row.id, false)
+                                      }}
+                                    >
+                                      <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                    </button>
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  Select {typeLabel.toLowerCase()}…
+                                </span>
+                              )}
+                            </div>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-auto"
+                          align="start"
+                        >
+                          {rows.map((row) => (
+                            <DropdownMenuItem
+                              key={row.id}
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                togglePermission(row.id, !selectedIds.has(row.id))
+                              }}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.has(row.id)}
+                                  readOnly
+                                  className="h-4 w-4 rounded border-gray-300"
+                                />
+                                <span className="font-mono text-xs truncate" title={row.label}>
+                                  {row.label}
+                                </span>
                               </div>
-                            )
-                          })}
-                        </div>
-                      </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  ))}
-                </div>
+                  )
+                })
               )}
             </CardContent>
           </Card>

@@ -11,7 +11,6 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import {
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { DataSourceService } from "@/services/datasource"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/_layout/connection/$id")({
@@ -42,6 +42,10 @@ function ConnectionDetail() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canUpdate = hasPermission("datasource", "update", id)
+  const canDelete = hasPermission("datasource", "delete", id)
+  const canExecute = hasPermission("datasource", "execute", id)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const matchRoute = useMatchRoute()
   
@@ -140,27 +144,33 @@ function ConnectionDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link to="/connection/$id/edit" params={{ id }}>
-            <Button variant="outline">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
+          {canUpdate && (
+            <Link to="/connection/$id/edit" params={{ id }}>
+              <Button variant="outline">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+          )}
+          {canExecute && (
+            <Button
+              variant="outline"
+              onClick={() => testMutation.mutate()}
+              disabled={testMutation.isPending}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              {testMutation.isPending ? "Testing..." : "Test Connection"}
             </Button>
-          </Link>
-          <Button
-            variant="outline"
-            onClick={() => testMutation.mutate()}
-            disabled={testMutation.isPending}
-          >
-            <Play className="mr-2 h-4 w-4" />
-            {testMutation.isPending ? "Testing..." : "Test Connection"}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+          )}
+          {canDelete && (
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 
@@ -213,7 +223,7 @@ function ConnectionDetail() {
                     variant="ghost"
                     className="h-auto p-0 hover:bg-transparent"
                     onClick={() => toggleStatusMutation.mutate()}
-                    disabled={toggleStatusMutation.isPending}
+                    disabled={!canUpdate || toggleStatusMutation.isPending}
                   >
                     <div className="flex items-center gap-2">
                       <span

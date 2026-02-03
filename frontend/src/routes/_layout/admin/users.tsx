@@ -10,6 +10,7 @@ import { DataTable } from "@/components/Common/DataTable"
 import PendingUsers from "@/components/Pending/PendingUsers"
 import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useAuth"
+import { usePermissions } from "@/hooks/usePermissions"
 
 function getUsersQueryOptions() {
   return {
@@ -27,11 +28,14 @@ export const Route = createFileRoute("/_layout/admin/users")({
 
 function UsersTableContent() {
   const { user: currentUser } = useAuth()
+  const { hasPermission } = usePermissions()
   const { data: users } = useSuspenseQuery(getUsersQueryOptions())
 
   const tableData: UserTableData[] = users.data.map((user: UserPublic) => ({
     ...user,
     isCurrentUser: currentUser?.id === user.id,
+    canUpdate: hasPermission("user", "update", user.id),
+    canDelete: hasPermission("user", "delete", user.id),
   }))
 
   return <DataTable columns={columns} data={tableData} />
@@ -46,6 +50,9 @@ function UsersTable() {
 }
 
 function AdminUsersPage() {
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission("user", "create")
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -62,7 +69,7 @@ function AdminUsersPage() {
               Manage Roles
             </Button>
           </Link>
-          <AddUser />
+          {canCreate && <AddUser />}
         </div>
       </div>
       <UsersTable />

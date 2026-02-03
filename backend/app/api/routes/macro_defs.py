@@ -11,10 +11,20 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    require_permission,
+    require_permission_for_body_resource,
+    require_permission_for_resource,
+)
+from app.core.permission import get_user_permissions, has_permission
+from app.core.permission_resources import (
+    ensure_resource_permissions,
+    remove_resource_permissions,
+)
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
-from app.models import Message
-from app.models import User
+from app.models import Message, User
 from app.models_dbapi import ApiMacroDef, MacroDefVersionCommit
 from app.schemas_dbapi import (
     ApiMacroDefCreate,
@@ -33,6 +43,32 @@ from app.core.gateway.config_cache import invalidate_gateway_config
 from app.models_dbapi import ApiAssignment
 
 router = APIRouter(prefix="/macro-defs", tags=["macro-defs"])
+
+MACRO_DEF_RESOURCE_ACTIONS = (
+    PermissionActionEnum.READ,
+    PermissionActionEnum.CREATE,
+    PermissionActionEnum.UPDATE,
+    PermissionActionEnum.DELETE,
+)
+
+
+def _macro_def_resource_id_from_path(
+    *,
+    session: Any,
+    id: uuid.UUID | None = None,
+    version_id: uuid.UUID | None = None,
+    **_: Any,
+) -> uuid.UUID | None:
+    if id is not None:
+        return id
+    if version_id is not None:
+        version = session.get(MacroDefVersionCommit, version_id)
+        return version.api_macro_def_id if version else None
+    return None
+
+
+def _macro_def_resource_id_from_body(*, body: Any, **_: Any) -> uuid.UUID | None:
+    return getattr(body, "id", None)
 
 
 def _to_public(m: ApiMacroDef) -> ApiMacroDefPublic:
@@ -63,6 +99,29 @@ def _list_filters(stmt: Any, body: ApiMacroDefListIn) -> Any:
     return stmt
 
 
+def _macro_def_allowed_ids(
+    session: Any, current_user: CurrentUser
+) -> list[uuid.UUID] | None:
+    """None = global read; else list of allowed macro_def ids."""
+    if has_permission(
+        session,
+        current_user,
+        ResourceTypeEnum.MACRO_DEF,
+        PermissionActionEnum.READ,
+        None,
+    ):
+        return None
+    perms = get_user_permissions(session, current_user.id)
+    allowed = [
+        p.resource_id
+        for p in perms
+        if p.resource_type == ResourceTypeEnum.MACRO_DEF
+        and p.action == PermissionActionEnum.READ
+        and p.resource_id is not None
+    ]
+    return allowed if allowed else []
+
+
 @router.get(
     "",
     response_model=list[ApiMacroDefPublic],
@@ -74,15 +133,23 @@ def _list_filters(stmt: Any, body: ApiMacroDefListIn) -> Any:
 )
 def list_macro_defs_simple(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     module_id: uuid.UUID | None = None,
 ) -> Any:
     """Simple list for dropdowns (no pagination). Global + module-specific if module_id given."""
+    allowed_ids = _macro_def_allowed_ids(session, current_user)
+    if allowed_ids is not None and not allowed_ids:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission required: macro_def.read",
+        )
     stmt = select(ApiMacroDef).order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
     if module_id is not None:
         stmt = stmt.where(
             (ApiMacroDef.module_id.is_(None)) | (ApiMacroDef.module_id == module_id)
         )
+    if allowed_ids is not None:
+        stmt = stmt.where(ApiMacroDef.id.in_(allowed_ids))
     rows = session.exec(stmt).all()
     return [_to_public(r) for r in rows]
 
@@ -98,14 +165,24 @@ def list_macro_defs_simple(
 )
 def list_macro_defs(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
+    current_user: CurrentUser,
     body: ApiMacroDefListIn,
 ) -> Any:
     """List macro_defs with pagination and optional filters."""
+    allowed_ids = _macro_def_allowed_ids(session, current_user)
+    if allowed_ids is not None and not allowed_ids:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission required: macro_def.read",
+        )
     count_stmt = _list_filters(select(func.count()).select_from(ApiMacroDef), body)
+    if allowed_ids is not None:
+        count_stmt = count_stmt.where(ApiMacroDef.id.in_(allowed_ids))
     total = session.exec(count_stmt).one()
 
     stmt = _list_filters(select(ApiMacroDef), body)
+    if allowed_ids is not None:
+        stmt = stmt.where(ApiMacroDef.id.in_(allowed_ids))
     offset = (body.page - 1) * body.page_size
     stmt = (
         stmt.order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
@@ -134,6 +211,10 @@ def create_macro_def(
     """Create a new macro_def (Jinja or Python)."""
     m = ApiMacroDef.model_validate(body)
     session.add(m)
+    session.flush()
+    ensure_resource_permissions(
+        session, ResourceTypeEnum.MACRO_DEF, m.id, MACRO_DEF_RESOURCE_ACTIONS
+    )
     session.commit()
     session.refresh(m)
     _invalidate_apis_using_module(m.module_id, session)
@@ -143,16 +224,18 @@ def create_macro_def(
 @router.post(
     "/update",
     response_model=ApiMacroDefPublic,
-    dependencies=[
-        Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
-        )
-    ],
 )
 def update_macro_def(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: ApiMacroDefUpdate,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.MACRO_DEF,
+            PermissionActionEnum.UPDATE,
+            ApiMacroDefUpdate,
+            _macro_def_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Update an existing macro_def."""
     m = session.get(ApiMacroDef, body.id)
@@ -185,7 +268,11 @@ def _count_apis_using_macro_def(m: ApiMacroDef, session) -> int:
     response_model=Message,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.DELETE)
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.DELETE,
+                _macro_def_resource_id_from_path,
+            )
         )
     ],
 )
@@ -206,6 +293,7 @@ def delete_macro_def(
             detail=f"Cannot delete: macro_def is in scope for {count} API(s) ({scope}). Remove or reassign those APIs first.",
         )
     module_id = m.module_id
+    remove_resource_permissions(session, ResourceTypeEnum.MACRO_DEF, m.id)
     session.delete(m)
     session.commit()
     _invalidate_apis_using_module(module_id, session)
@@ -217,7 +305,11 @@ def delete_macro_def(
     response_model=ApiMacroDefDetail,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.READ,
+                _macro_def_resource_id_from_path,
+            )
         )
     ],
 )
@@ -240,16 +332,18 @@ def get_macro_def(
 @router.post(
     "/publish",
     response_model=ApiMacroDefPublic,
-    dependencies=[
-        Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
-        )
-    ],
 )
 def publish_macro_def(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: ApiMacroDefPublishIn,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.MACRO_DEF,
+            PermissionActionEnum.UPDATE,
+            ApiMacroDefPublishIn,
+            _macro_def_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Set is_published=True. Must provide version_id."""
     m = session.get(ApiMacroDef, body.id)
@@ -277,16 +371,18 @@ def publish_macro_def(
 @router.post(
     "/unpublish",
     response_model=ApiMacroDefPublic,
-    dependencies=[
-        Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
-        )
-    ],
 )
 def unpublish_macro_def(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: ApiMacroDefPublishIn,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.MACRO_DEF,
+            PermissionActionEnum.UPDATE,
+            ApiMacroDefPublishIn,
+            _macro_def_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Set is_published=False."""
     m = session.get(ApiMacroDef, body.id)
@@ -306,7 +402,11 @@ def unpublish_macro_def(
     response_model=MacroDefVersionCommitDetail,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.UPDATE,
+                _macro_def_resource_id_from_path,
+            )
         )
     ],
 )
@@ -359,7 +459,11 @@ def create_macro_def_version(
     response_model=MacroDefVersionCommitListOut,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.READ,
+                _macro_def_resource_id_from_path,
+            )
         )
     ],
 )
@@ -405,7 +509,11 @@ def list_macro_def_versions(
     response_model=MacroDefVersionCommitDetail,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.READ,
+                _macro_def_resource_id_from_path,
+            )
         )
     ],
 )
@@ -440,7 +548,11 @@ def get_macro_def_version(
     response_model=ApiMacroDefPublic,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.UPDATE,
+                _macro_def_resource_id_from_path,
+            )
         )
     ],
 )
@@ -475,7 +587,11 @@ def restore_macro_def_version(
     response_model=Message,
     dependencies=[
         Depends(
-            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.DELETE)
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.DELETE,
+                _macro_def_resource_id_from_path,
+            )
         )
     ],
 )

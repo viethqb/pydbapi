@@ -116,24 +116,30 @@ export const groupsColumns: ColumnDef<GroupTableData>[] = [
                   View
                 </Link>
               </DropdownMenuItem>
-              {group.canUpdate !== false && group.onEdit && (
-                <DropdownMenuItem
-                  onClick={() => group.onEdit?.(group.id)}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                disabled={group.canUpdate === false || !group.onEdit}
+                onClick={
+                  group.canUpdate === false || !group.onEdit
+                    ? undefined
+                    : () => group.onEdit?.(group.id)
+                }
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {group.canDelete !== false && group.onDelete && (
-                <DropdownMenuItem
-                  onClick={() => group.onDelete?.(group.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                disabled={group.canDelete === false || !group.onDelete}
+                onClick={
+                  group.canDelete === false || !group.onDelete
+                    ? undefined
+                    : () => group.onDelete?.(group.id)
+                }
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

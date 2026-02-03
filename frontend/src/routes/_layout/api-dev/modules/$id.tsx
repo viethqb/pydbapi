@@ -24,6 +24,7 @@ import { ApiAssignmentsService } from "@/services/api-assignments"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 
 export const Route = createFileRoute("/_layout/api-dev/modules/$id")({
   component: ModuleDetail,
@@ -42,6 +43,8 @@ function ModuleDetail() {
   const matchRoute = useMatchRoute()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canCreateApi = hasPermission("api_assignment", "create")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteApiId, setDeleteApiId] = useState<string | null>(null)
   
@@ -143,6 +146,8 @@ function ModuleDetail() {
       module_name: module.name,
       onDelete: handleDeleteApi,
       onPublish: handlePublishApi,
+      canUpdate: hasPermission("api_assignment", "update", api.id),
+      canDelete: hasPermission("api_assignment", "delete", api.id),
     }))
 
   return (
@@ -162,12 +167,14 @@ function ModuleDetail() {
             </p>
           </div>
         </div>
-        <Link to="/api-dev/apis/create" search={{ module_id: id }}>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create API
-          </Button>
-        </Link>
+        {canCreateApi && (
+          <Link to="/api-dev/apis/create" search={{ module_id: id }}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create API
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Module Info */}

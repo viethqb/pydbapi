@@ -155,7 +155,7 @@ export const columns: ColumnDef<DataSourceTableData>[] = [
                   Detail
                 </DropdownMenuItem>
               </Link>
-              {datasource.canUpdate !== false && (
+              {datasource.canUpdate !== false ? (
                 <Link
                   to="/connection/$id/edit"
                   params={{ id: datasource.id }}
@@ -166,25 +166,36 @@ export const columns: ColumnDef<DataSourceTableData>[] = [
                     Edit
                   </DropdownMenuItem>
                 </Link>
-              )}
-              {datasource.canExecute !== false && datasource.onTest && (
-                <DropdownMenuItem
-                  onClick={() => datasource.onTest?.(datasource.id)}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Test
+              ) : (
+                <DropdownMenuItem disabled>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                disabled={datasource.canExecute === false || !datasource.onTest}
+                onClick={
+                  datasource.canExecute === false || !datasource.onTest
+                    ? undefined
+                    : () => datasource.onTest?.(datasource.id)
+                }
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Test
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {datasource.canDelete !== false && datasource.onDelete && (
-                <DropdownMenuItem
-                  onClick={() => datasource.onDelete?.(datasource.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                disabled={datasource.canDelete === false || !datasource.onDelete}
+                onClick={
+                  datasource.canDelete === false || !datasource.onDelete
+                    ? undefined
+                    : () => datasource.onDelete?.(datasource.id)
+                }
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
