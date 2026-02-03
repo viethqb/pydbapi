@@ -6,10 +6,11 @@ Endpoints: stats, recent-access, recent-commits.
 
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models_dbapi import (
     AccessRecord,
     ApiAssignment,
@@ -46,7 +47,15 @@ def _count(session, model, where=None):
     return session.exec(stmt).one() or 0
 
 
-@router.get("/stats", response_model=OverviewStats)
+@router.get(
+    "/stats",
+    response_model=OverviewStats,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.OVERVIEW, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_overview_stats(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -64,7 +73,15 @@ def get_overview_stats(
     )
 
 
-@router.get("/requests-by-day", response_model=RequestsByDayOut)
+@router.get(
+    "/requests-by-day",
+    response_model=RequestsByDayOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.OVERVIEW, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_requests_by_day(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -96,7 +113,15 @@ def get_requests_by_day(
     return RequestsByDayOut(data=points)
 
 
-@router.get("/top-paths", response_model=TopPathsOut)
+@router.get(
+    "/top-paths",
+    response_model=TopPathsOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.OVERVIEW, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_top_paths(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -135,7 +160,15 @@ def _to_access_public(r: AccessRecord) -> AccessRecordPublic:
     )
 
 
-@router.get("/recent-access", response_model=RecentAccessOut)
+@router.get(
+    "/recent-access",
+    response_model=RecentAccessOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.OVERVIEW, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_recent_access(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -159,7 +192,15 @@ def _to_version_commit_public(v: VersionCommit) -> VersionCommitPublic:
     )
 
 
-@router.get("/recent-commits", response_model=RecentCommitsOut)
+@router.get(
+    "/recent-commits",
+    response_model=RecentCommitsOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.OVERVIEW, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_recent_commits(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001

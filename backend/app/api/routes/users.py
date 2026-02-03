@@ -2,7 +2,9 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col, delete, func, select
+from pydantic import BaseModel
+from sqlalchemy import delete
+from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import (
@@ -10,7 +12,10 @@ from app.api.deps import (
     SessionDep,
     get_current_active_superuser,
 )
+from app.core.permission import has_permission
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.core.config import settings
+from app.core.permission import get_my_permissions_flat
 from app.core.security import get_password_hash, verify_password
 from app.models import (
     Message,
@@ -23,9 +28,24 @@ from app.models import (
     UserUpdate,
     UserUpdateMe,
 )
+from app.models_permission import Role, UserRoleLink
 from app.utils import generate_new_account_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+class PermissionItem(BaseModel):
+    """Single permission entry for GET /me/permissions."""
+
+    resource_type: str
+    action: str
+    resource_id: uuid.UUID | None = None
+
+
+class MyPermissionsOut(BaseModel):
+    """Response for GET /users/me/permissions."""
+
+    data: list[PermissionItem]
 
 
 @router.get(
@@ -124,6 +144,23 @@ def read_user_me(current_user: CurrentUser) -> Any:
     return current_user
 
 
+@router.get("/me/permissions", response_model=MyPermissionsOut)
+def read_my_permissions(session: SessionDep, current_user: CurrentUser) -> Any:
+    """
+    Get current user's permissions (from roles). Phase 2.
+    """
+    raw = get_my_permissions_flat(session, current_user.id)
+    data = [
+        PermissionItem(
+            resource_type=item["resource_type"],
+            action=item["action"],
+            resource_id=item["resource_id"],
+        )
+        for item in raw
+    ]
+    return MyPermissionsOut(data=data)
+
+
 @router.delete("/me", response_model=Message)
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
@@ -159,17 +196,23 @@ def read_user_by_id(
     user_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
 ) -> Any:
     """
-    Get a specific user by id.
+    Get a specific user by id. Allowed if viewing self, or superuser, or has user read permission.
     """
     user = session.get(User, user_id)
-    if user == current_user:
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
         return user
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="The user doesn't have enough privileges",
-        )
-    return user
+    if current_user.is_superuser:
+        return user
+    if has_permission(
+        session, current_user, ResourceTypeEnum.USER, PermissionActionEnum.READ
+    ):
+        return user
+    raise HTTPException(
+        status_code=403,
+        detail="The user doesn't have enough privileges",
+    )
 
 
 @router.patch(
@@ -222,3 +265,68 @@ def delete_user(
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+
+class UserRolesUpdateIn(BaseModel):
+    """Body for PUT /users/{user_id}/roles. Replaces user's roles."""
+
+    role_ids: list[uuid.UUID] = []
+
+
+class UserRolesOut(BaseModel):
+    """Response for GET/PUT /users/{user_id}/roles."""
+
+    user_id: uuid.UUID
+    role_ids: list[uuid.UUID]
+
+
+@router.get(
+    "/{user_id}/roles",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=UserRolesOut,
+)
+def get_user_roles(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    user_id: uuid.UUID,
+) -> Any:
+    """
+    Get roles assigned to a user. Admin only.
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    stmt = select(UserRoleLink.role_id).where(UserRoleLink.user_id == user_id)
+    role_ids = list(session.exec(stmt).all())
+    return UserRolesOut(user_id=user_id, role_ids=role_ids)
+
+
+@router.put(
+    "/{user_id}/roles",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=UserRolesOut,
+)
+def update_user_roles(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    user_id: uuid.UUID,
+    body: UserRolesUpdateIn,
+) -> Any:
+    """
+    Assign roles to a user. Replaces existing role assignments. Admin only.
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Validate role_ids exist
+    for rid in body.role_ids:
+        if session.get(Role, rid) is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Role not found: {rid}",
+            )
+    session.exec(delete(UserRoleLink).where(UserRoleLink.user_id == user_id))
+    for rid in body.role_ids:
+        session.add(UserRoleLink(user_id=user_id, role_id=rid))
+    session.commit()
+    return UserRolesOut(user_id=user_id, role_ids=body.role_ids)

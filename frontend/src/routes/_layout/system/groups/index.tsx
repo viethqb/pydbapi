@@ -24,6 +24,7 @@ import {
   type ApiGroupPublic,
 } from "@/services/groups"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   Dialog,
   DialogContent,
@@ -143,6 +144,8 @@ function GroupsPage() {
       onEdit: handleEdit,
       onDelete: handleDelete,
       onToggleStatus: handleToggleStatus,
+      canUpdate,
+      canDelete,
     })) || []
 
   return (
@@ -154,10 +157,12 @@ function GroupsPage() {
             Manage API groups for authorization
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Group
-        </Button>
+        {canCreate && (
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Group
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

@@ -18,6 +18,8 @@ import type { ApiModulePublic } from "@/services/modules"
 export type ModuleTableData = ApiModulePublic & {
   onDelete?: (id: string) => void
   onToggleStatus?: (id: string, currentStatus: boolean) => void
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export const moduleColumns: ColumnDef<ModuleTableData>[] = [
@@ -117,18 +119,20 @@ export const moduleColumns: ColumnDef<ModuleTableData>[] = [
                   View
                 </DropdownMenuItem>
               </Link>
-              <Link
-                to="/api-dev/modules/$id/edit"
-                params={{ id: module.id }}
-                className="block"
-              >
-                <DropdownMenuItem>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              </Link>
+              {module.canUpdate !== false && (
+                <Link
+                  to="/api-dev/modules/$id/edit"
+                  params={{ id: module.id }}
+                  className="block"
+                >
+                  <DropdownMenuItem>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Link>
+              )}
               <DropdownMenuSeparator />
-              {module.onDelete && (
+              {module.canDelete !== false && module.onDelete && (
                 <DropdownMenuItem
                   onClick={() => module.onDelete?.(module.id)}
                   className="text-destructive"

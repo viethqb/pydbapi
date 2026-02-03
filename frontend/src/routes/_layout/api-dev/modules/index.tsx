@@ -22,6 +22,7 @@ import {
   type ApiModuleListIn,
 } from "@/services/modules"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,8 @@ export const Route = createFileRoute("/_layout/api-dev/modules/")({
 function ModulesList() {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission("module", "create")
 
   // Filters state
   const [filters, setFilters] = useState<ApiModuleListIn>({
@@ -112,11 +115,17 @@ function ModulesList() {
   }
 
   const tableData: ModuleTableData[] =
-    (Array.isArray(data?.data) ? data.data : []).map((m) => ({
-      ...m,
-      onDelete: handleDelete,
-      onToggleStatus: handleToggleStatus,
-    }))
+    (Array.isArray(data?.data) ? data.data : []).map((m) => {
+      const canUpdate = hasPermission("module", "update", m.id)
+      const canDelete = hasPermission("module", "delete", m.id)
+      return {
+        ...m,
+        onDelete: handleDelete,
+        onToggleStatus: canUpdate ? handleToggleStatus : undefined,
+        canUpdate,
+        canDelete,
+      }
+    })
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,12 +136,14 @@ function ModulesList() {
             Organize APIs into modules
           </p>
         </div>
-        <Link to="/api-dev/modules/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Module
-          </Button>
-        </Link>
+        {canCreate && (
+          <Link to="/api-dev/modules/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Module
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

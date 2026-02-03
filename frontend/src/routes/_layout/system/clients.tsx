@@ -24,6 +24,7 @@ import {
   type AppClientListIn,
 } from "@/services/clients"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,10 @@ function ClientsPage() {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [copiedText, copyToClipboard] = useCopyToClipboard()
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission("client", "create")
+  const canUpdate = hasPermission("client", "update")
+  const canDelete = hasPermission("client", "delete")
 
   // Filters state
   const [filters, setFilters] = useState<AppClientListIn>({
@@ -182,6 +187,8 @@ function ClientsPage() {
       onDelete: handleDelete,
       onRegenerateSecret: handleRegenerateSecret,
       onToggleStatus: handleToggleStatus,
+      canUpdate,
+      canDelete,
     })) || []
 
   return (
@@ -193,10 +200,12 @@ function ClientsPage() {
             Manage application clients and credentials
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Client
-        </Button>
+        {canCreate && (
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Client
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

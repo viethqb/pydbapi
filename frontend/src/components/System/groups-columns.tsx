@@ -18,6 +18,8 @@ export type GroupTableData = ApiGroupPublic & {
   onEdit?: (id: string) => void
   onDelete?: (id: string) => void
   onToggleStatus?: (id: string, currentStatus: boolean) => void
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export const groupsColumns: ColumnDef<GroupTableData>[] = [
@@ -114,7 +116,7 @@ export const groupsColumns: ColumnDef<GroupTableData>[] = [
                   View
                 </Link>
               </DropdownMenuItem>
-              {group.onEdit && (
+              {group.canUpdate !== false && group.onEdit && (
                 <DropdownMenuItem
                   onClick={() => group.onEdit?.(group.id)}
                 >
@@ -123,7 +125,7 @@ export const groupsColumns: ColumnDef<GroupTableData>[] = [
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {group.onDelete && (
+              {group.canDelete !== false && group.onDelete && (
                 <DropdownMenuItem
                   onClick={() => group.onDelete?.(group.id)}
                   className="text-destructive"

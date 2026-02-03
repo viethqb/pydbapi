@@ -27,6 +27,7 @@ import {
 import { ModulesService } from "@/services/modules"
 import { DataSourceService } from "@/services/datasource"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,10 @@ export const Route = createFileRoute("/_layout/api-dev/apis/")({
 function ApisList() {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission("api_assignment", "create")
+  const canUpdate = hasPermission("api_assignment", "update")
+  const canDelete = hasPermission("api_assignment", "delete")
 
   // Filters state
   const [filters, setFilters] = useState<ApiAssignmentListIn>({
@@ -133,6 +138,8 @@ function ApisList() {
       datasource_name: api.datasource_id ? datasourceMap.get(api.datasource_id) : undefined,
       onDelete: handleDelete,
       onPublish: handlePublish,
+      canUpdate,
+      canDelete,
     }))
 
   const page = filters.page ?? 1
@@ -149,12 +156,14 @@ function ApisList() {
             Search and manage all API assignments across modules
           </p>
         </div>
-        <Link to="/api-dev/apis/create">
-          <Button size="lg">
-            <Plus className="mr-2 h-4 w-4" />
-            Create API
-          </Button>
-        </Link>
+        {canCreate && (
+          <Link to="/api-dev/apis/create">
+            <Button size="lg">
+              <Plus className="mr-2 h-4 w-4" />
+              Create API
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}
@@ -299,7 +308,7 @@ function ApisList() {
                 : "Get started by creating your first API"}
             </p>
           </div>
-          {!filters.name__ilike && !filters.module_id && filters.is_published === null && (
+          {canCreate && !filters.name__ilike && !filters.module_id && filters.is_published === null && (
             <Link to="/api-dev/apis/create">
               <Button className="mt-4">
                 <Plus className="mr-2 h-4 w-4" />

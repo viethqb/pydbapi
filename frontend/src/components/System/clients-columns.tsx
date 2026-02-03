@@ -18,6 +18,8 @@ export type ClientTableData = AppClientPublic & {
   onDelete?: (id: string) => void
   onRegenerateSecret?: (id: string) => void
   onToggleStatus?: (id: string, currentStatus: boolean) => void
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export const clientsColumns: ColumnDef<ClientTableData>[] = [
@@ -107,7 +109,7 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {client.onEdit && (
+              {client.canUpdate !== false && client.onEdit && (
                 <DropdownMenuItem
                   onClick={() => client.onEdit?.(client.id)}
                 >
@@ -124,7 +126,7 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {client.onDelete && (
+              {client.canDelete !== false && client.onDelete && (
                 <DropdownMenuItem
                   onClick={() => client.onDelete?.(client.id)}
                   className="text-destructive"

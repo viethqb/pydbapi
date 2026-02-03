@@ -310,7 +310,6 @@ function ApiRepositoryDetail() {
   const handleExecute = async () => {
     if (!apiUrl || !apiDetail) return
 
-    // For private APIs, check if Authorization header exists in headers
     if (apiDetail.access_type === "private") {
       const hasAuthHeader = headers.some((h) => h.key.toLowerCase() === "authorization" && h.value.trim())
       if (!hasAuthHeader) {
@@ -323,15 +322,10 @@ function ApiRepositoryDetail() {
     setResponse(null)
 
     try {
-      // Build headers from key-value array
       const headersObj: Record<string, string> = {}
       headers.forEach(({ key, value }) => {
-        if (key && value) {
-          headersObj[key] = value
-        }
+        if (key && value) headersObj[key] = value
       })
-
-      // Parse body
       let bodyObj: unknown = null
       if (["POST", "PUT", "PATCH"].includes(apiDetail.http_method)) {
         try {
@@ -343,35 +337,23 @@ function ApiRepositoryDetail() {
         }
       }
 
-      // Make request
-      const fetchOptions: RequestInit = {
+      const fetchResponse = await fetch(apiUrl, {
         method: apiDetail.http_method,
         headers: headersObj,
-      }
-
-      if (bodyObj !== null) {
-        fetchOptions.body = JSON.stringify(bodyObj)
-      }
-
-      const fetchResponse = await fetch(apiUrl, fetchOptions)
+        ...(bodyObj !== null && { body: JSON.stringify(bodyObj) }),
+      })
       const responseData = await fetchResponse.json().catch(() => ({ error: "Invalid JSON response" }))
 
-      setResponse({
-        status: fetchResponse.status,
-        data: responseData,
-      })
-
+      setResponse({ status: fetchResponse.status, data: responseData })
       if (fetchResponse.ok) {
         showSuccessToast("API executed successfully")
       } else {
         showErrorToast(`API returned status ${fetchResponse.status}`)
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      setResponse({
-        error: errorMessage,
-      })
-      showErrorToast(`Failed to execute API: ${errorMessage}`)
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
+      setResponse({ error: msg })
+      showErrorToast(`Failed to execute API: ${msg}`)
     } finally {
       setIsExecuting(false)
     }

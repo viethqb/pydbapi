@@ -9,12 +9,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.engines import ApiExecutor
 from app.models import Message
 from app.models import User
@@ -107,7 +108,17 @@ def _list_filters(stmt: Any, body: ApiAssignmentListIn) -> Any:
     return stmt
 
 
-@router.post("/list", response_model=ApiAssignmentListOut)
+@router.post(
+    "/list",
+    response_model=ApiAssignmentListOut,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
+            )
+        )
+    ],
+)
 def list_api_assignments(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -129,7 +140,17 @@ def list_api_assignments(
     return ApiAssignmentListOut(data=[_to_public(r) for r in rows], total=total)
 
 
-@router.post("/create", response_model=ApiAssignmentPublic)
+@router.post(
+    "/create",
+    response_model=ApiAssignmentPublic,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.CREATE
+            )
+        )
+    ],
+)
 def create_api_assignment(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -205,7 +226,17 @@ def create_api_assignment(
     return _to_public(a)
 
 
-@router.post("/update", response_model=ApiAssignmentPublic)
+@router.post(
+    "/update",
+    response_model=ApiAssignmentPublic,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            )
+        )
+    ],
+)
 def update_api_assignment(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -340,7 +371,17 @@ def update_api_assignment(
     return _to_public(a)
 
 
-@router.post("/publish", response_model=ApiAssignmentPublic)
+@router.post(
+    "/publish",
+    response_model=ApiAssignmentPublic,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            )
+        )
+    ],
+)
 def publish_api_assignment(
     session: SessionDep,
     current_user: CurrentUser,
@@ -373,7 +414,17 @@ def publish_api_assignment(
     return _to_public(a)
 
 
-@router.post("/unpublish", response_model=ApiAssignmentPublic)
+@router.post(
+    "/unpublish",
+    response_model=ApiAssignmentPublic,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            )
+        )
+    ],
+)
 def unpublish_api_assignment(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -401,7 +452,16 @@ def _debug_error_response(status_code: int, detail: str) -> JSONResponse:
     )
 
 
-@router.post("/debug")
+@router.post(
+    "/debug",
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            )
+        )
+    ],
+)
 def debug_api_assignment(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -547,7 +607,17 @@ def debug_api_assignment(
         }
 
 
-@router.delete("/delete/{id}", response_model=Message)
+@router.delete(
+    "/delete/{id}",
+    response_model=Message,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.DELETE
+            )
+        )
+    ],
+)
 def delete_api_assignment(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -562,7 +632,17 @@ def delete_api_assignment(
     return Message(message="ApiAssignment deleted successfully")
 
 
-@router.get("/{id}", response_model=ApiAssignmentDetail)
+@router.get(
+    "/{id}",
+    response_model=ApiAssignmentDetail,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
+            )
+        )
+    ],
+)
 def get_api_assignment(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -575,7 +655,17 @@ def get_api_assignment(
     return _to_detail(a)
 
 
-@router.post("/{id}/versions/create", response_model=VersionCommitDetail)
+@router.post(
+    "/{id}/versions/create",
+    response_model=VersionCommitDetail,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            )
+        )
+    ],
+)
 def create_version(
     session: SessionDep,
     current_user: CurrentUser,
@@ -638,7 +728,17 @@ def create_version(
     )
 
 
-@router.get("/{id}/versions", response_model=VersionCommitListOut)
+@router.get(
+    "/{id}/versions",
+    response_model=VersionCommitListOut,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
+            )
+        )
+    ],
+)
 def list_versions(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -680,7 +780,17 @@ def list_versions(
     )
 
 
-@router.get("/versions/{version_id}", response_model=VersionCommitDetail)
+@router.get(
+    "/versions/{version_id}",
+    response_model=VersionCommitDetail,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
+            )
+        )
+    ],
+)
 def get_version(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -713,7 +823,17 @@ def get_version(
     )
 
 
-@router.post("/{id}/versions/{version_id}/restore", response_model=ApiAssignmentDetail)
+@router.post(
+    "/{id}/versions/{version_id}/restore",
+    response_model=ApiAssignmentDetail,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.UPDATE
+            )
+        )
+    ],
+)
 def restore_version(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -764,7 +884,17 @@ def restore_version(
     return _to_detail(a)
 
 
-@router.delete("/versions/{version_id}", response_model=Message)
+@router.delete(
+    "/versions/{version_id}",
+    response_model=Message,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.DELETE
+            )
+        )
+    ],
+)
 def delete_version(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001

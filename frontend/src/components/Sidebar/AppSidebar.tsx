@@ -13,11 +13,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
-import { baseNavItems } from "./navItems"
+import { baseNavItems, securityNavItem } from "./navItems"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
-function toMainItem(item: (typeof baseNavItems)[number]): Item {
+function toMainItem(
+  item: (typeof baseNavItems)[number] | typeof securityNavItem,
+): Item {
   return {
     icon: item.icon,
     title: item.title,
@@ -30,7 +32,11 @@ export function AppSidebar() {
   const { user: currentUser } = useAuth()
 
   const items: Item[] = currentUser?.is_superuser
-    ? [...baseNavItems.map(toMainItem), { icon: Users, title: "Admin", path: "/admin" }]
+    ? [
+        ...baseNavItems.map(toMainItem),
+        toMainItem(securityNavItem),
+        { icon: Users, title: "Admin", path: "/admin" },
+      ]
     : baseNavItems.map(toMainItem)
 
   return (

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
@@ -8,6 +8,8 @@ import { z } from "zod"
 import { type UserCreate, UsersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RolesService } from "@/services/roles"
+import { UserPermissionsService } from "@/services/user-permissions"
 import {
   Dialog,
   DialogClose,
@@ -54,8 +56,16 @@ type FormData = z.infer<typeof formSchema>
 
 const AddUser = () => {
   const [isOpen, setIsOpen] = useState(false)
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const { data: rolesData } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => RolesService.list(),
+    enabled: isOpen,
+  })
+  const roles = rolesData?.data ?? []
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -72,11 +82,26 @@ const AddUser = () => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: UserCreate) =>
-      UsersService.createUser({ requestBody: data }),
+    mutationFn: async ({
+      formData,
+      roleIds,
+    }: {
+      formData: FormData
+      roleIds: string[]
+    }) => {
+      const { confirm_password: _, ...createBody } = formData
+      const created = await UsersService.createUser({
+        requestBody: createBody as UserCreate,
+      })
+      if (roleIds.length > 0) {
+        await UserPermissionsService.updateUserRoles(created.id, roleIds)
+      }
+      return created
+    },
     onSuccess: () => {
       showSuccessToast("User created successfully")
       form.reset()
+      setSelectedRoleIds([])
       setIsOpen(false)
     },
     onError: handleError.bind(showErrorToast),
@@ -86,7 +111,13 @@ const AddUser = () => {
   })
 
   const onSubmit = (data: FormData) => {
-    mutation.mutate(data)
+    mutation.mutate({ formData: data, roleIds: selectedRoleIds })
+  }
+
+  const toggleRole = (roleId: string, checked: boolean) => {
+    setSelectedRoleIds((prev) =>
+      checked ? [...prev, roleId] : prev.filter((id) => id !== roleId),
+    )
   }
 
   return (
@@ -216,6 +247,34 @@ const AddUser = () => {
                   </FormItem>
                 )}
               />
+
+              {roles.length > 0 && (
+                <div className="space-y-2">
+                  <FormLabel>Roles</FormLabel>
+                  <div className="flex flex-wrap gap-3">
+                    {roles.map((role) => (
+                      <div
+                        key={role.id}
+                        className="flex items-center gap-2"
+                      >
+                        <Checkbox
+                          id={`add-role-${role.id}`}
+                          checked={selectedRoleIds.includes(role.id)}
+                          onCheckedChange={(v) =>
+                            toggleRole(role.id, v === true)
+                          }
+                        />
+                        <label
+                          htmlFor={`add-role-${role.id}`}
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          {role.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>

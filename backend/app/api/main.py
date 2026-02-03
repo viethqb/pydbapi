@@ -9,7 +9,9 @@ from app.api.routes import (
     macro_defs,
     modules,
     overview,
+    permissions,
     private,
+    roles,
     users,
     utils,
 )
@@ -26,6 +28,8 @@ api_router.include_router(groups.router)
 api_router.include_router(api_assignments.router)
 api_router.include_router(clients.router)
 api_router.include_router(overview.router)
+api_router.include_router(roles.router)
+api_router.include_router(permissions.router)
 
 
 if settings.ENVIRONMENT == "local":

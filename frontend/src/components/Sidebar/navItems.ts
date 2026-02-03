@@ -4,6 +4,7 @@ import {
   Database,
   LayoutDashboard,
   Settings,
+  Shield,
   Users,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -42,3 +43,10 @@ export const baseNavItems: NavItem[] = [
     ],
   },
 ]
+
+/** Security menu (Roles, etc.). Shown only for Admin (is_superuser). */
+export const securityNavItem: NavItem = {
+  icon: Shield,
+  title: "Security",
+  submenu: [{ title: "Roles", path: "/security/roles" }],
+}

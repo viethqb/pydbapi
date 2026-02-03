@@ -20,6 +20,7 @@ import {
 import { MacroDefsService, type ApiMacroDefListIn } from "@/services/macro-defs"
 import { ModulesService } from "@/services/modules"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,10 @@ export const Route = createFileRoute("/_layout/api-dev/macro-defs/")({
 function MacroDefsList() {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission("macro_def", "create")
+  const canUpdate = hasPermission("macro_def", "update")
+  const canDelete = hasPermission("macro_def", "delete")
 
   const [filters, setFilters] = useState<ApiMacroDefListIn>({
     page: 1,
@@ -112,12 +117,14 @@ function MacroDefsList() {
             Jinja macros and Python functions reusable in API content
           </p>
         </div>
-        <Link to="/api-dev/macro-defs/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create macro definition
-          </Button>
-        </Link>
+        {canCreate && (
+          <Link to="/api-dev/macro-defs/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create macro definition
+            </Button>
+          </Link>
+        )}
       </div>
 
       <MacroExamples />

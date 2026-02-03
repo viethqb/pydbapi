@@ -7,10 +7,11 @@ Endpoints: list (POST), create, update, delete, detail (with api_assignment_ids)
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models import Message
 from app.models_dbapi import ApiAssignmentGroupLink, ApiGroup
 from app.schemas_dbapi import (
@@ -46,7 +47,13 @@ def _list_filters(stmt: Any, body: ApiGroupListIn) -> Any:
     return stmt
 
 
-@router.post("/list", response_model=ApiGroupListOut)
+@router.post(
+    "/list",
+    response_model=ApiGroupListOut,
+    dependencies=[
+        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.READ))
+    ],
+)
 def list_groups(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -64,7 +71,13 @@ def list_groups(
     return ApiGroupListOut(data=[_to_public(r) for r in rows], total=total)
 
 
-@router.post("/create", response_model=ApiGroupPublic)
+@router.post(
+    "/create",
+    response_model=ApiGroupPublic,
+    dependencies=[
+        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.CREATE))
+    ],
+)
 def create_group(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -78,7 +91,13 @@ def create_group(
     return _to_public(g)
 
 
-@router.post("/update", response_model=ApiGroupPublic)
+@router.post(
+    "/update",
+    response_model=ApiGroupPublic,
+    dependencies=[
+        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.UPDATE))
+    ],
+)
 def update_group(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -96,7 +115,13 @@ def update_group(
     return _to_public(g)
 
 
-@router.delete("/delete/{id}", response_model=Message)
+@router.delete(
+    "/delete/{id}",
+    response_model=Message,
+    dependencies=[
+        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.DELETE))
+    ],
+)
 def delete_group(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -111,7 +136,13 @@ def delete_group(
     return Message(message="ApiGroup deleted successfully")
 
 
-@router.get("/{id}", response_model=ApiGroupDetail)
+@router.get(
+    "/{id}",
+    response_model=ApiGroupDetail,
+    dependencies=[
+        Depends(require_permission(ResourceTypeEnum.GROUP, PermissionActionEnum.READ))
+    ],
+)
 def get_group(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001

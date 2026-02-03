@@ -8,10 +8,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models import Message
 from app.models import User
 from app.models_dbapi import ApiMacroDef, MacroDefVersionCommit
@@ -62,7 +63,15 @@ def _list_filters(stmt: Any, body: ApiMacroDefListIn) -> Any:
     return stmt
 
 
-@router.get("", response_model=list[ApiMacroDefPublic])
+@router.get(
+    "",
+    response_model=list[ApiMacroDefPublic],
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+        )
+    ],
+)
 def list_macro_defs_simple(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -71,12 +80,22 @@ def list_macro_defs_simple(
     """Simple list for dropdowns (no pagination). Global + module-specific if module_id given."""
     stmt = select(ApiMacroDef).order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
     if module_id is not None:
-        stmt = stmt.where((ApiMacroDef.module_id.is_(None)) | (ApiMacroDef.module_id == module_id))
+        stmt = stmt.where(
+            (ApiMacroDef.module_id.is_(None)) | (ApiMacroDef.module_id == module_id)
+        )
     rows = session.exec(stmt).all()
     return [_to_public(r) for r in rows]
 
 
-@router.post("/list", response_model=ApiMacroDefListOut)
+@router.post(
+    "/list",
+    response_model=ApiMacroDefListOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+        )
+    ],
+)
 def list_macro_defs(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -88,13 +107,25 @@ def list_macro_defs(
 
     stmt = _list_filters(select(ApiMacroDef), body)
     offset = (body.page - 1) * body.page_size
-    stmt = stmt.order_by(ApiMacroDef.sort_order, ApiMacroDef.name).offset(offset).limit(body.page_size)
+    stmt = (
+        stmt.order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
+        .offset(offset)
+        .limit(body.page_size)
+    )
     rows = session.exec(stmt).all()
 
     return ApiMacroDefListOut(data=[_to_public(r) for r in rows], total=total)
 
 
-@router.post("/create", response_model=ApiMacroDefPublic)
+@router.post(
+    "/create",
+    response_model=ApiMacroDefPublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.CREATE)
+        )
+    ],
+)
 def create_macro_def(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -109,7 +140,15 @@ def create_macro_def(
     return _to_public(m)
 
 
-@router.post("/update", response_model=ApiMacroDefPublic)
+@router.post(
+    "/update",
+    response_model=ApiMacroDefPublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
+        )
+    ],
+)
 def update_macro_def(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -141,7 +180,15 @@ def _count_apis_using_macro_def(m: ApiMacroDef, session) -> int:
     return len(session.exec(stmt).all())
 
 
-@router.delete("/delete/{id}", response_model=Message)
+@router.delete(
+    "/delete/{id}",
+    response_model=Message,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.DELETE)
+        )
+    ],
+)
 def delete_macro_def(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -165,7 +212,15 @@ def delete_macro_def(
     return Message(message="ApiMacroDef deleted successfully")
 
 
-@router.get("/{id}", response_model=ApiMacroDefDetail)
+@router.get(
+    "/{id}",
+    response_model=ApiMacroDefDetail,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_macro_def(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -182,7 +237,15 @@ def get_macro_def(
     )
 
 
-@router.post("/publish", response_model=ApiMacroDefPublic)
+@router.post(
+    "/publish",
+    response_model=ApiMacroDefPublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
+        )
+    ],
+)
 def publish_macro_def(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -198,7 +261,9 @@ def publish_macro_def(
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
     if version.api_macro_def_id != m.id:
-        raise HTTPException(status_code=400, detail="Version does not belong to this macro_def")
+        raise HTTPException(
+            status_code=400, detail="Version does not belong to this macro_def"
+        )
     m.is_published = True
     m.published_version_id = body.version_id
     m.updated_at = datetime.now(timezone.utc)
@@ -209,7 +274,15 @@ def publish_macro_def(
     return _to_public(m)
 
 
-@router.post("/unpublish", response_model=ApiMacroDefPublic)
+@router.post(
+    "/unpublish",
+    response_model=ApiMacroDefPublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
+        )
+    ],
+)
 def unpublish_macro_def(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -228,7 +301,15 @@ def unpublish_macro_def(
     return _to_public(m)
 
 
-@router.post("/{id}/versions/create", response_model=MacroDefVersionCommitDetail)
+@router.post(
+    "/{id}/versions/create",
+    response_model=MacroDefVersionCommitDetail,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
+        )
+    ],
+)
 def create_macro_def_version(
     session: SessionDep,
     current_user: CurrentUser,
@@ -240,12 +321,17 @@ def create_macro_def_version(
     if not m:
         raise HTTPException(status_code=404, detail="ApiMacroDef not found")
     if not m.content:
-        raise HTTPException(status_code=400, detail="Macro_def has no content to version")
-    max_version = session.exec(
-        select(func.max(MacroDefVersionCommit.version)).where(
-            MacroDefVersionCommit.api_macro_def_id == m.id
+        raise HTTPException(
+            status_code=400, detail="Macro_def has no content to version"
         )
-    ).one() or 0
+    max_version = (
+        session.exec(
+            select(func.max(MacroDefVersionCommit.version)).where(
+                MacroDefVersionCommit.api_macro_def_id == m.id
+            )
+        ).one()
+        or 0
+    )
     version = MacroDefVersionCommit(
         api_macro_def_id=m.id,
         version=max_version + 1,
@@ -268,7 +354,15 @@ def create_macro_def_version(
     )
 
 
-@router.get("/{id}/versions", response_model=MacroDefVersionCommitListOut)
+@router.get(
+    "/{id}/versions",
+    response_model=MacroDefVersionCommitListOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+        )
+    ],
+)
 def list_macro_def_versions(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -296,7 +390,9 @@ def list_macro_def_versions(
                 version=v.version,
                 commit_message=v.commit_message,
                 committed_by_id=v.committed_by_id,
-                committed_by_email=users.get(v.committed_by_id) if v.committed_by_id else None,
+                committed_by_email=(
+                    users.get(v.committed_by_id) if v.committed_by_id else None
+                ),
                 committed_at=v.committed_at,
             )
             for v in versions
@@ -304,7 +400,15 @@ def list_macro_def_versions(
     )
 
 
-@router.get("/versions/{version_id}", response_model=MacroDefVersionCommitDetail)
+@router.get(
+    "/versions/{version_id}",
+    response_model=MacroDefVersionCommitDetail,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_macro_def_version(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -331,7 +435,15 @@ def get_macro_def_version(
     )
 
 
-@router.post("/{id}/versions/{version_id}/restore", response_model=ApiMacroDefPublic)
+@router.post(
+    "/{id}/versions/{version_id}/restore",
+    response_model=ApiMacroDefPublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.UPDATE)
+        )
+    ],
+)
 def restore_macro_def_version(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -346,7 +458,9 @@ def restore_macro_def_version(
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
     if version.api_macro_def_id != id:
-        raise HTTPException(status_code=400, detail="Version does not belong to this macro_def")
+        raise HTTPException(
+            status_code=400, detail="Version does not belong to this macro_def"
+        )
     m.content = version.content_snapshot
     m.updated_at = datetime.now(timezone.utc)
     session.add(m)
@@ -356,7 +470,15 @@ def restore_macro_def_version(
     return _to_public(m)
 
 
-@router.delete("/versions/{version_id}", response_model=Message)
+@router.delete(
+    "/versions/{version_id}",
+    response_model=Message,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.DELETE)
+        )
+    ],
+)
 def delete_macro_def_version(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001

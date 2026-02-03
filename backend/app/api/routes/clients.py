@@ -9,11 +9,12 @@ import secrets
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, require_permission
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.core.security import get_password_hash
 from app.models import Message
 from app.models_dbapi import AppClient, AppClientApiLink, AppClientGroupLink
@@ -54,7 +55,13 @@ def _list_filters(stmt: Any, body: AppClientListIn) -> Any:
     return stmt
 
 
-@router.post("/list", response_model=AppClientListOut)
+@router.post(
+    "/list",
+    response_model=AppClientListOut,
+    dependencies=[
+        Depends(require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.READ))
+    ],
+)
 def list_clients(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -74,7 +81,15 @@ def list_clients(
     return AppClientListOut(data=[_to_public(r) for r in rows], total=total)
 
 
-@router.post("/create", response_model=AppClientPublic)
+@router.post(
+    "/create",
+    response_model=AppClientPublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.CREATE)
+        )
+    ],
+)
 def create_client(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -104,7 +119,15 @@ def create_client(
     return _to_public(c)
 
 
-@router.post("/update", response_model=AppClientPublic)
+@router.post(
+    "/update",
+    response_model=AppClientPublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.UPDATE)
+        )
+    ],
+)
 def update_client(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -136,7 +159,15 @@ def update_client(
     return _to_public(c)
 
 
-@router.delete("/delete/{id}", response_model=Message)
+@router.delete(
+    "/delete/{id}",
+    response_model=Message,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.DELETE)
+        )
+    ],
+)
 def delete_client(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -151,7 +182,15 @@ def delete_client(
     return Message(message="AppClient deleted successfully")
 
 
-@router.post("/{id}/regenerate-secret", response_model=AppClientRegenerateSecretOut)
+@router.post(
+    "/{id}/regenerate-secret",
+    response_model=AppClientRegenerateSecretOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.UPDATE)
+        )
+    ],
+)
 def regenerate_client_secret(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -187,7 +226,13 @@ def _to_detail(c: AppClient) -> AppClientDetail:
     )
 
 
-@router.get("/{id}", response_model=AppClientDetail)
+@router.get(
+    "/{id}",
+    response_model=AppClientDetail,
+    dependencies=[
+        Depends(require_permission(ResourceTypeEnum.CLIENT, PermissionActionEnum.READ))
+    ],
+)
 def get_client(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001

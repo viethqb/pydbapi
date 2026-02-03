@@ -17,6 +17,8 @@ import type { ApiMacroDefPublic, MacroTypeEnum } from "@/services/macro-defs"
 export type MacroDefTableData = ApiMacroDefPublic & {
   onDelete?: (id: string) => void
   moduleName?: string | null
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export const macroDefColumns: ColumnDef<MacroDefTableData>[] = [
@@ -116,18 +118,20 @@ export const macroDefColumns: ColumnDef<MacroDefTableData>[] = [
                   View
                 </DropdownMenuItem>
               </Link>
-              <Link
-                to="/api-dev/macro-defs/$id/edit"
-                params={{ id: macro.id }}
-                className="block"
-              >
-                <DropdownMenuItem>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              </Link>
+              {macro.canUpdate !== false && (
+                <Link
+                  to="/api-dev/macro-defs/$id/edit"
+                  params={{ id: macro.id }}
+                  className="block"
+                >
+                  <DropdownMenuItem>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Link>
+              )}
               <DropdownMenuSeparator />
-              {macro.onDelete && (
+              {macro.canDelete !== false && macro.onDelete && (
                 <DropdownMenuItem
                   onClick={() => macro.onDelete?.(macro.id)}
                   className="text-destructive"

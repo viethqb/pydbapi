@@ -1,11 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type UserPublic, UsersService } from "@/client"
+import { RolesService } from "@/services/roles"
+import { UserPermissionsService } from "@/services/user-permissions"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -58,8 +60,27 @@ interface EditUserProps {
 
 const EditUser = ({ user, onSuccess }: EditUserProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const { data: rolesData } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => RolesService.list(),
+    enabled: isOpen,
+  })
+  const { data: userRolesData } = useQuery({
+    queryKey: ["userRoles", user.id],
+    queryFn: () => UserPermissionsService.getUserRoles(user.id),
+    enabled: isOpen,
+  })
+  const roles = rolesData?.data ?? []
+
+  useEffect(() => {
+    if (isOpen && userRolesData) {
+      setSelectedRoleIds(userRolesData.role_ids ?? [])
+    }
+  }, [isOpen, userRolesData?.role_ids?.join(",")])
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -74,8 +95,23 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      UsersService.updateUser({ userId: user.id, requestBody: data }),
+    mutationFn: async ({
+      formData,
+      roleIds,
+    }: {
+      formData: FormData
+      roleIds: string[]
+    }) => {
+      const { confirm_password: _, ...submitData } = formData
+      if (!submitData.password) {
+        delete submitData.password
+      }
+      await UsersService.updateUser({
+        userId: user.id,
+        requestBody: submitData,
+      })
+      await UserPermissionsService.updateUserRoles(user.id, roleIds)
+    },
     onSuccess: () => {
       showSuccessToast("User updated successfully")
       setIsOpen(false)
@@ -84,16 +120,18 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
     onError: handleError.bind(showErrorToast),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] })
+      queryClient.invalidateQueries({ queryKey: ["userRoles", user.id] })
     },
   })
 
   const onSubmit = (data: FormData) => {
-    // exclude confirm_password from submission data and remove password if empty
-    const { confirm_password: _, ...submitData } = data
-    if (!submitData.password) {
-      delete submitData.password
-    }
-    mutation.mutate(submitData)
+    mutation.mutate({ formData: data, roleIds: selectedRoleIds })
+  }
+
+  const toggleRole = (roleId: string, checked: boolean) => {
+    setSelectedRoleIds((prev) =>
+      checked ? [...prev, roleId] : prev.filter((id) => id !== roleId),
+    )
   }
 
   return (
@@ -217,6 +255,34 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
                   </FormItem>
                 )}
               />
+
+              {roles.length > 0 && (
+                <div className="space-y-2">
+                  <FormLabel>Roles</FormLabel>
+                  <div className="flex flex-wrap gap-3">
+                    {roles.map((role) => (
+                      <div
+                        key={role.id}
+                        className="flex items-center gap-2"
+                      >
+                        <Checkbox
+                          id={`edit-role-${user.id}-${role.id}`}
+                          checked={selectedRoleIds.includes(role.id)}
+                          onCheckedChange={(v) =>
+                            toggleRole(role.id, v === true)
+                          }
+                        />
+                        <label
+                          htmlFor={`edit-role-${user.id}-${role.id}`}
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          {role.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>

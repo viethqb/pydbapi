@@ -34,6 +34,9 @@ export type DataSourceTableData = DataSourcePublic & {
   onTest?: (id: string) => void
   onDelete?: (id: string) => void
   onToggleStatus?: (id: string, currentStatus: boolean) => void
+  canUpdate?: boolean
+  canDelete?: boolean
+  canExecute?: boolean
 }
 
 export const columns: ColumnDef<DataSourceTableData>[] = [
@@ -152,17 +155,19 @@ export const columns: ColumnDef<DataSourceTableData>[] = [
                   Detail
                 </DropdownMenuItem>
               </Link>
-              <Link
-                to="/connection/$id/edit"
-                params={{ id: datasource.id }}
-                className="block"
-              >
-                <DropdownMenuItem>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              </Link>
-              {datasource.onTest && (
+              {datasource.canUpdate !== false && (
+                <Link
+                  to="/connection/$id/edit"
+                  params={{ id: datasource.id }}
+                  className="block"
+                >
+                  <DropdownMenuItem>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Link>
+              )}
+              {datasource.canExecute !== false && datasource.onTest && (
                 <DropdownMenuItem
                   onClick={() => datasource.onTest?.(datasource.id)}
                 >
@@ -171,7 +176,7 @@ export const columns: ColumnDef<DataSourceTableData>[] = [
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {datasource.onDelete && (
+              {datasource.canDelete !== false && datasource.onDelete && (
                 <DropdownMenuItem
                   onClick={() => datasource.onDelete?.(datasource.id)}
                   className="text-destructive"

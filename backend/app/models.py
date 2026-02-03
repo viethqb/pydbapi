@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import uuid
 
 from pydantic import EmailStr
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, SQLModel
 
 
 # Shared properties
@@ -41,8 +43,10 @@ class UpdatePassword(SQLModel):
 
 # Database model, database table inferred from class name
 class User(UserBase, table=True):
+    __tablename__ = "user"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
+    # User roles: query via app.models_permission.UserRoleLink + Role
 
 
 # Properties to return via API, id is always required

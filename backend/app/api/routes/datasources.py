@@ -8,13 +8,25 @@ Phase 3: test/preTest use core.pool.connect + health_check.
 import uuid
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    require_permission,
+    require_permission_for_body_resource,
+    require_permission_for_resource,
+)
+from app.core.permission_resources import (
+    ensure_resource_permissions,
+    remove_resource_permissions,
+)
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.core.pool import connect, health_check
 from app.models import Message
 from app.models_dbapi import DataSource, ProductTypeEnum
+from app.models import User
 from app.schemas_dbapi import (
     DataSourceCreate,
     DataSourceListIn,
@@ -26,6 +38,31 @@ from app.schemas_dbapi import (
 )
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
+
+DATASOURCE_RESOURCE_ACTIONS = (
+    PermissionActionEnum.READ,
+    PermissionActionEnum.CREATE,
+    PermissionActionEnum.UPDATE,
+    PermissionActionEnum.DELETE,
+    PermissionActionEnum.EXECUTE,
+)
+
+
+def _datasource_resource_id_from_body(
+    *,
+    body: DataSourceUpdate,
+    **_: Any,
+) -> uuid.UUID | None:
+    return body.id
+
+
+def _datasource_resource_id_from_path(
+    *,
+    id: uuid.UUID,
+    **_: Any,
+) -> uuid.UUID | None:
+    return id
+
 
 # Supported DB types (Phase 2: postgres, mysql only)
 DATASOURCE_TYPES: list[str] = [
@@ -69,13 +106,29 @@ def _to_public(ds: DataSource) -> DataSourcePublic:
     )
 
 
-@router.get("/types", response_model=list[str])
+@router.get(
+    "/types",
+    response_model=list[str],
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.DATASOURCE, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_types(current_user: CurrentUser) -> Any:  # noqa: ARG001
     """List supported database types (postgres, mysql initially)."""
     return DATASOURCE_TYPES
 
 
-@router.get("/{type}/drivers", response_model=dict[str, list[str]])
+@router.get(
+    "/{type}/drivers",
+    response_model=dict[str, list[str]],
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.DATASOURCE, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_drivers(
     current_user: CurrentUser,  # noqa: ARG001
     type: Literal["postgres", "mysql"],
@@ -95,7 +148,15 @@ def _list_filters(stmt: Any, body: DataSourceListIn) -> Any:
     return stmt
 
 
-@router.post("/list", response_model=DataSourceListOut)
+@router.post(
+    "/list",
+    response_model=DataSourceListOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.DATASOURCE, PermissionActionEnum.READ)
+        )
+    ],
+)
 def list_datasources(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -113,7 +174,15 @@ def list_datasources(
     return DataSourceListOut(data=[_to_public(r) for r in rows], total=total)
 
 
-@router.post("/create", response_model=DataSourcePublic)
+@router.post(
+    "/create",
+    response_model=DataSourcePublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.DATASOURCE, PermissionActionEnum.CREATE)
+        )
+    ],
+)
 def create_datasource(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -122,16 +191,33 @@ def create_datasource(
     """Create a new datasource."""
     ds = DataSource.model_validate(body)
     session.add(ds)
+    session.flush()
+    ensure_resource_permissions(
+        session,
+        ResourceTypeEnum.DATASOURCE,
+        ds.id,
+        DATASOURCE_RESOURCE_ACTIONS,
+    )
     session.commit()
     session.refresh(ds)
     return _to_public(ds)
 
 
-@router.post("/update", response_model=DataSourcePublic)
+@router.post(
+    "/update",
+    response_model=DataSourcePublic,
+)
 def update_datasource(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     body: DataSourceUpdate,
+    _: User = Depends(
+        require_permission_for_body_resource(
+            ResourceTypeEnum.DATASOURCE,
+            PermissionActionEnum.UPDATE,
+            DataSourceUpdate,
+            _datasource_resource_id_from_body,
+        )
+    ),
 ) -> Any:
     """Update an existing datasource."""
     ds = session.get(DataSource, body.id)
@@ -145,7 +231,38 @@ def update_datasource(
     return _to_public(ds)
 
 
-@router.get("/{id}", response_model=DataSourcePublic)
+@router.get(
+    "/test/{id}",
+    response_model=DataSourceTestResult,
+)
+def test_datasource(
+    session: SessionDep,
+    id: uuid.UUID,
+    _: User = Depends(
+        require_permission_for_resource(
+            ResourceTypeEnum.DATASOURCE,
+            PermissionActionEnum.EXECUTE,
+            resource_id_getter=_datasource_resource_id_from_path,
+        )
+    ),
+) -> Any:
+    """Test connection for an existing datasource."""
+    ds = session.get(DataSource, id)
+    if not ds:
+        raise HTTPException(status_code=404, detail="DataSource not found")
+    ok, message = _test_connection(ds)
+    return DataSourceTestResult(ok=ok, message=message)
+
+
+@router.get(
+    "/{id}",
+    response_model=DataSourcePublic,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.DATASOURCE, PermissionActionEnum.READ)
+        )
+    ],
+)
 def get_datasource(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
@@ -158,36 +275,42 @@ def get_datasource(
     return _to_public(ds)
 
 
-@router.delete("/delete/{id}", response_model=Message)
+@router.delete(
+    "/delete/{id}",
+    response_model=Message,
+)
 def delete_datasource(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
     id: uuid.UUID,
+    _: User = Depends(
+        require_permission_for_resource(
+            ResourceTypeEnum.DATASOURCE,
+            PermissionActionEnum.DELETE,
+            resource_id_getter=_datasource_resource_id_from_path,
+        )
+    ),
 ) -> Any:
     """Delete a datasource by id."""
     ds = session.get(DataSource, id)
     if not ds:
         raise HTTPException(status_code=404, detail="DataSource not found")
+    remove_resource_permissions(session, ResourceTypeEnum.DATASOURCE, id)
     session.delete(ds)
     session.commit()
     return Message(message="DataSource deleted successfully")
 
 
-@router.get("/test/{id}", response_model=DataSourceTestResult)
-def test_datasource(
-    session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001
-    id: uuid.UUID,
-) -> Any:
-    """Test connection for an existing datasource."""
-    ds = session.get(DataSource, id)
-    if not ds:
-        raise HTTPException(status_code=404, detail="DataSource not found")
-    ok, message = _test_connection(ds)
-    return DataSourceTestResult(ok=ok, message=message)
-
-
-@router.post("/preTest", response_model=DataSourceTestResult)
+@router.post(
+    "/preTest",
+    response_model=DataSourceTestResult,
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.DATASOURCE, PermissionActionEnum.EXECUTE
+            )
+        )
+    ],
+)
 def pre_test_datasource(
     current_user: CurrentUser,  # noqa: ARG001
     body: DataSourcePreTestIn,

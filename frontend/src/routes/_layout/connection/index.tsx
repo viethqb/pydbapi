@@ -23,6 +23,7 @@ import {
   type ProductTypeEnum,
 } from "@/services/datasource"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,8 @@ export const Route = createFileRoute("/_layout/connection/")({
 function ConnectionList() {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission("datasource", "create")
 
   // Filters state
   const [filters, setFilters] = useState<DataSourceListIn>({
@@ -133,12 +136,20 @@ function ConnectionList() {
   }
 
   const tableData: DataSourceTableData[] =
-    data?.data.map((ds) => ({
-      ...ds,
-      onTest: handleTest,
-      onDelete: handleDelete,
-      onToggleStatus: handleToggleStatus,
-    })) || []
+    data?.data.map((ds) => {
+      const canUpdate = hasPermission("datasource", "update", ds.id)
+      const canDelete = hasPermission("datasource", "delete", ds.id)
+      const canExecute = hasPermission("datasource", "execute", ds.id)
+      return {
+        ...ds,
+        onTest: handleTest,
+        onDelete: handleDelete,
+        onToggleStatus: canUpdate ? handleToggleStatus : undefined,
+        canUpdate,
+        canDelete,
+        canExecute,
+      }
+    }) || []
 
   return (
     <div className="flex flex-col gap-6">
@@ -149,12 +160,14 @@ function ConnectionList() {
             Manage your database connections
           </p>
         </div>
-        <Link to="/connection/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Data Source
-          </Button>
-        </Link>
+        {canCreate && (
+          <Link to="/connection/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Data Source
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

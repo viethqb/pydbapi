@@ -20,6 +20,8 @@ export type ApiTableData = ApiAssignmentPublic & {
   datasource_name?: string
   onDelete?: (id: string) => void
   onPublish?: (id: string) => void
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export const apiColumns: ColumnDef<ApiTableData>[] = [
@@ -184,16 +186,18 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
                   Detail
                 </DropdownMenuItem>
               </Link>
-              <Link
-                to="/api-dev/apis/$id/edit"
-                params={{ id: api.id }}
-                className="block"
-              >
-                <DropdownMenuItem>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              </Link>
+              {api.canUpdate !== false && (
+                <Link
+                  to="/api-dev/apis/$id/edit"
+                  params={{ id: api.id }}
+                  className="block"
+                >
+                  <DropdownMenuItem>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Link>
+              )}
               {api.onPublish && !api.is_published && (
                 <DropdownMenuItem
                   onClick={() => api.onPublish?.(api.id)}
@@ -203,7 +207,7 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {api.onDelete && (
+              {api.canDelete !== false && api.onDelete && (
                 <DropdownMenuItem
                   onClick={() => api.onDelete?.(api.id)}
                   className="text-destructive"
