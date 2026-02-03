@@ -7,6 +7,7 @@ TTL configurable via GATEWAY_CONFIG_CACHE_TTL_SECONDS.
 
 import json
 import logging
+import re
 from typing import Any
 from uuid import UUID
 
@@ -78,26 +79,49 @@ def _get_macro_content(m: ApiMacroDef, session: Session) -> str:
     if not m.published_version_id:
         return ""
     vc = session.exec(
-        select(MacroDefVersionCommit).where(MacroDefVersionCommit.id == m.published_version_id)
+        select(MacroDefVersionCommit).where(
+            MacroDefVersionCommit.id == m.published_version_id
+        )
     ).first()
     if vc:
         return vc.content_snapshot
     return ""
 
 
-def load_macros_for_api(api: ApiAssignment, session: Session) -> tuple[list[str], list[str]]:
+def _macro_referenced_in_content(macro_name: str, content: str) -> bool:
+    """True if macro_name appears in content as a whole word (e.g. call or reference)."""
+    if not content or not macro_name:
+        return False
+    pattern = r"\b" + re.escape(macro_name) + r"\b"
+    return bool(re.search(pattern, content))
+
+
+def load_macros_for_api(
+    api: ApiAssignment, session: Session, api_content: str = ""
+) -> tuple[list[str], list[str]]:
     """
     Load Jinja and Python macros for API (global + module-specific).
-    Only published macros are used. Raises HTTPException if any in-scope macro is unpublished.
+    Only published macros are prepended. Raises HTTPException only for macros that are
+    actually referenced in api_content but are unpublished (not for every in-scope macro).
     """
-    stmt = select(ApiMacroDef).where(
-        (ApiMacroDef.module_id.is_(None)) | (ApiMacroDef.module_id == api.module_id)
-    ).order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
+    stmt = (
+        select(ApiMacroDef)
+        .where(
+            (ApiMacroDef.module_id.is_(None)) | (ApiMacroDef.module_id == api.module_id)
+        )
+        .order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
+    )
     macros = session.exec(stmt).all()
 
-    unpublished = [m for m in macros if not getattr(m, "is_published", False)]
-    if unpublished:
-        names = ", ".join(f"'{m.name}'" for m in unpublished)
+    # Only require published when the macro is referenced in the API content
+    unpublished_referenced = [
+        m
+        for m in macros
+        if not getattr(m, "is_published", False)
+        and _macro_referenced_in_content(m.name, api_content)
+    ]
+    if unpublished_referenced:
+        names = ", ".join(f"'{m.name}'" for m in unpublished_referenced)
         raise HTTPException(
             status_code=400,
             detail=f"Macro(s) must be published before use: {names}. Publish in API Dev > Macros.",
@@ -106,6 +130,8 @@ def load_macros_for_api(api: ApiAssignment, session: Session) -> tuple[list[str]
     jinja_contents: list[str] = []
     python_contents: list[str] = []
     for m in macros:
+        if not getattr(m, "is_published", False):
+            continue
         content = _get_macro_content(m, session)
         if not content:
             continue
@@ -131,7 +157,9 @@ def load_gateway_config_from_db(
         return None
 
     content = ctx.content
-    params_definition: list[dict] | None = ctx.params if getattr(ctx, "params", None) else None
+    params_definition: list[dict] | None = (
+        ctx.params if getattr(ctx, "params", None) else None
+    )
     param_validates: list[dict] | None = getattr(ctx, "param_validates", None)
     result_transform: str | None = getattr(ctx, "result_transform", None)
 
@@ -148,7 +176,7 @@ def load_gateway_config_from_db(
             params_definition = params_definition or []
             param_validates = param_validates or []
 
-    jinja_macros, python_macros = load_macros_for_api(api, session)
+    jinja_macros, python_macros = load_macros_for_api(api, session, api_content=content)
 
     return {
         "content": content,

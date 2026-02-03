@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Globe, Pencil, Trash2, RotateCcw, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces, GitBranch, User } from "lucide-react"
+import { ArrowLeft, Globe, Pencil, Trash2, RotateCcw, EyeOff, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces, GitBranch, Undo2, User } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -174,6 +174,19 @@ function ApiDetail() {
       showSuccessToast("Version deleted successfully")
       setDeleteVersionDialogOpen(false)
       setVersionToDelete(null)
+      refetchVersions()
+      queryClient.invalidateQueries({ queryKey: ["api-assignment", id] })
+    },
+    onError: (error: Error) => {
+      showErrorToast(error.message)
+    },
+  })
+
+  // Revert version to draft (clear published_version_id when API is not published)
+  const revertToDraftMutation = useMutation({
+    mutationFn: (versionId: string) => ApiAssignmentsService.revertVersionToDraft(versionId),
+    onSuccess: () => {
+      showSuccessToast("Version reverted to draft")
       refetchVersions()
       queryClient.invalidateQueries({ queryKey: ["api-assignment", id] })
     },
@@ -1174,6 +1187,19 @@ function ApiDetail() {
                                   <RotateCcw className="mr-1 h-4 w-4" />
                                   Restore
                                 </Button>
+                                {!apiDetail?.is_published &&
+                                  apiDetail?.published_version_id === version.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => revertToDraftMutation.mutate(version.id)}
+                                      disabled={!canUpdate || revertToDraftMutation.isPending}
+                                      title="Revert this version to draft (only when API is not published)"
+                                    >
+                                      <Undo2 className="mr-1 h-4 w-4" />
+                                      Revert to draft
+                                    </Button>
+                                  )}
                                 <Button
                                   variant="ghost"
                                   size="sm"

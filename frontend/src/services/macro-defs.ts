@@ -203,4 +203,11 @@ export const MacroDefsService = {
       method: "DELETE",
     })
   },
+
+  revertVersionToDraft: async (versionId: string): Promise<{ message: string }> => {
+    return request<{ message: string }>(
+      `/api/v1/macro-defs/versions/${versionId}/revert-to-draft`,
+      { method: "POST" }
+    )
+  },
 }

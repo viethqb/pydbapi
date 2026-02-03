@@ -582,6 +582,46 @@ def restore_macro_def_version(
     return _to_public(m)
 
 
+@router.post(
+    "/versions/{version_id}/revert-to-draft",
+    response_model=Message,
+    dependencies=[
+        Depends(
+            require_permission_for_resource(
+                ResourceTypeEnum.MACRO_DEF,
+                PermissionActionEnum.UPDATE,
+                _macro_def_resource_id_from_path,
+            )
+        )
+    ],
+)
+def revert_macro_def_version_to_draft(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    version_id: uuid.UUID,
+) -> Any:
+    """Clear published_version_id for this version (revert to draft). Only allowed when macro_def is not published."""
+    version = session.get(MacroDefVersionCommit, version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    m = session.get(ApiMacroDef, version.api_macro_def_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="ApiMacroDef not found")
+    if m.is_published:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot revert version to draft when macro_def is published. Unpublish first.",
+        )
+    if m.published_version_id == version_id:
+        m.published_version_id = None
+        m.updated_at = datetime.now(timezone.utc)
+        session.add(m)
+        session.commit()
+        _invalidate_apis_using_module(m.module_id, session)
+    return Message(message="Version reverted to draft")
+
+
 @router.delete(
     "/versions/{version_id}",
     response_model=Message,

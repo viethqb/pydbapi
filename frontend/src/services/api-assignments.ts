@@ -275,4 +275,11 @@ export const ApiAssignmentsService = {
       method: "DELETE",
     })
   },
+
+  revertVersionToDraft: async (versionId: string): Promise<{ message: string }> => {
+    return request<{ message: string }>(
+      `/api/v1/api-assignments/versions/${versionId}/revert-to-draft`,
+      { method: "POST" }
+    )
+  },
 }

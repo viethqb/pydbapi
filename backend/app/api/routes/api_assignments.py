@@ -571,7 +571,7 @@ def debug_api_assignment(
             else ((ctx.content if ctx else "") or "")
         )
         # Prepend macros (same as runtime) so content can call them
-        jinja_m, python_m = load_macros_for_api(a, session)
+        jinja_m, python_m = load_macros_for_api(a, session, api_content=content)
         if engine and engine.value == "SQL" and jinja_m:
             content = "\n\n".join(jinja_m) + "\n\n" + content
         elif engine and engine.value == "SCRIPT" and python_m:
@@ -969,6 +969,45 @@ def restore_version(
     invalidate_gateway_config(a.id)
     a = session.get(ApiAssignment, id)
     return _to_detail(a)
+
+
+@router.post(
+    "/versions/{version_id}/revert-to-draft",
+    response_model=Message,
+    dependencies=[
+        Depends(
+            require_permission_for_resource(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.UPDATE,
+                _api_assignment_resource_id_from_path,
+            )
+        )
+    ],
+)
+def revert_version_to_draft(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    version_id: uuid.UUID,
+) -> Any:
+    """Clear published_version_id for this version (revert to draft). Only allowed when API is not published."""
+    version = session.get(VersionCommit, version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    a = session.get(ApiAssignment, version.api_assignment_id)
+    if not a:
+        raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    if a.is_published:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot revert version to draft when API is published. Unpublish first.",
+        )
+    if a.published_version_id == version_id:
+        a.published_version_id = None
+        a.updated_at = datetime.now(timezone.utc)
+        session.add(a)
+        session.commit()
+    return Message(message="Version reverted to draft")
 
 
 @router.delete(

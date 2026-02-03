@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useMatchRoute } from "@tanstack/react-router"
 import { useState, useEffect } from "react"
-import { GitBranch, RotateCcw, Trash2, User } from "lucide-react"
+import { ArrowLeft, GitBranch, RotateCcw, Trash2, Undo2, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -140,6 +140,16 @@ function MacroDetail() {
     onError: (error: Error) => showErrorToast(error.message),
   })
 
+  const revertToDraftMutation = useMutation({
+    mutationFn: (versionId: string) => MacroDefsService.revertVersionToDraft(versionId),
+    onSuccess: () => {
+      showSuccessToast("Version reverted to draft")
+      queryClient.invalidateQueries({ queryKey: ["macro", id] })
+      refetchVersions()
+    },
+    onError: (error: Error) => showErrorToast(error.message),
+  })
+
   const restoreVersionMutation = useMutation({
     mutationFn: (versionId: string) => MacroDefsService.restoreVersion(id, versionId),
     onSuccess: () => {
@@ -220,28 +230,41 @@ function MacroDetail() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{macro.name}</h1>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Badge variant={macro.macro_type === "JINJA" ? "secondary" : "outline"}>
-              {macro.macro_type}
-            </Badge>
-            <Badge variant={macro.is_published ? "default" : "outline"}>
-              {macro.is_published ? "Published" : "Draft"}
-            </Badge>
-            <span className="text-muted-foreground text-sm">
-              Scope: {moduleName}
-            </span>
-            {(macro as ApiMacroDefDetail).used_by_apis_count > 0 && (
+    <div className="flex flex-col gap-6">
+      {/* Header - same structure as API detail */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4 flex-1">
+          <Link to="/api-dev/macro-defs">
+            <Button variant="ghost" size="icon" className="mt-1">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold tracking-tight">{macro.name}</h1>
+              <Badge variant={macro.macro_type === "JINJA" ? "secondary" : "outline"}>
+                {macro.macro_type}
+              </Badge>
+              <Badge variant={macro.is_published ? "default" : "outline"}>
+                {macro.is_published ? "Published" : "Draft"}
+              </Badge>
               <span className="text-muted-foreground text-sm">
-                · Used by {(macro as ApiMacroDefDetail).used_by_apis_count} API(s)
+                Scope: {moduleName}
               </span>
+              {(macro as ApiMacroDefDetail).used_by_apis_count > 0 && (
+                <span className="text-muted-foreground text-sm">
+                  · Used by {(macro as ApiMacroDefDetail).used_by_apis_count} API(s)
+                </span>
+              )}
+            </div>
+            {macro.description && (
+              <p className="text-muted-foreground text-base">
+                {macro.description}
+              </p>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {macro.is_published ? (
             <Button
               variant="outline"
@@ -287,8 +310,9 @@ function MacroDetail() {
                   value={macro.content}
                   onChange={() => {}}
                   disabled
-                  height={Math.min(300, (macro.content.split("\n").length || 1) * 22)}
                   autoHeight
+                  minHeight={260}
+                  maxHeight={720}
                 />
               </div>
               <MacroExamples />
@@ -379,6 +403,19 @@ function MacroDetail() {
                                   <RotateCcw className="mr-1 h-4 w-4" />
                                   Restore
                                 </Button>
+                                {!macro?.is_published &&
+                                  macro?.published_version_id === version.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => revertToDraftMutation.mutate(version.id)}
+                                      disabled={!canUpdate || revertToDraftMutation.isPending}
+                                      title="Revert this version to draft (only when macro is not published)"
+                                    >
+                                      <Undo2 className="mr-1 h-4 w-4" />
+                                      Revert to draft
+                                    </Button>
+                                  )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -401,12 +438,6 @@ function MacroDetail() {
           </Tabs>
         </CardContent>
       </Card>
-
-      <div className="flex gap-2">
-        <Link to="/api-dev/macro-defs">
-          <Button variant="outline">Back to Macro definitions</Button>
-        </Link>
-      </div>
 
       <Dialog open={createVersionDialogOpen} onOpenChange={setCreateVersionDialogOpen}>
         <DialogContent>
