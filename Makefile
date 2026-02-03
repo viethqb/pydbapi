@@ -1,4 +1,4 @@
-# PyDBAPI – common targets
+# pyDBAPI – common targets
 # Requires: uv (https://docs.astral.sh/uv/) or use scripts directly
 
 .PHONY: venv install test migrate integration-test docker-up docker-down

@@ -1,6 +1,6 @@
-# PyDBAPI
+# pyDBAPI
 
-**PyDBAPI** is a DB API platform: manage data sources (PostgreSQL, MySQL), define API endpoints with SQL (Jinja2) or Python scripts, and expose them through a dynamic gateway with auth, rate limiting, and versioning.
+**pyDBAPI** is a DB API platform: manage data sources (PostgreSQL, MySQL), define API endpoints with SQL (Jinja2) or Python scripts, and expose them through a dynamic gateway with auth, rate limiting, and versioning.
 
 ## Technology Stack and Features
 
@@ -31,7 +31,7 @@
 Clone the repository and run with Docker Compose:
 
 ```bash
-git clone https://github.com/your-org/pydbapi.git
+git clone https://github.com/viethqb/pydbapi.git
 cd pydbapi
 cp .env.example .env   # if present; otherwise create .env from deployment docs
 # Edit .env: SECRET_KEY, POSTGRES_PASSWORD, FIRST_SUPERUSER, FIRST_SUPERUSER_PASSWORD
@@ -80,4 +80,4 @@ See [release-notes.md](./release-notes.md).
 
 ## License
 
-PyDBAPI is licensed under the MIT license.
+pyDBAPI is licensed under the MIT license.

@@ -46,7 +46,7 @@ This is useful for:
 
 The backend is automatically configured to use Mailcatcher when running with Docker Compose locally (SMTP on port 1025). All captured emails can be viewed at <http://localhost:1080>.
 
-## PyDBAPI: venv, tests, integration
+## pyDBAPI: venv, tests, integration
 
 - Create a virtualenv and install dependencies (prefer [uv](https://docs.astral.sh/uv/)):
 

@@ -12,7 +12,7 @@ Keep dependencies and your application up to date after ensuring tests pass, so 
 
 If you think you found a vulnerability (or are unsure), please report it as soon as possible:
 
-- **Preferred**: Open a [private security advisory](https://github.com/your-org/pydbapi/security/advisories/new) in this repository (GitHub: Security → Advisories).
+- **Preferred**: Open a [private security advisory](https://github.com/viethqb/pydbapi/security/advisories/new) in this repository (GitHub: Security → Advisories).
 - **Alternatively**: Contact the project maintainers (e.g. via the contact method listed in the repository or your organization).
 
 Please include clear steps and example code to reproduce the issue.
