@@ -26,6 +26,7 @@ export type DataSourcePublic = {
   driver_version: string | null
   description: string | null
   is_active: boolean
+  close_connection_after_execute: boolean
   created_at: string
   updated_at: string
 }

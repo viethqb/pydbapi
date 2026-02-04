@@ -97,6 +97,11 @@ class DataSource(SQLModel, table=True):
     driver_version: str | None = Field(default=None, max_length=64)
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)
+    close_connection_after_execute: bool = Field(
+        default=False,
+        description="If True, close the DB connection after each request instead of returning to pool. "
+        "Required for DBs like StarRocks when using EXECUTE AS user WITH NO REVERT (impersonation).",
+    )
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
 
@@ -332,6 +337,10 @@ class ApiAssignment(SQLModel, table=True):
     rate_limit_per_minute: int | None = Field(
         default=None,
         description="Max requests per minute for this API. None = no limit (call freely).",
+    )
+    close_connection_after_execute: bool = Field(
+        default=False,
+        description="If True, close DB connection after each request (e.g. StarRocks EXECUTE AS WITH NO REVERT).",
     )
     sort_order: int = Field(default=0)
     created_at: datetime = Field(default_factory=_utc_now)

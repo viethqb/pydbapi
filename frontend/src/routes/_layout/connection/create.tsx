@@ -51,6 +51,7 @@ const formSchema = z.object({
   password: z.string().min(1, "Password is required").max(512),
   description: z.string().max(512).optional().nullable(),
   is_active: z.boolean().default(true),
+  close_connection_after_execute: z.boolean().default(false),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -84,6 +85,7 @@ function ConnectionCreate() {
       password: "",
       description: null,
       is_active: true,
+      close_connection_after_execute: false,
     },
   })
 
@@ -136,7 +138,10 @@ function ConnectionCreate() {
       showErrorToast("Please test connection successfully before saving")
       return
     }
-    createMutation.mutate(values)
+    createMutation.mutate({
+      ...values,
+      close_connection_after_execute: values.close_connection_after_execute,
+    })
   }
 
   const handleTest = () => {
@@ -335,6 +340,28 @@ function ConnectionCreate() {
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel>Enable this data source for use</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Close connection after execute</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="close_connection_after_execute"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Close DB connection after each request (e.g. StarRocks impersonation)</FormLabel>
                             </div>
                           </FormItem>
                         )}

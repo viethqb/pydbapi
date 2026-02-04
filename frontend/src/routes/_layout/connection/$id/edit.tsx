@@ -51,6 +51,7 @@ const formSchema = z.object({
   password: z.string().max(512).optional(),
   description: z.string().max(512).optional().nullable(),
   is_active: z.boolean().default(true),
+  close_connection_after_execute: z.boolean().default(false),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -93,6 +94,7 @@ function ConnectionEdit() {
       password: "",
       description: null,
       is_active: true,
+      close_connection_after_execute: false,
     },
   })
 
@@ -114,6 +116,7 @@ function ConnectionEdit() {
         password: "", // Don't prefill password
         description: datasource.description || null,
         is_active: datasource.is_active,
+        close_connection_after_execute: datasource.close_connection_after_execute ?? false,
       })
       setTestConnectionSuccess(false)
     }
@@ -189,6 +192,7 @@ function ConnectionEdit() {
       ...(values.password ? { password: values.password } : {}),
       description: values.description,
       is_active: values.is_active,
+      close_connection_after_execute: values.close_connection_after_execute,
     }
     updateMutation.mutate(updateData)
   }
@@ -430,6 +434,28 @@ function ConnectionEdit() {
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel>Enable this data source for use</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Close connection after execute</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="close_connection_after_execute"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Close DB connection after each request (e.g. StarRocks impersonation)</FormLabel>
                             </div>
                           </FormItem>
                         )}

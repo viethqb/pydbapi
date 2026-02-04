@@ -540,7 +540,7 @@ function ApiRepositoryDetail() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">DataSource</TableHead>
+                    <TableHead className="w-[180px]">Data Source</TableHead>
                     <TableCell>
                       {datasource?.name ? (
                         <Badge variant="outline" className="font-normal">

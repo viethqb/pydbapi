@@ -35,6 +35,7 @@ class ApiExecutor:
         datasource_id: UUID | None = None,
         datasource: DataSource | None = None,
         session: Session | None = None,
+        close_connection_after_execute: bool = False,
     ) -> dict[str, Any] | Any:
         """
         Run SQL or Script. For SQL/SCRIPT, datasource (or load from datasource_id) is required.
@@ -46,7 +47,9 @@ class ApiExecutor:
         ds = datasource
         if ds is None and datasource_id is not None:
             if session is None:
-                raise ValueError("session is required to load DataSource by datasource_id")
+                raise ValueError(
+                    "session is required to load DataSource by datasource_id"
+                )
             ds = session.get(DataSource, datasource_id)
             if ds is None:
                 raise ValueError("DataSource not found")
@@ -57,7 +60,9 @@ class ApiExecutor:
 
         if engine == ExecuteEngineEnum.SQL:
             if ds is None:
-                raise ValueError("datasource or datasource_id is required for SQL engine")
+                raise ValueError(
+                    "datasource or datasource_id is required for SQL engine"
+                )
             try:
                 sql = SQLTemplateEngine().render(content, _params)
                 _log.debug("Rendered SQL: %s", sql)
@@ -65,8 +70,9 @@ class ApiExecutor:
                 _log.error("SQL template render failed: %s", e, exc_info=True)
                 raise
             try:
-                # execute_sql always returns list of statement results (data[0], data[1], ...)
-                out = execute_sql(ds, sql)
+                # use_pool=False when close_connection_after_execute (e.g. StarRocks impersonation)
+                use_pool = not close_connection_after_execute
+                out = execute_sql(ds, sql, use_pool=use_pool)
                 return {"data": out}
             except Exception as e:
                 _log.error("SQL execution failed: %s. SQL: %s", e, sql, exc_info=True)
@@ -74,7 +80,9 @@ class ApiExecutor:
 
         if engine == ExecuteEngineEnum.SCRIPT:
             if ds is None:
-                raise ValueError("datasource or datasource_id is required for SCRIPT engine")
+                raise ValueError(
+                    "datasource or datasource_id is required for SCRIPT engine"
+                )
             pm = get_pool_manager()
             ctx = ScriptContext(
                 datasource=ds,
@@ -83,6 +91,7 @@ class ApiExecutor:
                 cache_client=get_redis(),
                 settings=settings,
                 logger=_log,
+                close_connection_after_execute=close_connection_after_execute,
             )
             result = ScriptExecutor().execute(content, ctx)
             return {"data": result}

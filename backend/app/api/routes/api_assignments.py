@@ -108,6 +108,9 @@ def _to_public(a: ApiAssignment) -> ApiAssignmentPublic:
         published_version_id=a.published_version_id,
         access_type=a.access_type,
         rate_limit_per_minute=getattr(a, "rate_limit_per_minute", None),
+        close_connection_after_execute=getattr(
+            a, "close_connection_after_execute", False
+        ),
         sort_order=a.sort_order,
         created_at=a.created_at,
         updated_at=a.updated_at,
@@ -227,6 +230,11 @@ def create_api_assignment(
     body: ApiAssignmentCreate,
 ) -> Any:
     """Create API assignment; if content provided, create ApiContext (1-1). Optionally link groups."""
+    if body.execute_engine.value in ("SQL", "SCRIPT") and not body.datasource_id:
+        raise HTTPException(
+            status_code=400,
+            detail="DataSource is required for SQL and SCRIPT engines.",
+        )
     assign_data = body.model_dump(
         exclude={
             "content",
@@ -322,6 +330,18 @@ def update_api_assignment(
     a = session.get(ApiAssignment, body.id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
+
+    # Ensure SQL/SCRIPT engines have a datasource (use body values if set, else current)
+    body_set = body.model_dump(exclude_unset=True)
+    engine = (
+        body.execute_engine if body.execute_engine is not None else a.execute_engine
+    )
+    ds_id = body.datasource_id if "datasource_id" in body_set else a.datasource_id
+    if engine.value in ("SQL", "SCRIPT") and not ds_id:
+        raise HTTPException(
+            status_code=400,
+            detail="DataSource is required for SQL and SCRIPT engines.",
+        )
 
     update_data = body.model_dump(
         exclude_unset=True,

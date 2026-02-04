@@ -36,6 +36,10 @@ class DataSourceCreate(SQLModel):
     driver_version: str | None = Field(default=None, max_length=64)
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)
+    close_connection_after_execute: bool = Field(
+        default=False,
+        description="If True, close DB connection after each request (e.g. for StarRocks impersonation).",
+    )
 
 
 class DataSourceUpdate(SQLModel):
@@ -52,6 +56,7 @@ class DataSourceUpdate(SQLModel):
     driver_version: str | None = None
     description: str | None = None
     is_active: bool | None = None
+    close_connection_after_execute: bool | None = None
 
 
 class DataSourcePublic(SQLModel):
@@ -67,6 +72,7 @@ class DataSourcePublic(SQLModel):
     driver_version: str | None
     description: str | None
     is_active: bool
+    close_connection_after_execute: bool
     created_at: datetime
     updated_at: datetime
 
@@ -417,6 +423,10 @@ class ApiAssignmentCreate(SQLModel):
     rate_limit_per_minute: int | None = Field(
         default=None, description="Max requests/min for this API. None = no limit."
     )
+    close_connection_after_execute: bool = Field(
+        default=False,
+        description="Close DB connection after each request (e.g. StarRocks impersonation).",
+    )
     sort_order: int = Field(default=0)
     content: str | None = Field(
         default=None, description="SQL/script → ApiContext (1-1)"
@@ -451,6 +461,7 @@ class ApiAssignmentUpdate(SQLModel):
     rate_limit_per_minute: int | None = Field(
         default=None, description="Max requests/min for this API. None = no limit."
     )
+    close_connection_after_execute: bool | None = None
     sort_order: int | None = None
     content: str | None = None
     result_transform: str | None = None
@@ -502,6 +513,7 @@ class ApiAssignmentPublic(SQLModel):
     published_version_id: uuid.UUID | None
     access_type: ApiAccessTypeEnum
     rate_limit_per_minute: int | None = None
+    close_connection_after_execute: bool = False
     sort_order: int
     created_at: datetime
     updated_at: datetime

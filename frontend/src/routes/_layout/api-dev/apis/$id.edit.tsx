@@ -94,7 +94,12 @@ const formSchema = z.object({
   path: z.string().min(1, "Path is required").max(255),
   http_method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH"]),
   execute_engine: z.enum(["SQL", "SCRIPT"]),
-  datasource_id: z.string().optional().nullable(),
+  datasource_id: z
+    .string()
+    .nullable()
+    .refine((v) => v != null && v !== "" && v !== "none", {
+      message: "DataSource is required",
+    }),
   description: z.string().max(512).optional().nullable(),
   access_type: z.enum(["public", "private"]).default("private"),
   rate_limit_per_minute: z
@@ -102,6 +107,7 @@ const formSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v === "" ? null : v)),
+  close_connection_after_execute: z.boolean().default(false),
   content: z.string().optional().nullable(),
   result_transform: z.string().optional().nullable(),
   group_ids: z.array(z.string()).default([]),
@@ -188,6 +194,7 @@ function ApiEdit() {
       description: null,
       access_type: "private",
       rate_limit_per_minute: null,
+      close_connection_after_execute: false,
       content: "",
       result_transform: "",
       group_ids: [],
@@ -245,6 +252,7 @@ function ApiEdit() {
         description: apiDetail.description || null,
         access_type: apiDetail.access_type || "private",
         rate_limit_per_minute: (apiDetail as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
+        close_connection_after_execute: (apiDetail as { close_connection_after_execute?: boolean }).close_connection_after_execute ?? false,
         content: apiDetail.api_context?.content || "",
         result_transform: apiDetail.api_context?.result_transform || "",
         group_ids: apiDetail.group_ids?.map(id => String(id)) || [],
@@ -440,6 +448,7 @@ function ApiEdit() {
         values.rate_limit_per_minute === "" || values.rate_limit_per_minute == null
           ? null
           : Number(values.rate_limit_per_minute),
+      close_connection_after_execute: values.close_connection_after_execute ?? false,
       content: values.content || null,
       result_transform: values.result_transform || null,
       group_ids: values.group_ids,
@@ -649,6 +658,28 @@ function ApiEdit() {
                                   Max requests per minute for this API. Empty = no limit (call freely).
                                 </FormDescription>
                                 <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Close connection after execute</TableHead>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name="close_connection_after_execute"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Close DB connection after each request (e.g. StarRocks impersonation)</FormLabel>
+                                </div>
                               </FormItem>
                             )}
                           />
@@ -1188,7 +1219,7 @@ function ApiEdit() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">DataSource</TableHead>
+                    <TableHead className="w-[180px]">Data Source *</TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -1204,11 +1235,11 @@ function ApiEdit() {
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select datasource" />
+                                    <SelectValue placeholder="Select datasource (required)" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
+                                  <SelectItem value="none">— Select datasource —</SelectItem>
                                   {Array.isArray(datasourcesData?.data) && datasourcesData.data.length > 0 ? (
                                     datasourcesData.data.map((ds) => {
                                       const dsId = String(ds.id)
@@ -1226,7 +1257,7 @@ function ApiEdit() {
                                 </SelectContent>
                               </Select>
                               <FormDescription className="mt-1">
-                                Required for SQL and SCRIPT engines
+                                Required. Select the database connection for this API.
                               </FormDescription>
                               <FormMessage />
                             </FormItem>

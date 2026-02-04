@@ -171,6 +171,9 @@ def run(
             raise RuntimeError("DataSource is inactive and cannot be used")
 
     try:
+        close_connection_after_execute = getattr(
+            api, "close_connection_after_execute", False
+        )
         result = ApiExecutor().execute(
             engine=api.execute_engine,
             content=content_to_run,
@@ -178,6 +181,7 @@ def run(
             datasource_id=api.datasource_id,
             datasource=api.datasource,
             session=session,
+            close_connection_after_execute=close_connection_after_execute,
         )
         # Result transform (Python) if configured; prepend macros so transform can use macro helpers
         if result_transform_code:

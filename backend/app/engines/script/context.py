@@ -37,12 +37,14 @@ class ScriptContext:
         env_whitelist: set[str] | frozenset[str] | None = None,
         http_timeout: float = 30.0,
         log_extra: dict[str, Any] | None = None,
+        close_connection_after_execute: bool = False,
     ) -> None:
         self._datasource = datasource
         self._req = req
         self._pool = pool_manager
         self._tx_conn: Any = None
         self._in_tx = False
+        self._close_connection_after_execute = close_connection_after_execute
 
         # ds: read-only metadata (no password)
         self.ds = {
@@ -78,7 +80,13 @@ class ScriptContext:
     def _release_connection(self, conn: Any) -> None:
         if conn is self._tx_conn:
             return
-        self._pool.release(conn, self._datasource.id)
+        if self._close_connection_after_execute:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        else:
+            self._pool.release(conn, self._datasource.id)
 
     def _commit_after_dml(self, conn: Any, *, is_dml: bool) -> None:
         if not is_dml or self._in_tx:
@@ -112,7 +120,7 @@ class ScriptContext:
             self._in_tx = False
 
     def release_script_connection(self) -> None:
-        """Call at script end: rollback if still in tx, then release the connection."""
+        """Call at script end: rollback if still in tx, then release or close the connection."""
         if self._tx_conn is None:
             return
         try:
@@ -122,10 +130,16 @@ class ScriptContext:
                 except Exception as e:
                     _log.warning("release_script_connection rollback: %s", e)
         finally:
-            try:
-                self._pool.release(self._tx_conn, self._datasource.id)
-            except Exception as e:
-                _log.warning("release_script_connection release: %s", e)
+            if self._close_connection_after_execute:
+                try:
+                    self._tx_conn.close()
+                except Exception as e:
+                    _log.warning("release_script_connection close: %s", e)
+            else:
+                try:
+                    self._pool.release(self._tx_conn, self._datasource.id)
+                except Exception as e:
+                    _log.warning("release_script_connection release: %s", e)
             self._tx_conn = None
             self._in_tx = False
 

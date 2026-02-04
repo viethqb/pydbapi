@@ -102,6 +102,7 @@ def _to_public(ds: DataSource) -> DataSourcePublic:
         driver_version=ds.driver_version,
         description=ds.description,
         is_active=ds.is_active,
+        close_connection_after_execute=ds.close_connection_after_execute,
         created_at=ds.created_at,
         updated_at=ds.updated_at,
     )

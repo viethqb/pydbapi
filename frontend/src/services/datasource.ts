@@ -28,6 +28,7 @@ export type DataSourceCreate = {
   driver_version?: string | null
   description?: string | null
   is_active?: boolean
+  close_connection_after_execute?: boolean
 }
 
 export type DataSourceUpdate = {
@@ -42,6 +43,7 @@ export type DataSourceUpdate = {
   driver_version?: string | null
   description?: string | null
   is_active?: boolean | null
+  close_connection_after_execute?: boolean | null
 }
 
 export type DataSourcePreTestIn = {

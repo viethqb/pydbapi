@@ -108,7 +108,7 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
   },
   {
     accessorKey: "datasource_name",
-    header: "DataSource",
+    header: "Data Source",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.datasource_name || "-"}

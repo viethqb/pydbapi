@@ -19,6 +19,7 @@ export type ApiAssignmentPublic = {
   published_version_id: string | null
   access_type: ApiAccessTypeEnum
   rate_limit_per_minute: number | null
+  close_connection_after_execute: boolean
   sort_order: number
   created_at: string
   updated_at: string
@@ -84,6 +85,7 @@ export type ApiAssignmentCreate = {
   description?: string | null
   access_type?: ApiAccessTypeEnum
   rate_limit_per_minute?: number | null
+  close_connection_after_execute?: boolean
   sort_order?: number
   content?: string | null
   group_ids?: string[]
@@ -103,6 +105,7 @@ export type ApiAssignmentUpdate = {
   description?: string | null
   access_type?: ApiAccessTypeEnum | null
   rate_limit_per_minute?: number | null
+  close_connection_after_execute?: boolean | null
   sort_order?: number | null
   content?: string | null
   group_ids?: string[] | null

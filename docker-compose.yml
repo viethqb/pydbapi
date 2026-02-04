@@ -29,6 +29,24 @@ services:
       retries: 5
       start_period: 10s
 
+  starrocks:
+    image: starrocks/allin1-ubuntu:latest
+    restart: always
+    ports:
+      - "9030:9030"   # FE MySQL protocol (connect as MySQL on this port)
+      - "8030:8030"   # FE HTTP
+      - "8040:8040"   # BE
+    healthcheck:
+      # FE HTTP port 8030; adjust if image has no curl (e.g. use start_period only)
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8030/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # Optional: persist BE data (uncomment to keep data across restarts)
+    # volumes:
+    #   - starrocks-be:/opt/starrocks/be/storage
+
   adminer:
     image: adminer
     restart: always
@@ -186,6 +204,7 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.middlewares=https-redirect
 volumes:
   app-db-data:
+  # starrocks-be:  # uncomment if using starrocks volume above
 
 networks:
   traefik-public:
