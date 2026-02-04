@@ -35,7 +35,7 @@ from app.core.gateway.resolver import (
 from app.core.gateway.runner import run as runner_run
 from app.models_dbapi import ApiAccessTypeEnum, ApiAssignment
 
-router = APIRouter(prefix="", tags=["gateway"])
+router = APIRouter(prefix="", tags=["gateway"], include_in_schema=False)
 
 
 def _run_runner_in_thread(
