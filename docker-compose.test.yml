@@ -20,7 +20,7 @@ services:
       timeout: 5s
 
   mysql:
-    image: mysql:8
+    image: mysql:9
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: app
