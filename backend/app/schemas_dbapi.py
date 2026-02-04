@@ -7,7 +7,7 @@ DataSource, ApiAssignment, ApiModule, ApiGroup, AppClient, etc.
 import uuid
 from datetime import date, datetime
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from sqlmodel import SQLModel
 
 from app.models_dbapi import (
@@ -800,3 +800,14 @@ class GatewayTokenResponse(SQLModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class GatewayTokenGenerateGetResponse(SQLModel):
+    """Response for GET /token/generate (legacy migration: expireAt unix + token)."""
+
+    model_config = ConfigDict(serialize_by_alias=True)
+
+    expire_at: int = Field(
+        ..., alias="expireAt", description="Unix timestamp when token expires"
+    )
+    token: str

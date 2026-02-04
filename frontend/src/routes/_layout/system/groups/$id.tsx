@@ -28,14 +28,9 @@ function buildApiPath(
   api: { path: string },
 ): string {
   if (!module) return ""
-  let moduleSegment = ""
-  if (module.path_prefix && module.path_prefix.trim() !== "/") {
-    moduleSegment = module.path_prefix.trim().replace(/^\/+|\/+$/g, "")
-  } else {
-    moduleSegment = module.name.toLowerCase().replace(/\s+/g, "-")
-  }
   const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-  return `/${moduleSegment}/${apiPath}`
+  const isRootModule = !module.path_prefix || module.path_prefix.trim() === "/"
+  return isRootModule ? `/${apiPath}` : `/${module.path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
 }
 
 export const Route = createFileRoute("/_layout/system/groups/$id")({

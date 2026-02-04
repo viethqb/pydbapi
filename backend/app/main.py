@@ -32,7 +32,9 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
+# Add specific routes FIRST (they have higher priority)
 app.include_router(token_router)
 app.include_router(api_router, prefix=settings.API_V1_STR)
-# Dynamic API: /{module}/{path:path} (gateway; api_router at /api/v1/... matched first)
+
+# Add gateway router LAST (catch-all route /{module}/{path:path})
 app.include_router(gateway_router)

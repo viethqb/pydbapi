@@ -32,10 +32,28 @@ def path_to_regex(pattern: str) -> re.Pattern[str]:
     for seg in re.split(r"(\{[^}]+\})", pattern):
         if re.match(r"^\{[^}]+\}$", seg):
             name = seg[1:-1]
-            parts.append(f"(?P<{name}>[^/]+)" if name.isidentifier() else re.escape(seg))
+            parts.append(
+                f"(?P<{name}>[^/]+)" if name.isidentifier() else re.escape(seg)
+            )
         else:
             parts.append(re.escape(seg))
     return re.compile("^" + "".join(parts) + "$")
+
+
+def _is_root_module(m: ApiModule) -> bool:
+    """True when path_prefix is '/' (stripped empty) — endpoint is /{path} without module segment."""
+    raw = (m.path_prefix or "/").strip("/")
+    return raw == ""
+
+
+def get_root_modules(session: Session) -> list[ApiModule]:
+    """Return active modules with path_prefix='/', ordered by sort_order, id."""
+    stmt = (
+        select(ApiModule)
+        .where(ApiModule.is_active.is_(True))
+        .order_by(ApiModule.sort_order.asc(), ApiModule.id.asc())
+    )
+    return [m for m in session.exec(stmt).all() if _is_root_module(m)]
 
 
 def resolve_module(segment: str, session: Session) -> ApiModule | None:
@@ -56,6 +74,24 @@ def resolve_module(segment: str, session: Session) -> ApiModule | None:
     for m in session.exec(stmt).all():
         if _module_gateway_key(m) == segment:
             return m
+    return None
+
+
+def resolve_root_module(
+    path: str, method: str, session: Session
+) -> tuple[ApiAssignment, dict[str, str], ApiModule] | None:
+    """
+    Resolve path for modules with path_prefix='/'. Try each root module in order; first match wins.
+    Returns (api, path_params, module) or None. path is normalized (no leading/trailing /).
+    """
+    path = (path or "").strip().strip("/")
+    if not path:
+        return None
+    for mod in get_root_modules(session):
+        resolved = resolve_api_assignment(mod.id, path, method, session)
+        if resolved:
+            api, path_params = resolved
+            return (api, path_params, mod)
     return None
 
 

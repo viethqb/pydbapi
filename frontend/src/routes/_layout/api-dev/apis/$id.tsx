@@ -404,23 +404,17 @@ function ApiDetail() {
   }, [generatedToken, apiDetail?.access_type])
 
   // Build API URL with query params (must be before early returns)
-  // Gateway pattern: /{module}/{path}
-  // module is derived from module.path_prefix (strip leading/trailing slashes) or module name
+  // Gateway: when path_prefix='/' use /{path}; otherwise /{module}/{path}
   const apiUrl = useMemo(() => {
     const currentModule = module
     const currentApiDetail = apiDetail
     if (!currentModule || !currentApiDetail) return ""
     const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-    // Get module segment from path_prefix or use module name as fallback
-    let moduleSegment = ""
-    if (currentModule.path_prefix && currentModule.path_prefix.trim() !== "/") {
-      moduleSegment = currentModule.path_prefix.trim().replace(/^\/+|\/+$/g, "")
-    } else {
-      // Fallback: use module name (lowercase, replace spaces with hyphens)
-      moduleSegment = currentModule.name.toLowerCase().replace(/\s+/g, "-")
-    }
     const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
-    let url = `${baseUrl}/${moduleSegment}/${apiPath}`
+    const isRootModule = !currentModule.path_prefix || currentModule.path_prefix.trim() === "/"
+    const url = isRootModule
+      ? `${baseUrl}/${apiPath}`
+      : `${baseUrl}/${currentModule.path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
     
     // Add query params
     const validParams = queryParams.filter((p) => p.key && p.value)
@@ -429,9 +423,8 @@ function ApiDetail() {
       validParams.forEach(({ key, value }) => {
         urlObj.searchParams.append(key, value)
       })
-      url = urlObj.toString()
+      return urlObj.toString()
     }
-    
     return url
   }, [module, apiDetail, queryParams])
 

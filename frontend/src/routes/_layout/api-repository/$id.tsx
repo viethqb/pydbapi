@@ -183,24 +183,17 @@ function ApiRepositoryDetail() {
     }
   }, [generatedToken, apiDetail?.access_type])
 
-  // Build API URL with query params
+  // Build API URL: when path_prefix='/' use /{path}; otherwise /{module}/{path}
   const apiUrl = useMemo(() => {
     const currentModule = module
     const currentApiDetail = apiDetail
     if (!currentModule || !currentApiDetail) return ""
     const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-    // Get module segment from path_prefix or use module name as fallback
-    let moduleSegment = ""
-    if (currentModule.path_prefix && currentModule.path_prefix.trim() !== "/") {
-      moduleSegment = currentModule.path_prefix.trim().replace(/^\/+|\/+$/g, "")
-    } else {
-      // Fallback: use module name (lowercase, replace spaces with hyphens)
-      moduleSegment = currentModule.name.toLowerCase().replace(/\s+/g, "-")
-    }
     const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
-    let url = `${baseUrl}/${moduleSegment}/${apiPath}`
-    
-    // Add query params
+    const isRootModule = !currentModule.path_prefix || currentModule.path_prefix.trim() === "/"
+    let url = isRootModule
+      ? `${baseUrl}/${apiPath}`
+      : `${baseUrl}/${currentModule.path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
     const validParams = queryParams.filter((p) => p.key && p.value)
     if (validParams.length > 0) {
       const urlObj = new URL(url)
@@ -209,7 +202,6 @@ function ApiRepositoryDetail() {
       })
       url = urlObj.toString()
     }
-    
     return url
   }, [module, apiDetail, queryParams])
 

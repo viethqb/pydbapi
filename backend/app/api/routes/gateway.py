@@ -27,7 +27,11 @@ from app.core.gateway import (
     verify_gateway_client,
 )
 from app.core.gateway.config_cache import get_or_load_gateway_config
-from app.core.gateway.resolver import resolve_api_assignment, resolve_module
+from app.core.gateway.resolver import (
+    resolve_api_assignment,
+    resolve_module,
+    resolve_root_module,
+)
 from app.core.gateway.runner import run as runner_run
 from app.models_dbapi import ApiAccessTypeEnum, ApiAssignment
 
@@ -94,12 +98,18 @@ async def gateway_proxy(
 
     mod = resolve_module(module, session)
     if not mod:
-        return _gateway_error(request, 404, "Not Found")
-
-    resolved = resolve_api_assignment(mod.id, path, request.method, session)
-    if not resolved:
-        return _gateway_error(request, 404, "Not Found")
-    api, path_params = resolved
+        # Try root modules (path_prefix='/'): endpoint is /{path} without module segment
+        full_path = f"{module}/{path}".rstrip("/") if path else module
+        root_resolved = resolve_root_module(full_path, request.method, session)
+        if root_resolved:
+            api, path_params, mod = root_resolved
+        else:
+            return _gateway_error(request, 404, "Not Found")
+    else:
+        resolved = resolve_api_assignment(mod.id, path, request.method, session)
+        if not resolved:
+            return _gateway_error(request, 404, "Not Found")
+        api, path_params = resolved
 
     # Check access_type: public APIs don't require authentication
     app_client = None

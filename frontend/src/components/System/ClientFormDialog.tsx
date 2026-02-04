@@ -120,17 +120,10 @@ export function ClientFormDialog({
     (api: ApiAssignmentPublic): string => {
       const mod = modulesMap[api.module_id]
       if (!mod) return `/${api.path || ""}`.replace(/\/+/g, "/")
-      const raw = (mod.path_prefix || "/").replace(/^\/+|\/+$/g, "")
-      const seg =
-        raw ||
-        (mod.name || "")
-          .toLowerCase()
-          .replace(/[^a-z0-9-]/g, "-")
-          .replace(/-+/g, "-")
-          .replace(/^-|-$/g, "") ||
-        "default"
       const p = (api.path || "").replace(/^\//, "")
-      return `/${seg}/${p}`.replace(/\/+/g, "/")
+      const raw = (mod.path_prefix || "/").replace(/^\/+|\/+$/g, "")
+      if (!raw) return `/${p}`.replace(/\/+/g, "/") // path_prefix='/' -> /{path}
+      return `/${raw}/${p}`.replace(/\/+/g, "/")
     },
     [modulesMap],
   )

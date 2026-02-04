@@ -46,6 +46,9 @@ script-extras = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
 [tool.mypy]
 strict = true
 exclude = ["venv", ".venv", "alembic"]

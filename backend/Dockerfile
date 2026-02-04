@@ -25,7 +25,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-workspace --package app
+    uv sync --frozen --no-install-workspace --package pydbapi-backend
 
 COPY ./backend/scripts /app/backend/scripts
 
@@ -38,7 +38,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=backend/pyproject.toml,target=backend/pyproject.toml \
-    uv sync --frozen --package app --group script-extras
+    uv sync --frozen --package pydbapi-backend --group script-extras
 
 WORKDIR /app/backend/
 

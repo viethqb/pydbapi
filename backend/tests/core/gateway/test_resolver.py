@@ -2,7 +2,13 @@
 
 from sqlmodel import Session
 
-from app.core.gateway.resolver import path_to_regex, resolve_api_assignment, resolve_module
+from app.core.gateway.resolver import (
+    get_root_modules,
+    path_to_regex,
+    resolve_api_assignment,
+    resolve_module,
+    resolve_root_module,
+)
 from app.models_dbapi import HttpMethodEnum
 from tests.utils.api_assignment import create_random_assignment
 from tests.utils.datasource import create_random_datasource
@@ -134,3 +140,54 @@ def test_resolve_api_assignment_wrong_method(db: Session) -> None:
         content="SELECT 1",
     )
     assert resolve_api_assignment(mod.id, "r", "GET", db) is None
+
+
+def test_get_root_modules(db: Session) -> None:
+    """path_prefix='/' -> in root modules; path_prefix='/x' -> not."""
+    m_root = create_random_module(db, path_prefix="/", name="default", is_active=True)
+    create_random_module(db, path_prefix="/api", is_active=True)
+    roots = get_root_modules(db)
+    assert len(roots) >= 1
+    ids = [m.id for m in roots]
+    assert m_root.id in ids
+
+
+def test_resolve_root_module_path(db: Session) -> None:
+    """path_prefix='/' module with path 'ping' -> resolve_root_module('ping') finds it."""
+    mod = create_random_module(db, path_prefix="/", name="root", is_active=True)
+    ds = create_random_datasource(db)
+    a = create_random_assignment(
+        db,
+        module_id=mod.id,
+        path="ping",
+        http_method=HttpMethodEnum.GET,
+        datasource_id=ds.id,
+        is_published=True,
+        content="SELECT 1 as x",
+    )
+    resolved = resolve_root_module("ping", "GET", db)
+    assert resolved is not None
+    api, params, m = resolved
+    assert api.id == a.id
+    assert m.id == mod.id
+    assert params == {}
+
+
+def test_resolve_root_module_multi_segment(db: Session) -> None:
+    """path_prefix='/' with path 'users/{id}' -> resolve_root_module('users/abc') finds it."""
+    mod = create_random_module(db, path_prefix="/", name="api", is_active=True)
+    ds = create_random_datasource(db)
+    a = create_random_assignment(
+        db,
+        module_id=mod.id,
+        path="users/{id}",
+        http_method=HttpMethodEnum.GET,
+        datasource_id=ds.id,
+        is_published=True,
+        content="SELECT 1",
+    )
+    resolved = resolve_root_module("users/xyz", "GET", db)
+    assert resolved is not None
+    api, params, _ = resolved
+    assert api.id == a.id
+    assert params == {"id": "xyz"}

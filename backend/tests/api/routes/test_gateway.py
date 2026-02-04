@@ -8,7 +8,13 @@ from sqlmodel import Session
 from app.api.deps import get_db
 from app.core.config import settings
 from app.core.security import get_password_hash
-from app.models_dbapi import AppClient, FirewallRuleTypeEnum, FirewallRules, HttpMethodEnum
+from app.main import app
+from app.models_dbapi import (
+    AppClient,
+    FirewallRuleTypeEnum,
+    FirewallRules,
+    HttpMethodEnum,
+)
 from tests.utils.api_assignment import create_random_assignment
 from tests.utils.datasource import create_random_datasource
 from tests.utils.module import create_random_module
@@ -83,6 +89,35 @@ def test_gateway_token_success_form(
     assert "access_token" in data
 
 
+def test_gateway_token_generate_get(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """GET /token/generate?clientId=&secret= returns expireAt (unix) and token (legacy migration)."""
+    cr = client.post(
+        f"{settings.API_V1_STR}/clients/create",
+        headers=superuser_token_headers,
+        json={
+            "name": "gw-get-token-test",
+            "client_secret": "GetTokenSecret999",
+            "is_active": True,
+        },
+    )
+    assert cr.status_code == 200
+    client_id = cr.json()["client_id"]
+
+    r = client.get(
+        f"{_base()}/generate",
+        params={"clientId": client_id, "secret": "GetTokenSecret999"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "expireAt" in data
+    assert "token" in data
+    assert isinstance(data["expireAt"], int)
+    assert data["expireAt"] > 0
+    assert len(data["token"]) > 0
+
+
 def test_gateway_token_invalid_client(client: TestClient) -> None:
     """Wrong client_id or client_secret -> 401."""
     r = client.post(
@@ -103,7 +138,11 @@ def test_gateway_token_invalid_secret(
     cr = client.post(
         f"{settings.API_V1_STR}/clients/create",
         headers=superuser_token_headers,
-        json={"name": "gw-bad-secret", "client_secret": "CorrectSecret789", "is_active": True},
+        json={
+            "name": "gw-bad-secret",
+            "client_secret": "CorrectSecret789",
+            "is_active": True,
+        },
     )
     assert cr.status_code == 200
     client_id = cr.json()["client_id"]
@@ -122,7 +161,11 @@ def test_gateway_token_no_auth_required(
     cr = client.post(
         f"{settings.API_V1_STR}/clients/create",
         headers=superuser_token_headers,
-        json={"name": "gw-no-auth", "client_secret": "NoAuthSecret111", "is_active": True},
+        json={
+            "name": "gw-no-auth",
+            "client_secret": "NoAuthSecret111",
+            "is_active": True,
+        },
     )
     assert cr.status_code == 200
     client_id = cr.json()["client_id"]
@@ -171,11 +214,12 @@ def test_gateway_proxy_200(
     def _db_override() -> Generator[Session, None, None]:
         yield db
 
-    client.app.dependency_overrides[get_db] = _db_override
+    # Override dependencies on main app
+    app.dependency_overrides[get_db] = _db_override
     try:
         _test_gateway_proxy_200_impl(client, db)
     finally:
-        client.app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_db, None)
 
 
 def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
@@ -211,7 +255,7 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
     assert tr.status_code == 200
     token = tr.json()["access_token"]
 
-    # Gateway
+    # Gateway: /{module}/{path}
     r = client.get(
         "/public/ping",
         headers=_gw_headers(token),
@@ -232,20 +276,25 @@ def test_gateway_proxy_401_without_auth(client: TestClient, db: Session) -> None
     def _ov() -> Generator[Session, None, None]:
         yield db
 
-    client.app.dependency_overrides[get_db] = _ov
+    app.dependency_overrides[get_db] = _ov
     try:
         mod = create_random_module(db, path_prefix="/a", is_active=True)
         ds = create_random_datasource(db)
         create_random_assignment(
-            db, module_id=mod.id, path="r", http_method=HttpMethodEnum.GET,
-            datasource_id=ds.id, is_published=True, content="SELECT 1",
+            db,
+            module_id=mod.id,
+            path="r",
+            http_method=HttpMethodEnum.GET,
+            datasource_id=ds.id,
+            is_published=True,
+            content="SELECT 1",
         )
         db.commit()
 
         r = client.get("/a/r", headers=_gw_headers())
         assert r.status_code == 401
     finally:
-        client.app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_db, None)
 
 
 def test_gateway_proxy_404_module(client: TestClient, db: Session) -> None:
@@ -255,15 +304,19 @@ def test_gateway_proxy_404_module(client: TestClient, db: Session) -> None:
     def _ov() -> Generator[Session, None, None]:
         yield db
 
-    client.app.dependency_overrides[get_db] = _ov
+    app.dependency_overrides[get_db] = _ov
     try:
         c = AppClient(
-            name="gw-404", client_id="gw-404", client_secret=get_password_hash("s"),
+            name="gw-404",
+            client_id="gw-404",
+            client_secret=get_password_hash("s"),
             is_active=True,
         )
         db.add(c)
         db.commit()
-        tr = client.post(f"{_base()}/generate", json={"client_id": "gw-404", "client_secret": "s"})
+        tr = client.post(
+            f"{_base()}/generate", json={"client_id": "gw-404", "client_secret": "s"}
+        )
         assert tr.status_code == 200
         token = tr.json()["access_token"]
 
@@ -273,7 +326,7 @@ def test_gateway_proxy_404_module(client: TestClient, db: Session) -> None:
         )
         assert r.status_code == 404
     finally:
-        client.app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_db, None)
 
 
 def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
@@ -283,10 +336,12 @@ def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
     def _ov() -> Generator[Session, None, None]:
         yield db
 
-    client.app.dependency_overrides[get_db] = _ov
+    app.dependency_overrides[get_db] = _ov
     try:
         c = AppClient(
-            name="gw-404p", client_id="gw-404p", client_secret=get_password_hash("s2"),
+            name="gw-404p",
+            client_id="gw-404p",
+            client_secret=get_password_hash("s2"),
             is_active=True,
         )
         db.add(c)
@@ -294,7 +349,9 @@ def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
         create_random_module(db, path_prefix="/m", is_active=True)
         db.commit()
 
-        tr = client.post(f"{_base()}/generate", json={"client_id": "gw-404p", "client_secret": "s2"})
+        tr = client.post(
+            f"{_base()}/generate", json={"client_id": "gw-404p", "client_secret": "s2"}
+        )
         assert tr.status_code == 200
         token = tr.json()["access_token"]
 
@@ -304,4 +361,4 @@ def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
         )
         assert r.status_code == 404
     finally:
-        client.app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_db, None)

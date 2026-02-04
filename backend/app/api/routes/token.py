@@ -1,8 +1,9 @@
 """
 Token (Phase 4, Task 4.2a): POST /token/generate – client credentials → JWT.
+Legacy migration: GET /token/generate?clientId=&secret= → { expireAt, token }.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -13,7 +14,11 @@ from app.api.deps import SessionDep
 from app.core.config import settings
 from app.core.security import create_access_token, verify_password
 from app.models_dbapi import AppClient
-from app.schemas_dbapi import GatewayTokenIn, GatewayTokenResponse
+from app.schemas_dbapi import (
+    GatewayTokenGenerateGetResponse,
+    GatewayTokenIn,
+    GatewayTokenResponse,
+)
 
 router = APIRouter(prefix="/token", tags=["token"])
 
@@ -62,16 +67,56 @@ async def token_generate(
 
     client = _get_client_by_client_id(session, body.client_id)
     if not client:
-        raise HTTPException(status_code=401, detail="Invalid client_id or client_secret")
+        raise HTTPException(
+            status_code=401, detail="Invalid client_id or client_secret"
+        )
 
     if not verify_password(body.client_secret, client.client_secret):
-        raise HTTPException(status_code=401, detail="Invalid client_id or client_secret")
+        raise HTTPException(
+            status_code=401, detail="Invalid client_id or client_secret"
+        )
 
     expires_delta = timedelta(seconds=settings.GATEWAY_JWT_EXPIRE_SECONDS)
-    access_token = create_access_token(subject=client.client_id, expires_delta=expires_delta)
+    access_token = create_access_token(
+        subject=client.client_id, expires_delta=expires_delta
+    )
 
     return GatewayTokenResponse(
         access_token=access_token,
         token_type="bearer",
         expires_in=settings.GATEWAY_JWT_EXPIRE_SECONDS,
+    )
+
+
+@router.get("/generate", response_model=GatewayTokenGenerateGetResponse)
+def token_generate_get(
+    clientId: str,
+    secret: str,
+    session: SessionDep,
+) -> Any:
+    """
+    Legacy migration: GET /token/generate?clientId=XXXX&secret=YYYY.
+    Returns { expireAt: unixtime, token } (no Bearer prefix required in Authorization).
+    """
+    client = _get_client_by_client_id(session, clientId)
+    if not client:
+        raise HTTPException(
+            status_code=401, detail="Invalid client_id or client_secret"
+        )
+
+    if not verify_password(secret, client.client_secret):
+        raise HTTPException(
+            status_code=401, detail="Invalid client_id or client_secret"
+        )
+
+    expires_delta = timedelta(seconds=settings.GATEWAY_JWT_EXPIRE_SECONDS)
+    expire_dt = datetime.now(timezone.utc) + expires_delta
+    expire_at = int(expire_dt.timestamp())
+    access_token = create_access_token(
+        subject=client.client_id, expires_delta=expires_delta
+    )
+
+    return GatewayTokenGenerateGetResponse(
+        expireAt=expire_at,
+        token=access_token,
     )

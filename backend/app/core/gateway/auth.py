@@ -36,19 +36,23 @@ def _get_client_by_client_id(session: Session, client_id: str) -> AppClient | No
 
 def verify_gateway_client(request: Request, session: Session) -> AppClient | None:
     """
-    Authenticate Gateway request. Only Bearer JWT is supported.
+    Authenticate Gateway request. Supports:
+    - Authorization: Bearer <token> (JWT)
+    - Authorization: <token> (raw token, legacy migration)
 
-    Bearer: decode JWT, sub=client_id → load AppClient, check is_active.
-    JWT is obtained from POST /token/generate with client_id and client_secret.
+    JWT is obtained from POST /token/generate or GET /token/generate?clientId=&secret=.
 
     Returns AppClient or None.
     """
-    auth = request.headers.get("Authorization") or ""
-
-    if not auth.startswith("Bearer "):
+    auth = (request.headers.get("Authorization") or "").strip()
+    if not auth:
         return None
 
-    token = auth[7:].strip()
+    # Bearer <token> or raw <token>
+    if auth.startswith("Bearer "):
+        token = auth[7:].strip()
+    else:
+        token = auth
     if not token:
         return None
 

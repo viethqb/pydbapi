@@ -122,7 +122,7 @@ And then you can run the local development server for the backend:
 
 ```bash
 cd backend
-fastapi dev app/main.py
+uvicorn app.main:app --reload
 ```
 
 ## Docker Compose in `localhost.tiangolo.com`

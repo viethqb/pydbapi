@@ -64,17 +64,9 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
     header: "Full Path",
     cell: ({ row }) => {
       const api = row.original
-      let moduleSegment = ""
-      
-      if (api.module_path_prefix && api.module_path_prefix.trim() !== "/") {
-        moduleSegment = api.module_path_prefix.trim().replace(/^\/+|\/+$/g, "")
-      } else if (api.module_name) {
-        // Fallback: use module name (lowercase, replace spaces with hyphens)
-        moduleSegment = api.module_name.toLowerCase().replace(/\s+/g, "-")
-      }
-      
       const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-      const fullPath = `/${moduleSegment}/${apiPath}`
+      const isRootModule = !api.module_path_prefix || api.module_path_prefix.trim() === "/"
+      const fullPath = isRootModule ? `/${apiPath}` : `/${api.module_path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
       
       return (
         <span className="font-mono text-sm">

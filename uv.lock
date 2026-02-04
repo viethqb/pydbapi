@@ -13,7 +13,7 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "app",
+    "pydbapi-backend",
 ]
 
 [[package]]
@@ -55,7 +55,7 @@ wheels = [
 ]
 
 [[package]]
-name = "app"
+name = "pydbapi-backend"
 version = "0.1.0"
 source = { editable = "backend" }
 dependencies = [
