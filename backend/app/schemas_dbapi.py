@@ -7,7 +7,7 @@ DataSource, ApiAssignment, ApiModule, ApiGroup, AppClient, etc.
 import uuid
 from datetime import date, datetime
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 from sqlmodel import SQLModel
 
 from app.models_dbapi import (
@@ -32,7 +32,9 @@ class DataSourceCreate(SQLModel):
     port: int = Field(default=5432, ge=1, le=65535)
     database: str = Field(..., min_length=1, max_length=255)
     username: str = Field(..., min_length=1, max_length=255)
-    password: str = Field(..., min_length=1, max_length=512)
+    password: str = Field(
+        default="", max_length=512, description="Optional; leave empty for no password."
+    )
     driver_version: str | None = Field(default=None, max_length=64)
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)
@@ -40,6 +42,20 @@ class DataSourceCreate(SQLModel):
         default=False,
         description="If True, close DB connection after each request (e.g. for StarRocks impersonation).",
     )
+    use_ssl: bool = Field(
+        default=False,
+        description="For Trino: use HTTPS. When True, password is required.",
+    )
+
+    @model_validator(mode="after")
+    def trino_ssl_requires_password(self) -> "DataSourceCreate":
+        if (
+            self.product_type == ProductTypeEnum.TRINO
+            and self.use_ssl
+            and not (self.password and self.password.strip())
+        ):
+            raise ValueError("Password is required for Trino when using SSL/HTTPS.")
+        return self
 
 
 class DataSourceUpdate(SQLModel):
@@ -52,11 +68,25 @@ class DataSourceUpdate(SQLModel):
     port: int | None = Field(default=None, ge=1, le=65535)
     database: str | None = Field(default=None, min_length=1, max_length=255)
     username: str | None = Field(default=None, min_length=1, max_length=255)
-    password: str | None = Field(default=None, min_length=1, max_length=512)
+    password: str | None = Field(
+        default=None, max_length=512
+    )  # None = keep current; "" = set to empty
     driver_version: str | None = None
     description: str | None = None
     is_active: bool | None = None
     close_connection_after_execute: bool | None = None
+    use_ssl: bool | None = None
+
+    @model_validator(mode="after")
+    def trino_ssl_requires_password(self) -> "DataSourceUpdate":
+        if self.product_type != ProductTypeEnum.TRINO or not self.use_ssl:
+            return self
+        # When setting use_ssl=True, password must be provided (non-empty)
+        if self.password is None:
+            return self  # None = keep current, validated on server if needed
+        if not (self.password.strip() if isinstance(self.password, str) else False):
+            raise ValueError("Password is required for Trino when using SSL/HTTPS.")
+        return self
 
 
 class DataSourcePublic(SQLModel):
@@ -73,6 +103,7 @@ class DataSourcePublic(SQLModel):
     description: str | None
     is_active: bool
     close_connection_after_execute: bool
+    use_ssl: bool
     created_at: datetime
     updated_at: datetime
 
@@ -102,7 +133,20 @@ class DataSourcePreTestIn(SQLModel):
     port: int = Field(default=5432, ge=1, le=65535)
     database: str = Field(..., min_length=1, max_length=255)
     username: str = Field(..., min_length=1, max_length=255)
-    password: str = Field(..., min_length=1, max_length=512)
+    password: str | None = Field(default=None, max_length=512, description="Optional.")
+    use_ssl: bool = Field(
+        default=False, description="For Trino: use HTTPS. When True, password required."
+    )
+
+    @model_validator(mode="after")
+    def trino_ssl_requires_password(self) -> "DataSourcePreTestIn":
+        if (
+            self.product_type == ProductTypeEnum.TRINO
+            and self.use_ssl
+            and not (self.password and str(self.password).strip())
+        ):
+            raise ValueError("Password is required for Trino when using SSL/HTTPS.")
+        return self
 
 
 class DataSourceTestResult(SQLModel):

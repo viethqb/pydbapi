@@ -2,7 +2,7 @@ import { OpenAPI } from "@/client"
 import type { DataSourcePublic } from "@/components/DataSource/columns"
 
 // Types matching backend schemas
-export type ProductTypeEnum = "postgres" | "mysql"
+export type ProductTypeEnum = "postgres" | "mysql" | "trino"
 
 export type DataSourceListIn = {
   page?: number
@@ -24,11 +24,12 @@ export type DataSourceCreate = {
   port?: number
   database: string
   username: string
-  password: string
+  password?: string
   driver_version?: string | null
   description?: string | null
   is_active?: boolean
   close_connection_after_execute?: boolean
+  use_ssl?: boolean
 }
 
 export type DataSourceUpdate = {
@@ -44,6 +45,7 @@ export type DataSourceUpdate = {
   description?: string | null
   is_active?: boolean | null
   close_connection_after_execute?: boolean | null
+  use_ssl?: boolean | null
 }
 
 export type DataSourcePreTestIn = {
@@ -52,7 +54,8 @@ export type DataSourcePreTestIn = {
   port?: number
   database: string
   username: string
-  password: string
+  password?: string | null
+  use_ssl?: boolean
 }
 
 export type DataSourceTestResult = {

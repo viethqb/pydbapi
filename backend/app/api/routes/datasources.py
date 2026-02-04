@@ -65,16 +65,18 @@ def _datasource_resource_id_from_path(
     return id
 
 
-# Supported DB types (Phase 2: postgres, mysql only)
+# Supported DB types (postgres, mysql, trino)
 DATASOURCE_TYPES: list[str] = [
     ProductTypeEnum.POSTGRES.value,
     ProductTypeEnum.MYSQL.value,
+    ProductTypeEnum.TRINO.value,
 ]
 
 # Default driver label per type (Phase 2: single option; Phase 3: no driver layer, can remove later)
 DRIVERS_BY_TYPE: dict[str, list[str]] = {
     ProductTypeEnum.POSTGRES.value: ["default"],
     ProductTypeEnum.MYSQL.value: ["default"],
+    ProductTypeEnum.TRINO.value: ["default"],
 }
 
 
@@ -103,6 +105,7 @@ def _to_public(ds: DataSource) -> DataSourcePublic:
         description=ds.description,
         is_active=ds.is_active,
         close_connection_after_execute=ds.close_connection_after_execute,
+        use_ssl=ds.use_ssl,
         created_at=ds.created_at,
         updated_at=ds.updated_at,
     )

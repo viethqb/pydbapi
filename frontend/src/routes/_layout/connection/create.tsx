@@ -41,18 +41,29 @@ import {
 } from "@/services/datasource"
 import useCustomToast from "@/hooks/useCustomToast"
 
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255),
-  product_type: z.enum(["postgres", "mysql"]),
-  host: z.string().min(1, "Host is required").max(255),
-  port: z.number().int().min(1).max(65535),
-  database: z.string().min(1, "Database is required").max(255),
-  username: z.string().min(1, "Username is required").max(255),
-  password: z.string().min(1, "Password is required").max(512),
-  description: z.string().max(512).optional().nullable(),
-  is_active: z.boolean().default(true),
-  close_connection_after_execute: z.boolean().default(false),
-})
+const formSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").max(255),
+    product_type: z.enum(["postgres", "mysql", "trino"]),
+    host: z.string().min(1, "Host is required").max(255),
+    port: z.number().int().min(1).max(65535),
+    database: z.string().min(1, "Database is required").max(255),
+    username: z.string().min(1, "Username is required").max(255),
+    password: z.string().max(512).optional().default(""),
+    use_ssl: z.boolean().default(false),
+    description: z.string().max(512).optional().nullable(),
+    is_active: z.boolean().default(true),
+    close_connection_after_execute: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      if (data.product_type === "trino" && data.use_ssl) {
+        return !!data.password?.trim()
+      }
+      return true
+    },
+    { message: "Password is required for Trino when using SSL/HTTPS", path: ["password"] }
+  )
 
 type FormValues = z.infer<typeof formSchema>
 
@@ -116,7 +127,8 @@ function ConnectionCreate() {
         port: data.port,
         database: data.database,
         username: data.username,
-        password: data.password,
+        password: data.password ?? "",
+        use_ssl: data.use_ssl,
       }),
     onSuccess: (result) => {
       if (result.ok) {
@@ -141,6 +153,7 @@ function ConnectionCreate() {
     createMutation.mutate({
       ...values,
       close_connection_after_execute: values.close_connection_after_execute,
+      use_ssl: values.use_ssl,
     })
   }
 
@@ -203,6 +216,7 @@ function ConnectionCreate() {
                               <SelectContent>
                                 <SelectItem value="postgres">PostgreSQL</SelectItem>
                                 <SelectItem value="mysql">MySQL</SelectItem>
+                                <SelectItem value="trino">Trino</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -211,6 +225,30 @@ function ConnectionCreate() {
                       />
                     </TableCell>
                   </TableRow>
+                  {form.watch("product_type") === "trino" && (
+                    <TableRow>
+                      <TableHead className="w-[180px]">Use SSL/HTTPS</TableHead>
+                      <TableCell>
+                        <FormField
+                          control={form.control}
+                          name="use_ssl"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal cursor-pointer">
+                                Use HTTPS (password required when enabled)
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
                   <TableRow>
                     <TableHead className="w-[180px]">Host *</TableHead>
                     <TableCell>
@@ -285,7 +323,7 @@ function ConnectionCreate() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">Password *</TableHead>
+                    <TableHead className="w-[180px]">Password</TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -293,7 +331,7 @@ function ConnectionCreate() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Input type="password" placeholder="••••••••" {...field} />
+                              <Input type="password" placeholder="Optional" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

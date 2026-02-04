@@ -206,6 +206,7 @@ function ConnectionList() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="postgres">PostgreSQL</SelectItem>
             <SelectItem value="mysql">MySQL</SelectItem>
+            <SelectItem value="trino">Trino</SelectItem>
           </SelectContent>
         </Select>
         <Select

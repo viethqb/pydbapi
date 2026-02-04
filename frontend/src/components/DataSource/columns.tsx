@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 export type DataSourcePublic = {
   id: string
   name: string
-  product_type: "postgres" | "mysql"
+  product_type: "postgres" | "mysql" | "trino"
   host: string
   port: number
   database: string
@@ -27,6 +27,7 @@ export type DataSourcePublic = {
   description: string | null
   is_active: boolean
   close_connection_after_execute: boolean
+  use_ssl: boolean
   created_at: string
   updated_at: string
 }

@@ -30,10 +30,11 @@ def _utc_now() -> datetime:
 
 
 class ProductTypeEnum(str, Enum):
-    """Supported database product types (initial: postgres, mysql)."""
+    """Supported database product types (postgres, mysql, trino)."""
 
     POSTGRES = "postgres"
     MYSQL = "mysql"
+    TRINO = "trino"
 
 
 class HttpMethodEnum(str, Enum):
@@ -101,6 +102,10 @@ class DataSource(SQLModel, table=True):
         default=False,
         description="If True, close the DB connection after each request instead of returning to pool. "
         "Required for DBs like StarRocks when using EXECUTE AS user WITH NO REVERT (impersonation).",
+    )
+    use_ssl: bool = Field(
+        default=False,
+        description="For Trino: use HTTPS (http_scheme='https'). When True, password is required.",
     )
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)

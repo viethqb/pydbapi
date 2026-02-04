@@ -41,18 +41,30 @@ import {
 } from "@/services/datasource"
 import useCustomToast from "@/hooks/useCustomToast"
 
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255),
-  product_type: z.enum(["postgres", "mysql"]),
-  host: z.string().min(1, "Host is required").max(255),
-  port: z.number().int().min(1).max(65535),
-  database: z.string().min(1, "Database is required").max(255),
-  username: z.string().min(1, "Username is required").max(255),
-  password: z.string().max(512).optional(),
-  description: z.string().max(512).optional().nullable(),
-  is_active: z.boolean().default(true),
-  close_connection_after_execute: z.boolean().default(false),
-})
+const formSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").max(255),
+    product_type: z.enum(["postgres", "mysql", "trino"]),
+    host: z.string().min(1, "Host is required").max(255),
+    port: z.number().int().min(1).max(65535),
+    database: z.string().min(1, "Database is required").max(255),
+    username: z.string().min(1, "Username is required").max(255),
+    password: z.string().max(512).optional(),
+    clear_password: z.boolean().optional().default(false),
+    use_ssl: z.boolean().default(false),
+    description: z.string().max(512).optional().nullable(),
+    is_active: z.boolean().default(true),
+    close_connection_after_execute: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      if (data.product_type === "trino" && data.use_ssl) {
+        return !!data.password?.trim()
+      }
+      return true
+    },
+    { message: "Password is required for Trino when using SSL/HTTPS", path: ["password"] }
+  )
 
 type FormValues = z.infer<typeof formSchema>
 
@@ -95,6 +107,8 @@ function ConnectionEdit() {
       description: null,
       is_active: true,
       close_connection_after_execute: false,
+      clear_password: false,
+      use_ssl: false,
     },
   })
 
@@ -108,12 +122,14 @@ function ConnectionEdit() {
       
       form.reset({
         name: datasource.name,
-        product_type: productType as "postgres" | "mysql",
+        product_type: productType as "postgres" | "mysql" | "trino",
         host: datasource.host,
         port: datasource.port,
         database: datasource.database,
         username: datasource.username,
-        password: "", // Don't prefill password
+        password: "",
+        clear_password: false,
+        use_ssl: !!datasource.use_ssl,
         description: datasource.description || null,
         is_active: datasource.is_active,
         close_connection_after_execute: datasource.close_connection_after_execute ?? false,
@@ -153,7 +169,8 @@ function ConnectionEdit() {
         port: data.port,
         database: data.database,
         username: data.username,
-        password: data.password || "", // Use current password if not changed
+        password: data.password || "",
+        use_ssl: data.use_ssl,
       }),
     onSuccess: (result) => {
       if (result.ok) {
@@ -189,21 +206,21 @@ function ConnectionEdit() {
       port: values.port,
       database: values.database,
       username: values.username,
-      ...(values.password ? { password: values.password } : {}),
+      ...(values.clear_password
+        ? { password: "" }
+        : values.password
+          ? { password: values.password }
+          : {}),
       description: values.description,
       is_active: values.is_active,
       close_connection_after_execute: values.close_connection_after_execute,
+      use_ssl: values.use_ssl,
     }
     updateMutation.mutate(updateData)
   }
 
   const handleTest = () => {
     const values = form.getValues()
-    // For testing, password is required to verify the connection
-    if (!values.password) {
-      showErrorToast("Please enter password to test connection")
-      return
-    }
     testMutation.mutate(values)
   }
 
@@ -289,6 +306,7 @@ function ConnectionEdit() {
                               <SelectContent>
                                 <SelectItem value="postgres">PostgreSQL</SelectItem>
                                 <SelectItem value="mysql">MySQL</SelectItem>
+                                <SelectItem value="trino">Trino</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -297,6 +315,30 @@ function ConnectionEdit() {
                       />
                     </TableCell>
                   </TableRow>
+                  {form.watch("product_type") === "trino" && (
+                    <TableRow>
+                      <TableHead className="w-[180px]">Use SSL/HTTPS</TableHead>
+                      <TableCell>
+                        <FormField
+                          control={form.control}
+                          name="use_ssl"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal cursor-pointer">
+                                Use HTTPS (password required when enabled)
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
                   <TableRow>
                     <TableHead className="w-[180px]">Host *</TableHead>
                     <TableCell>
@@ -372,7 +414,7 @@ function ConnectionEdit() {
                   </TableRow>
                   <TableRow>
                     <TableHead className="w-[180px]">Password</TableHead>
-                    <TableCell>
+                    <TableCell className="space-y-3">
                       <FormField
                         control={form.control}
                         name="password"
@@ -386,10 +428,29 @@ function ConnectionEdit() {
                                 value={field.value || ""}
                               />
                             </FormControl>
-                            <FormDescription className="mt-1">
-                              Leave empty to keep current password
-                            </FormDescription>
                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="clear_password"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel className="text-sm font-normal cursor-pointer">
+                                Set password to empty (clear password)
+                              </FormLabel>
+                              <FormDescription>
+                                Check to update stored password to empty; leave unchecked to keep current or use the value above.
+                              </FormDescription>
+                            </div>
                           </FormItem>
                         )}
                       />

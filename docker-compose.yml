@@ -47,6 +47,18 @@ services:
     # volumes:
     #   - starrocks-be:/opt/starrocks/be/storage
 
+  trino:
+    image: trinodb/trino
+    restart: always
+    ports:
+      - "9080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/v1/info/state || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   adminer:
     image: adminer
     restart: always
