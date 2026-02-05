@@ -40,6 +40,7 @@ export const baseNavItems: NavItem[] = [
     submenu: [
       { title: "Groups", path: "/system/groups" },
       { title: "Clients", path: "/system/clients" },
+      { title: "Access logs", path: "/system/access-logs" },
     ],
   },
 ]

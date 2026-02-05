@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    access_logs,
     api_assignments,
     clients,
     datasources,
@@ -28,6 +29,7 @@ api_router.include_router(groups.router)
 api_router.include_router(api_assignments.router)
 api_router.include_router(clients.router)
 api_router.include_router(overview.router)
+api_router.include_router(access_logs.router)
 api_router.include_router(roles.router)
 api_router.include_router(permissions.router)
 

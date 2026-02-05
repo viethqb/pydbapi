@@ -65,6 +65,7 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
   client: "Client",
   user: "User",
   overview: "Overview",
+  access_log: "Access log",
 }
 
 function RoleEditPage() {
@@ -225,6 +226,7 @@ function RoleEditPage() {
       "client",
       "user",
       "overview",
+      "access_log",
     ]
     const byType = new Map<string, typeof permissionRows>()
     for (const row of permissionRows) {

@@ -148,6 +148,12 @@ def get_top_paths(
     )
 
 
+def _truncate_for_list(s: str | None, max_len: int = 200) -> str | None:
+    if s is None or len(s) <= max_len:
+        return s
+    return s[:max_len] + "..."
+
+
 def _to_access_public(r: AccessRecord) -> AccessRecordPublic:
     return AccessRecordPublic(
         id=r.id,
@@ -158,6 +164,9 @@ def _to_access_public(r: AccessRecord) -> AccessRecordPublic:
         path=r.path,
         status_code=r.status_code,
         created_at=r.created_at,
+        request_body=_truncate_for_list(r.request_body),
+        request_headers=_truncate_for_list(r.request_headers),
+        request_params=_truncate_for_list(r.request_params),
     )
 
 

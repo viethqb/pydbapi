@@ -13,31 +13,48 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
+import { usePermissions } from "@/hooks/usePermissions"
 import { baseNavItems, securityNavItem } from "./navItems"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
 function toMainItem(
   item: (typeof baseNavItems)[number] | typeof securityNavItem,
+  filterSubmenu?: (sub: { title: string; path: string }) => boolean,
 ): Item {
+  const submenu =
+    item.submenu && filterSubmenu
+      ? item.submenu.filter(filterSubmenu)
+      : item.submenu
   return {
     icon: item.icon,
     title: item.title,
     path: item.path,
-    submenu: item.submenu,
+    submenu: submenu?.length ? submenu : undefined,
   }
 }
 
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
+  const { hasPermission } = usePermissions()
 
-  const items: Item[] = currentUser?.is_superuser
-    ? [
-        ...baseNavItems.map(toMainItem),
+  const items: Item[] = (() => {
+    const canAccessLogs = hasPermission("access_log", "read")
+    const filter = (item: (typeof baseNavItems)[number] | typeof securityNavItem) =>
+      toMainItem(item, (sub) => {
+        if (sub.path === "/system/access-logs") return canAccessLogs
+        return true
+      })
+    const base = baseNavItems.map(filter)
+    if (currentUser?.is_superuser) {
+      return [
+        ...base,
         toMainItem(securityNavItem),
         { icon: Users, title: "Admin", path: "/admin" },
       ]
-    : baseNavItems.map(toMainItem)
+    }
+    return base
+  })()
 
   return (
     <Sidebar collapsible="icon">

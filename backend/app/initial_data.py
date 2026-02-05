@@ -147,6 +147,12 @@ def seed_roles_and_permissions(session: Session) -> None:
         if p.resource_type == ResourceTypeEnum.OVERVIEW
         and p.action == PermissionActionEnum.READ
     ]
+    alpha_perms += [
+        p
+        for p in all_permissions
+        if p.resource_type == ResourceTypeEnum.ACCESS_LOG
+        and p.action in (PermissionActionEnum.READ, PermissionActionEnum.UPDATE)
+    ]
     for perm in alpha_perms:
         _link_role_permission(session, alpha_role.id, perm.id)
 
@@ -159,6 +165,7 @@ def seed_roles_and_permissions(session: Session) -> None:
         ResourceTypeEnum.MACRO_DEF,
         ResourceTypeEnum.CLIENT,
         ResourceTypeEnum.OVERVIEW,
+        ResourceTypeEnum.ACCESS_LOG,
     ]
     gamma_perms = [
         p
@@ -169,7 +176,7 @@ def seed_roles_and_permissions(session: Session) -> None:
     for perm in gamma_perms:
         _link_role_permission(session, gamma_role.id, perm.id)
 
-    # 6. Operator: api_assignment read + execute (debug), overview read
+    # 6. Operator: api_assignment read + execute (debug), overview read, access_log read
     operator_perms = [
         p
         for p in all_permissions
@@ -184,6 +191,10 @@ def seed_roles_and_permissions(session: Session) -> None:
             )
             or (
                 p.resource_type == ResourceTypeEnum.OVERVIEW
+                and p.action == PermissionActionEnum.READ
+            )
+            or (
+                p.resource_type == ResourceTypeEnum.ACCESS_LOG
                 and p.action == PermissionActionEnum.READ
             )
         )

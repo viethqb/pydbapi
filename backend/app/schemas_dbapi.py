@@ -574,7 +574,7 @@ class ApiAssignmentListIn(SQLModel):
     """Body for POST /api-assignments/list; pagination and optional filters."""
 
     page: int = Field(default=1, ge=1, description="1-based page number")
-    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    page_size: int = Field(default=20, ge=1, le=500, description="Items per page")
     module_id: uuid.UUID | None = None
     is_published: bool | None = None
     name__ilike: str | None = Field(default=None, max_length=255)
@@ -728,7 +728,7 @@ class OverviewStats(SQLModel):
 
 
 class AccessRecordPublic(SQLModel):
-    """Minimal schema for AccessRecord in recent-access; request_body excluded."""
+    """Schema for AccessRecord in list; optional body/headers/params preview (truncated)."""
 
     id: uuid.UUID
     api_assignment_id: uuid.UUID | None
@@ -738,6 +738,9 @@ class AccessRecordPublic(SQLModel):
     path: str
     status_code: int
     created_at: datetime
+    request_body: str | None = Field(default=None, description="Truncated for list")
+    request_headers: str | None = Field(default=None, description="Truncated for list")
+    request_params: str | None = Field(default=None, description="Truncated for list")
 
 
 class VersionCommitPublic(SQLModel):
@@ -835,6 +838,75 @@ class TopPathsOut(SQLModel):
     """Response for GET /overview/top-paths."""
 
     data: list[TopPathPoint]
+
+
+# ---------------------------------------------------------------------------
+# Access log config & list (admin page)
+# ---------------------------------------------------------------------------
+
+
+class AccessLogConfigPublic(SQLModel):
+    """Current access log storage: null = main DB, else DataSource id. use_starrocks_audit for MySQL/StarRocks."""
+
+    datasource_id: uuid.UUID | None = None
+    use_starrocks_audit: bool = False
+
+
+class AccessLogConfigUpdate(SQLModel):
+    """Body for PUT /access-log-config."""
+
+    datasource_id: uuid.UUID | None = None
+    use_starrocks_audit: bool = False
+
+
+class AccessLogDatasourceOption(SQLModel):
+    """Minimal DataSource info for access-log storage dropdown (no password)."""
+
+    id: uuid.UUID
+    name: str
+    product_type: str
+
+
+class AccessLogDatasourceOptionsOut(SQLModel):
+    """Response for GET /access-logs/datasource-options."""
+
+    data: list[AccessLogDatasourceOption]
+
+
+class AccessLogListIn(SQLModel):
+    """Query params for GET /access-logs."""
+
+    api_assignment_id: uuid.UUID | None = None
+    time_from: datetime | None = None
+    time_to: datetime | None = None
+    status: str | None = None  # "all" | "success" | "fail"
+    page: int = 1
+    page_size: int = 20
+
+
+class AccessRecordDetail(SQLModel):
+    """Full access record for detail view (includes request_body, headers, params; human-readable api/client)."""
+
+    id: uuid.UUID
+    api_assignment_id: uuid.UUID | None
+    app_client_id: uuid.UUID | None
+    ip_address: str
+    http_method: str
+    path: str
+    status_code: int
+    request_body: str | None = None
+    request_headers: str | None = None
+    request_params: str | None = None
+    created_at: datetime
+    api_display: str | None = Field(default=None, description="e.g. GET /module/path or API name")
+    app_client_display: str | None = Field(default=None, description="Client name")
+
+
+class AccessLogListOut(SQLModel):
+    """Response for GET /access-logs."""
+
+    data: list[AccessRecordPublic]
+    total: int
 
 
 # ---------------------------------------------------------------------------

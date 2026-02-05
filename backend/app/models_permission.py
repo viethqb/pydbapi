@@ -33,6 +33,7 @@ class ResourceTypeEnum(str, Enum):
     CLIENT = "client"
     USER = "user"
     OVERVIEW = "overview"
+    ACCESS_LOG = "access_log"
 
 
 class PermissionActionEnum(str, Enum):

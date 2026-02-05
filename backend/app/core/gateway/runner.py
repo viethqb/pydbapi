@@ -10,12 +10,13 @@ from sqlmodel import Session
 from app.core.config import settings
 from fastapi import HTTPException
 
+from app.core.access_log_storage import write_access_record
 from app.core.gateway.config_cache import get_or_load_gateway_config
 from app.core.param_type import ParamTypeError, validate_and_coerce_params
 from app.core.param_validate import ParamValidateError, run_param_validates
 from app.core.result_transform import ResultTransformError, run_result_transform
 from app.engines import ApiExecutor
-from app.models_dbapi import AccessRecord, ApiAssignment
+from app.models_dbapi import ApiAssignment
 
 
 def _write_access_record(
@@ -28,11 +29,17 @@ def _write_access_record(
     path: str,
     status_code: int,
     request_body: str | None = None,
+    request_headers: str | None = None,
+    request_params: str | None = None,
 ) -> None:
+    from uuid import uuid4
+
     body: str | None = None
     if settings.GATEWAY_ACCESS_LOG_BODY and request_body:
         body = request_body[:2000] + "..." if len(request_body) > 2000 else request_body
-    rec = AccessRecord(
+    write_access_record(
+        main_session=session,
+        id=uuid4(),
         api_assignment_id=api_assignment_id,
         app_client_id=app_client_id,
         ip_address=ip_address,
@@ -40,9 +47,9 @@ def _write_access_record(
         path=path,
         status_code=status_code,
         request_body=body,
+        request_headers=request_headers,
+        request_params=request_params,
     )
-    session.add(rec)
-    session.commit()
 
 
 def run(
@@ -55,6 +62,8 @@ def run(
     http_method: str = "GET",
     request_path: str = "",
     request_body: str | None = None,
+    request_headers: str | None = None,
+    request_params: str | None = None,
 ) -> dict:
     """
     Load ApiContext (from cache or DB), run ApiExecutor, write AccessRecord.
@@ -72,6 +81,8 @@ def run(
             path=request_path,
             status_code=500,
             request_body=request_body,
+            request_headers=request_headers,
+            request_params=request_params,
         )
         raise RuntimeError("ApiContext not found for ApiAssignment")
 
@@ -112,6 +123,8 @@ def run(
                 path=request_path,
                 status_code=400,
                 request_body=request_body,
+                request_headers=request_headers,
+                request_params=request_params,
             )
             raise HTTPException(
                 status_code=400,
@@ -131,6 +144,8 @@ def run(
             path=request_path,
             status_code=400,
             request_body=request_body,
+            request_headers=request_headers,
+            request_params=request_params,
         )
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -152,6 +167,8 @@ def run(
                 path=request_path,
                 status_code=400,
                 request_body=request_body,
+                request_headers=request_headers,
+                request_params=request_params,
             )
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -167,6 +184,8 @@ def run(
                 path=request_path,
                 status_code=400,
                 request_body=request_body,
+                request_headers=request_headers,
+                request_params=request_params,
             )
             raise RuntimeError("DataSource is inactive and cannot be used")
 
@@ -202,6 +221,8 @@ def run(
                     path=request_path,
                     status_code=400,
                     request_body=request_body,
+                    request_headers=request_headers,
+                    request_params=request_params,
                 )
                 raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -214,6 +235,8 @@ def run(
             path=request_path,
             status_code=200,
             request_body=request_body,
+            request_headers=request_headers,
+            request_params=request_params,
         )
         return result
     except Exception:
@@ -226,5 +249,7 @@ def run(
             path=request_path,
             status_code=500,
             request_body=request_body,
+            request_headers=request_headers,
+            request_params=request_params,
         )
         raise

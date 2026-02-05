@@ -7,6 +7,7 @@ concurrent requests and the concurrent limit (max_concurrent per client) works.
 """
 
 import asyncio
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
@@ -46,6 +47,8 @@ def _run_runner_in_thread(
     http_method: str,
     request_path: str,
     request_body: str | None,
+    request_headers: str | None = None,
+    request_params: str | None = None,
 ) -> dict:
     """Run runner_run in a thread with a fresh session (session is not thread-safe)."""
     with Session(engine) as session:
@@ -61,6 +64,8 @@ def _run_runner_in_thread(
             http_method=http_method,
             request_path=request_path,
             request_body=request_body,
+            request_headers=request_headers,
+            request_params=request_params,
         )
 
 
@@ -158,6 +163,16 @@ async def gateway_proxy(
         params, body_for_log = await parse_params(
             request, path_params, request.method, params_definition=params_definition
         )
+        request_headers_str: str | None = None
+        try:
+            request_headers_str = json.dumps(dict(request.headers))
+        except Exception:
+            pass
+        request_params_str: str | None = None
+        try:
+            request_params_str = json.dumps(params) if params else None
+        except Exception:
+            pass
 
         # Run in thread pool so event loop is not blocked; concurrent limit can then work
         result = await asyncio.to_thread(
@@ -169,6 +184,8 @@ async def gateway_proxy(
             request.method,
             f"{module}/{path}".rstrip("/"),
             body_for_log,
+            request_headers_str,
+            request_params_str,
         )
     except HTTPException as he:
         # Convert to standard envelope; preserve status code

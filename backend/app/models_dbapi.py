@@ -558,7 +558,34 @@ class AccessRecord(SQLModel, table=True):
     path: str = Field(max_length=512)
     status_code: int = Field(default=0)
     request_body: str | None = Field(default=None, sa_column=Column(Text))
+    request_headers: str | None = Field(default=None, sa_column=Column(Text))
+    request_params: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=_utc_now)
 
     api_assignment: "ApiAssignment" = Relationship(back_populates="access_records")
     app_client: "AppClient" = Relationship(back_populates="access_records")
+
+
+# ---------------------------------------------------------------------------
+# AccessLogConfig - Which DataSource to use for access logs (singleton)
+# ---------------------------------------------------------------------------
+
+# Singleton row id used in application
+ACCESS_LOG_CONFIG_ROW_ID = 1
+
+
+class AccessLogConfig(SQLModel, table=True):
+    """Single row: datasource_id = which DataSource stores access_record. NULL = main DB.
+    use_starrocks_audit: when True and datasource is MySQL, use StarRocks audit schema
+    (starrocks_audit_db__.pydbapi_access_log_tbl__) instead of access_record table."""
+
+    __tablename__ = "access_log_config"
+
+    id: int = Field(primary_key=True, default=ACCESS_LOG_CONFIG_ROW_ID)
+    datasource_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="datasource.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+    use_starrocks_audit: bool = Field(default=False)
