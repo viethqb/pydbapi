@@ -96,6 +96,7 @@ def connect(
             auth=BasicAuthentication(username, password or ""),
             catalog=database,
             schema="default",
+            source="pydbapi",
             http_scheme="https" if use_ssl else "http",
             request_timeout=timeout,
         )
