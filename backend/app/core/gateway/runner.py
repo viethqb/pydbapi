@@ -3,6 +3,7 @@ Gateway runner (Phase 4, Task 4.1): run API via ApiExecutor, write AccessRecord.
 Uses config cache (Redis) to reduce DB load for content, params, validate, transform.
 """
 
+import logging
 from uuid import UUID
 
 from sqlmodel import Session
@@ -17,6 +18,8 @@ from app.core.param_validate import ParamValidateError, run_param_validates
 from app.core.result_transform import ResultTransformError, run_result_transform
 from app.engines import ApiExecutor
 from app.models_dbapi import ApiAssignment
+
+logger = logging.getLogger(__name__)
 
 
 def _write_access_record(
@@ -37,19 +40,23 @@ def _write_access_record(
     body: str | None = None
     if settings.GATEWAY_ACCESS_LOG_BODY and request_body:
         body = request_body[:2000] + "..." if len(request_body) > 2000 else request_body
-    write_access_record(
-        main_session=session,
-        id=uuid4(),
-        api_assignment_id=api_assignment_id,
-        app_client_id=app_client_id,
-        ip_address=ip_address,
-        http_method=http_method,
-        path=path,
-        status_code=status_code,
-        request_body=body,
-        request_headers=request_headers,
-        request_params=request_params,
-    )
+    try:
+        write_access_record(
+            main_session=session,
+            id=uuid4(),
+            api_assignment_id=api_assignment_id,
+            app_client_id=app_client_id,
+            ip_address=ip_address,
+            http_method=http_method,
+            path=path,
+            status_code=status_code,
+            request_body=body,
+            request_headers=request_headers,
+            request_params=request_params,
+        )
+    except Exception:
+        # Do not block API responses when audit logging fails; log and continue.
+        logger.exception("Failed to write access record", extra={"api_assignment_id": str(api_assignment_id)})
 
 
 def run(
