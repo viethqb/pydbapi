@@ -5,7 +5,7 @@ Table schema matches AccessRecord (id, api_assignment_id, app_client_id, ip_addr
 http_method, path, status_code, request_body, created_at) with StarRocks-compatible types.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -111,6 +111,7 @@ def read_starrocks_audit_list(
     engine: Engine,
     *,
     api_assignment_id: str | None = None,
+    api_assignment_ids: list[str] | None = None,
     app_client_id: str | None = None,
     path__ilike: str | None = None,
     http_method: str | None = None,
@@ -127,6 +128,14 @@ def read_starrocks_audit_list(
     if api_assignment_id is not None:
         conditions.append("`api_assignment_id` = :api_assignment_id")
         params["api_assignment_id"] = api_assignment_id
+    if api_assignment_ids:
+        # Build `IN` clause with named params to avoid SQL injection
+        placeholders: list[str] = []
+        for i, v in enumerate(api_assignment_ids):
+            key = f"api_assignment_id_{i}"
+            placeholders.append(f":{key}")
+            params[key] = v
+        conditions.append(f"`api_assignment_id` IN ({', '.join(placeholders)})")
     if app_client_id is not None:
         conditions.append("`app_client_id` = :app_client_id")
         params["app_client_id"] = app_client_id
@@ -167,6 +176,7 @@ def read_starrocks_audit_list(
     count_params = {
         k: v for k, v in params.items()
         if k in ("api_assignment_id", "app_client_id", "path_like", "http_method", "ip_address", "time_from", "time_to")
+        or k.startswith("api_assignment_id_")
     }
     with engine.connect() as conn:
         count_result = conn.execute(count_sql, count_params)
@@ -196,3 +206,71 @@ def read_starrocks_audit_detail(engine: Engine, log_id: str) -> dict | None:
     keys = list(result.keys())
     row_dict = dict(zip(keys, row, strict=True))
     return _row_to_dict(row_dict)
+
+
+def read_starrocks_audit_requests_by_day(
+    engine: Engine,
+    *,
+    days: int,
+) -> list[tuple[date, int]]:
+    """Query requests grouped by day from StarRocks audit table. Returns list of (date, count)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    sql = text(f"""
+    SELECT DATE(`created_at`) AS day, COUNT(*) AS count
+    FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
+    WHERE `created_at` >= :cutoff
+    GROUP BY DATE(`created_at`)
+    ORDER BY day ASC
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(sql, {"cutoff": cutoff})
+        rows = result.fetchall()
+    points: list[tuple[date, int]] = []
+    for row in rows:
+        day_val, count_val = row
+        if isinstance(day_val, datetime):
+            day_val = day_val.date()
+        elif isinstance(day_val, str):
+            day_val = date.fromisoformat(day_val.split("T")[0])
+        points.append((day_val, int(count_val or 0)))
+    return points
+
+
+def read_starrocks_audit_top_paths(
+    engine: Engine,
+    *,
+    days: int,
+    limit: int,
+) -> list[tuple[str, int]]:
+    """Query top paths by count from StarRocks audit table. Returns list of (path, count)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    sql = text(f"""
+    SELECT `path`, COUNT(*) AS count
+    FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
+    WHERE `created_at` >= :cutoff
+    GROUP BY `path`
+    ORDER BY count DESC
+    LIMIT :limit
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(sql, {"cutoff": cutoff, "limit": limit})
+        rows = result.fetchall()
+    return [(str(path), int(count or 0)) for path, count in rows]
+
+
+def read_starrocks_audit_recent(
+    engine: Engine,
+    *,
+    limit: int,
+) -> list[dict]:
+    """Query recent access records from StarRocks audit table. Returns list of row dicts."""
+    sql = text(f"""
+    SELECT `id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`
+    FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
+    ORDER BY `created_at` DESC
+    LIMIT :limit
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(sql, {"limit": limit})
+        rows = [dict(zip(result.keys(), row, strict=True)) for row in result.fetchall()]
+    return [_row_to_dict(r) for r in rows]

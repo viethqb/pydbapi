@@ -37,6 +37,8 @@ import {
   type AccessRecordPublic,
 } from "@/services/access-logs"
 import { ClientsService } from "@/services/clients"
+import { GroupsService } from "@/services/groups"
+import { ModulesService } from "@/services/modules"
 import { usePermissions } from "@/hooks/usePermissions"
 import useCustomToast from "@/hooks/useCustomToast"
 
@@ -88,6 +90,8 @@ function AccessLogsPage() {
   const [useStarrocksAudit, setUseStarrocksAudit] = useState(false)
   const [fullContentDialog, setFullContentDialog] = useState<FullContentPayload | null>(null)
   const [filters, setFilters] = useState({
+    module_id: null as string | null,
+    group_id: null as string | null,
     api_assignment_id: null as string | null,
     app_client_id: null as string | null,
     path__ilike: "",
@@ -98,6 +102,11 @@ function AccessLogsPage() {
     page: 1,
     page_size: 20,
   })
+
+  const [moduleSearch, setModuleSearch] = useState("")
+  const [apiSearch, setApiSearch] = useState("")
+  const [clientSearch, setClientSearch] = useState("")
+  const [groupSearch, setGroupSearch] = useState("")
 
   const { data: config } = useQuery({
     queryKey: ["access-log-config"],
@@ -125,8 +134,24 @@ function AccessLogsPage() {
     queryKey: ["clients-for-access-log-filter"],
     queryFn: () => ClientsService.list({ page: 1, page_size: 500 }),
   })
+  const { data: modulesList } = useQuery({
+    queryKey: ["modules-simple-for-access-log-filter"],
+    queryFn: () => ModulesService.listSimple(),
+  })
+  const { data: groupsList } = useQuery({
+    queryKey: ["groups-for-access-log-filter", groupSearch],
+    queryFn: () =>
+      GroupsService.list({
+        page: 1,
+        page_size: 50,
+        name__ilike: groupSearch.trim() || null,
+        is_active: true,
+      }),
+  })
 
   const listParams = {
+    module_id: filters.module_id || null,
+    group_id: filters.group_id || null,
     api_assignment_id: filters.api_assignment_id || null,
     app_client_id: filters.app_client_id || null,
     path__ilike: filters.path__ilike.trim() || null,
@@ -141,6 +166,47 @@ function AccessLogsPage() {
     page: filters.page,
     page_size: filters.page_size,
   }
+
+  const moduleById = new Map((modulesList ?? []).map((m) => [m.id, m]))
+  const formatApiFullPath = (api: { module_id: string; path: string }) => {
+    const mod = moduleById.get(api.module_id)
+    const prefix = (mod?.path_prefix || "/").replace(/^\/+|\/+$/g, "")
+    const p = (api.path || "").replace(/^\/+|\/+$/g, "")
+    const full = `/${prefix}/${p}`.replace(/\/+/g, "/")
+    return full === "/" ? "/" : full.replace(/\/$/, "")
+  }
+  const formatApiLabel = (api: { http_method: string; name: string; module_id: string; path: string }) => {
+    const modName = moduleById.get(api.module_id)?.name ?? "Unknown module"
+    return `[${api.http_method}] [${modName}] [${api.name}] ${formatApiFullPath(api)}`
+  }
+
+  const modulesFiltered = (modulesList ?? []).filter((m) => {
+    const q = moduleSearch.trim().toLowerCase()
+    if (!q) return true
+    return (
+      m.name.toLowerCase().includes(q) ||
+      (m.path_prefix || "").toLowerCase().includes(q)
+    )
+  })
+  const apisFiltered = (apiList?.data ?? []).filter((a) => {
+    const q = apiSearch.trim().toLowerCase()
+    if (!q) return true
+    const label = formatApiLabel({
+      http_method: a.http_method,
+      name: a.name,
+      module_id: a.module_id,
+      path: a.path,
+    }).toLowerCase()
+    return label.includes(q)
+  })
+  const clientsFiltered = (clientsList?.data ?? []).filter((c) => {
+    const q = clientSearch.trim().toLowerCase()
+    if (!q) return true
+    return (
+      c.name.toLowerCase().includes(q) ||
+      (c.client_id || "").toLowerCase().includes(q)
+    )
+  })
   const { data: listData, isLoading } = useQuery({
     queryKey: ["access-logs", listParams],
     queryFn: () => AccessLogsService.list(listParams),
@@ -309,6 +375,73 @@ function AccessLogsPage() {
           <Table>
             <TableBody>
               <TableRow>
+                <TableCell className="w-[120px] font-medium text-muted-foreground">Module</TableCell>
+                <TableCell className="w-[240px]">
+                  <Select
+                    value={filters.module_id ?? "__all__"}
+                    onValueChange={(v) =>
+                      setFilters((f) => ({
+                        ...f,
+                        module_id: v === "__all__" ? null : v,
+                        api_assignment_id: null, // reset API when module changes
+                        page: 1,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full max-w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <div className="p-2">
+                        <Input
+                          placeholder="Search module…"
+                          value={moduleSearch}
+                          onChange={(e) => setModuleSearch(e.target.value)}
+                        />
+                      </div>
+                      <SelectItem value="__all__">All modules</SelectItem>
+                      {modulesFiltered.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name} ({m.path_prefix})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="w-[120px] font-medium text-muted-foreground">Group</TableCell>
+                <TableCell className="w-[240px]">
+                  <Select
+                    value={filters.group_id ?? "__all__"}
+                    onValueChange={(v) =>
+                      setFilters((f) => ({
+                        ...f,
+                        group_id: v === "__all__" ? null : v,
+                        page: 1,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full max-w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <div className="p-2">
+                        <Input
+                          placeholder="Search group…"
+                          value={groupSearch}
+                          onChange={(e) => setGroupSearch(e.target.value)}
+                        />
+                      </div>
+                      <SelectItem value="__all__">All groups</SelectItem>
+                      {(groupsList?.data ?? []).map((g) => (
+                        <SelectItem key={g.id} value={g.id}>
+                          {g.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+              <TableRow>
                 <TableCell className="w-[120px] font-medium text-muted-foreground">API</TableCell>
                 <TableCell className="w-[240px]">
                   <Select
@@ -325,16 +458,30 @@ function AccessLogsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <div className="p-2">
+                        <Input
+                          placeholder="Search API…"
+                          value={apiSearch}
+                          onChange={(e) => setApiSearch(e.target.value)}
+                        />
+                      </div>
                       <SelectItem value="__all__">All APIs</SelectItem>
-                      {apiList?.data?.map((api) => (
-                        <SelectItem key={api.id} value={api.id}>
-                          {api.http_method} {api.name}
-                        </SelectItem>
-                      ))}
+                      {apisFiltered
+                        .filter((a) => !filters.module_id || a.module_id === filters.module_id)
+                        .map((api) => (
+                          <SelectItem key={api.id} value={api.id}>
+                            {formatApiLabel({
+                              http_method: api.http_method,
+                              name: api.name,
+                              module_id: api.module_id,
+                              path: api.path,
+                            })}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="w-[120px] font-medium text-muted-foreground">App client</TableCell>
+                <TableCell className="w-[120px] font-medium text-muted-foreground">Client</TableCell>
                 <TableCell className="w-[240px]">
                   <Select
                     value={filters.app_client_id ?? "__all__"}
@@ -346,12 +493,19 @@ function AccessLogsPage() {
                       }))
                     }
                   >
-                    <SelectTrigger className="w-full max-w-[200px]">
+                    <SelectTrigger className="w-full max-w-[220px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <div className="p-2">
+                        <Input
+                          placeholder="Search client…"
+                          value={clientSearch}
+                          onChange={(e) => setClientSearch(e.target.value)}
+                        />
+                      </div>
                       <SelectItem value="__all__">All clients</SelectItem>
-                      {clientsList?.data?.map((c) => (
+                      {clientsFiltered.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
                         </SelectItem>

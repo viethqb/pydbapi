@@ -94,6 +94,8 @@ export const AccessLogsService = {
 
   list: async (params: {
     api_assignment_id?: string | null
+    module_id?: string | null
+    group_id?: string | null
     app_client_id?: string | null
     path__ilike?: string | null
     http_method?: string | null
@@ -107,6 +109,10 @@ export const AccessLogsService = {
     const sp = new URLSearchParams()
     if (params.api_assignment_id != null && params.api_assignment_id !== "")
       sp.set("api_assignment_id", params.api_assignment_id)
+    if (params.module_id != null && params.module_id !== "")
+      sp.set("module_id", params.module_id)
+    if (params.group_id != null && params.group_id !== "")
+      sp.set("group_id", params.group_id)
     if (params.app_client_id != null && params.app_client_id !== "")
       sp.set("app_client_id", params.app_client_id)
     if (params.path__ilike != null && params.path__ilike !== "")

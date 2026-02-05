@@ -692,7 +692,7 @@ class AppClientListIn(SQLModel):
     """Body for POST /clients/list; pagination and optional filters."""
 
     page: int = Field(default=1, ge=1, description="1-based page number")
-    page_size: int = Field(default=20, ge=1, le=100, description="Items per page")
+    page_size: int = Field(default=20, ge=1, le=500, description="Items per page")
     name__ilike: str | None = Field(default=None, max_length=255)
     is_active: bool | None = None
 

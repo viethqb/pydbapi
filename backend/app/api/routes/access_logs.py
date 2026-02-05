@@ -23,6 +23,7 @@ from app.models_dbapi import (
     AccessLogConfig,
     AccessRecord,
     ApiAssignment,
+    ApiAssignmentGroupLink,
     AppClient,
     DataSource,
     ProductTypeEnum,
@@ -213,6 +214,8 @@ def list_access_logs(
     session: SessionDep,
     current_user: CurrentUser,
     api_assignment_id: str | None = Query(None, description="Filter by API assignment UUID"),
+    module_id: str | None = Query(None, description="Filter by module UUID (resolves to API assignment ids)"),
+    group_id: str | None = Query(None, description="Filter by group UUID (resolves to API assignment ids)"),
     app_client_id: str | None = Query(None, description="Filter by app client UUID"),
     path__ilike: str | None = Query(None, description="Filter by path (substring)"),
     http_method: str | None = Query(None, description="Filter by HTTP method (GET, POST, ...)"),
@@ -226,11 +229,43 @@ def list_access_logs(
     """List access logs with filters. Paginated."""
     from app.core.starrocks_audit import read_starrocks_audit_list
 
+    # Resolve module/group filters to api_assignment_id list from MAIN DB
+    api_ids_from_module: set[uuid_mod.UUID] | None = None
+    api_ids_from_group: set[uuid_mod.UUID] | None = None
+    if module_id:
+        try:
+            mid = uuid_mod.UUID(module_id)
+            rows = session.exec(select(ApiAssignment.id).where(ApiAssignment.module_id == mid)).all()
+            api_ids_from_module = {r for r in rows if r}
+        except (ValueError, TypeError):
+            api_ids_from_module = set()
+    if group_id:
+        try:
+            gid = uuid_mod.UUID(group_id)
+            rows = session.exec(
+                select(ApiAssignmentGroupLink.api_assignment_id).where(ApiAssignmentGroupLink.api_group_id == gid)
+            ).all()
+            api_ids_from_group = {r for r in rows if r}
+        except (ValueError, TypeError):
+            api_ids_from_group = set()
+
+    api_ids_filter: set[uuid_mod.UUID] | None = None
+    if api_ids_from_module is not None and api_ids_from_group is not None:
+        api_ids_filter = api_ids_from_module.intersection(api_ids_from_group)
+    elif api_ids_from_module is not None:
+        api_ids_filter = api_ids_from_module
+    elif api_ids_from_group is not None:
+        api_ids_filter = api_ids_from_group
+
     log_session, is_main, use_starrocks_audit, engine = _get_log_session_and_mode(session)
     if use_starrocks_audit and engine is not None:
+        api_assignment_ids: list[str] | None = None
+        if api_ids_filter is not None:
+            api_assignment_ids = [str(x) for x in api_ids_filter]
         rows_raw, total = read_starrocks_audit_list(
             engine,
             api_assignment_id=api_assignment_id,
+            api_assignment_ids=api_assignment_ids,
             app_client_id=app_client_id,
             path__ilike=path__ilike,
             http_method=http_method,
@@ -280,6 +315,12 @@ def list_access_logs(
         if path__ilike is not None and path__ilike.strip():
             stmt = stmt.where(AccessRecord.path.ilike(f"%{path__ilike.strip()}%"))
             count_stmt = count_stmt.where(AccessRecord.path.ilike(f"%{path__ilike.strip()}%"))
+        if api_ids_filter is not None:
+            if len(api_ids_filter) == 0:
+                # No API assignments match module/group filter
+                return AccessLogListOut(data=[], total=0)
+            stmt = stmt.where(AccessRecord.api_assignment_id.in_(api_ids_filter))
+            count_stmt = count_stmt.where(AccessRecord.api_assignment_id.in_(api_ids_filter))
         if http_method is not None and http_method.strip():
             stmt = stmt.where(AccessRecord.http_method == http_method.strip().upper())
             count_stmt = count_stmt.where(AccessRecord.http_method == http_method.strip().upper())
