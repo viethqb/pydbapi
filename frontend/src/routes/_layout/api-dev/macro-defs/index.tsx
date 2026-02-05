@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, BookOpen } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import MacroDefUsageGuide from "@/components/ApiDev/MacroDefUsageGuide"
 import {
   Select,
   SelectContent,
@@ -29,7 +31,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import MacroExamples from "@/components/ApiDev/MacroExamples"
 
 export const Route = createFileRoute("/_layout/api-dev/macro-defs/")({
   component: MacroDefsList,
@@ -110,24 +111,36 @@ function MacroDefsList() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Macro definitions</h1>
-          <p className="text-muted-foreground">
-            Jinja macros and Python functions reusable in API content
-          </p>
+      <Tabs defaultValue="list" className="w-full">
+        <div className="flex items-center justify-between">
+          <TabsList className="h-11">
+            <TabsTrigger value="list">Macro definitions</TabsTrigger>
+            <TabsTrigger value="guide" className="gap-2">
+              <BookOpen className="h-4 w-4" />
+              Guide
+            </TabsTrigger>
+          </TabsList>
+          {canCreate && (
+            <Link to="/api-dev/macro-defs/create">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create macro definition
+              </Button>
+            </Link>
+          )}
         </div>
-        {canCreate && (
-          <Link to="/api-dev/macro-defs/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create macro definition
-            </Button>
-          </Link>
-        )}
-      </div>
 
-      <MacroExamples />
+        <TabsContent value="guide" className="mt-6">
+          <MacroDefUsageGuide />
+        </TabsContent>
+
+        <TabsContent value="list" className="mt-6 flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-bold">Macro definitions</h1>
+        <p className="text-muted-foreground">
+          Jinja macros and Python functions reusable in API content
+        </p>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -229,6 +242,9 @@ function MacroDefsList() {
           </div>
         </div>
       )}
+
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>

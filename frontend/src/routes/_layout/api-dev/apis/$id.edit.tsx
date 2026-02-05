@@ -53,15 +53,11 @@ import { GroupsService } from "@/services/groups"
 import useCustomToast from "@/hooks/useCustomToast"
 import { Checkbox } from "@/components/ui/checkbox"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
-import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
-import ParamValidateExamples from "@/components/ApiDev/ParamValidateExamples"
-import ParamsExample from "@/components/ApiDev/ParamsExample"
 import {
   RESULT_TRANSFORM_PLACEHOLDER,
   SCRIPT_CONTENT_PLACEHOLDER,
   SQL_CONTENT_PLACEHOLDER,
 } from "@/components/ApiDev/apiContentPlaceholders"
-import ResultTransformExamples from "@/components/ApiDev/ResultTransformExamples"
 import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 
 const paramSchema = z.object({
@@ -835,7 +831,6 @@ function ApiEdit() {
                               Add Parameter
                             </Button>
                           </div>
-                          <ParamsExample />
                           {field.value && field.value.length > 0 ? (
                             <div className="rounded-md border overflow-x-auto">
                               <Table>
@@ -1049,7 +1044,6 @@ function ApiEdit() {
                               Add Parameter validate
                             </Button>
                           </div>
-                          <ParamValidateExamples />
                           {field.value && field.value.length > 0 ? (
                             <div className="rounded-md border">
                               <Table>
@@ -1280,7 +1274,6 @@ function ApiEdit() {
                       : "Python script with execute(params) function"}
                   </p>
                 </div>
-                <ApiContentExamples executeEngine={executeEngine} />
                 <FormField
                   control={form.control}
                   name="content"
@@ -1320,13 +1313,12 @@ function ApiEdit() {
                   <div className="mb-2">
                     <h3 className="text-lg font-semibold">Result transform (Python)</h3>
                     <p className="text-sm text-muted-foreground">
-                      Python script to transform the raw executor result before returning
-                    </p>
-                  </div>
-                  <ResultTransformExamples />
-                  <FormField
-                    control={form.control}
-                    name="result_transform"
+                    Python script to transform the raw executor result before returning
+                  </p>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="result_transform"
                     render={({ field }) => (
                       <FormItem className="mt-4">
                         <FormControl>

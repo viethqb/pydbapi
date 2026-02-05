@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, Loader2 } from "lucide-react"
+import { Plus, Search, Loader2, BookOpen } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import ApiUsageGuide from "@/components/ApiDev/ApiUsageGuide"
 import {
   Select,
   SelectContent,
@@ -148,22 +150,38 @@ function ApisList() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">APIs</h1>
-          <p className="text-muted-foreground mt-1">
-            Search and manage all API assignments across modules
-          </p>
+      <Tabs defaultValue="list" className="w-full">
+        <div className="flex items-center justify-between">
+          <TabsList className="h-11">
+            <TabsTrigger value="list" className="gap-2">
+              APIs
+            </TabsTrigger>
+            <TabsTrigger value="guide" className="gap-2">
+              <BookOpen className="h-4 w-4" />
+              Guide
+            </TabsTrigger>
+          </TabsList>
+          {canCreate && (
+            <Link to="/api-dev/apis/create">
+              <Button size="lg">
+                <Plus className="mr-2 h-4 w-4" />
+                Create API
+              </Button>
+            </Link>
+          )}
         </div>
-        {canCreate && (
-          <Link to="/api-dev/apis/create">
-            <Button size="lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Create API
-            </Button>
-          </Link>
-        )}
+
+        <TabsContent value="guide" className="mt-6">
+          <ApiUsageGuide />
+        </TabsContent>
+
+        <TabsContent value="list" className="mt-6 flex flex-col gap-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">APIs</h1>
+        <p className="text-muted-foreground mt-1">
+          Search and manage all API assignments across modules
+        </p>
       </div>
 
       {/* Filters */}
@@ -353,6 +371,9 @@ function ApisList() {
           )}
         </>
       )}
+
+        </TabsContent>
+      </Tabs>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>

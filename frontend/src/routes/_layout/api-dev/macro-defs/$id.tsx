@@ -33,7 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
-import MacroExamples from "@/components/ApiDev/MacroExamples"
 import { MacroDefsService, type ApiMacroDefDetail, type MacroDefVersionCommitPublic, type MacroDefVersionCommitDetail } from "@/services/macro-defs"
 import { ModulesService } from "@/services/modules"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -315,7 +314,6 @@ function MacroDetail() {
                   maxHeight={720}
                 />
               </div>
-              <MacroExamples />
             </TabsContent>
 
             <TabsContent value="versions" className="mt-6">

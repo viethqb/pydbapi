@@ -42,15 +42,11 @@ import { MacroDefsService } from "@/services/macro-defs"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
-import ApiContentExamples from "@/components/ApiDev/ApiContentExamples"
-import ParamValidateExamples from "@/components/ApiDev/ParamValidateExamples"
-import ParamsExample from "@/components/ApiDev/ParamsExample"
 import {
   RESULT_TRANSFORM_PLACEHOLDER,
   SCRIPT_CONTENT_PLACEHOLDER,
   SQL_CONTENT_PLACEHOLDER,
 } from "@/components/ApiDev/apiContentPlaceholders"
-import ResultTransformExamples from "@/components/ApiDev/ResultTransformExamples"
 import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
@@ -865,8 +861,6 @@ function ApiDetail() {
                   </div>
                 </div>
 
-                <ParamsExample />
-
                 {apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params) && apiDetail.api_context.params.length > 0 ? (
                   <div className="rounded-md border overflow-x-auto">
                     <Table>
@@ -932,8 +926,6 @@ function ApiDetail() {
                     Parameter validation scripts
                   </div>
                 </div>
-
-                <ParamValidateExamples />
 
                 {(() => {
                   const paramValidates = (apiDetail.api_context as { param_validates?: unknown[] } | null)?.param_validates
@@ -1025,7 +1017,6 @@ function ApiDetail() {
                       )}
                     </Button>
                   </div>
-                  <ApiContentExamples executeEngine={apiDetail.execute_engine} />
                   {apiDetail.execute_engine === "SQL" ? (
                     <SqlStatementsEditor
                       value={apiDetail.api_context.content || ""}
@@ -1061,7 +1052,6 @@ function ApiDetail() {
                         Python script to transform the raw executor result before returning
                       </p>
                     </div>
-                    <ResultTransformExamples />
                     <div className="mt-4">
                       {apiDetail.api_context.result_transform && apiDetail.api_context.result_transform.trim() !== "" ? (
                         <ApiContentEditor

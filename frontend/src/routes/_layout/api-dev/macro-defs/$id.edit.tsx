@@ -25,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
-import MacroExamples from "@/components/ApiDev/MacroExamples"
 import { MacroDefsService, type ApiMacroDefUpdate } from "@/services/macro-defs"
 import { ModulesService } from "@/services/modules"
 import useCustomToast from "@/hooks/useCustomToast"
@@ -236,7 +235,6 @@ function MacroEdit() {
                         ? "Jinja macro definition"
                         : "Python function definitions (http, db, cache, req)"}
                     </FormDescription>
-                    <MacroExamples />
                     <FormControl>
                       <div className="rounded-md border overflow-hidden mt-2">
                         <ApiContentEditor
