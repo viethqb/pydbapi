@@ -1,14 +1,14 @@
 # pyDBAPI
 
-**pyDBAPI** is a DB API platform: manage data sources (PostgreSQL, MySQL), define API endpoints with SQL (Jinja2) or Python scripts, and expose them through a dynamic gateway with auth, rate limiting, and versioning.
+**pyDBAPI** is a DB API platform: manage data sources (PostgreSQL, MySQL, Trino, and DBs using PostgreSQL/MySQL protocol such as StarRocks, RisingWave), define API endpoints with SQL (Jinja2) or Python scripts, and expose them through a dynamic gateway with auth, rate limiting, and versioning.
 
 ## Technology Stack and Features
 
 - ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
   - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the app database (PostgreSQL).
-  - 💾 **DataSources**: connect to external PostgreSQL and MySQL; connection pool and health checks.
+  - 💾 **DataSources**: connect to external PostgreSQL, MySQL, Trino, and PostgreSQL/MySQL-compatible DBs (e.g. StarRocks, RisingWave); connection pool and health checks.
   - 📝 **API Assignments**: define APIs with SQL (Jinja2 templates) or Python scripts (RestrictedPython sandbox).
-  - 🚪 **Gateway**: dynamic `/{module}/{path}` routing, JWT auth (from POST /token/generate), rate limiting (Redis or in-memory).
+  - 🚪 **Gateway**: dynamic `/{module}/{path}` routing (no `/api` prefix), JWT auth (from POST /token/generate), rate limiting (Redis or in-memory).
   - 📌 Modules, groups, clients, version commits (api-assignments, macro-defs).
 - 🚀 [**React**](https://react.dev) for the frontend (TypeScript, Vite, Tailwind, shadcn/ui).
   - 🤖 Auto-generated OpenAPI client.
@@ -25,6 +25,11 @@
 [![Dashboard Items](img/dashboard-items.png)](img/dashboard-items.png)  
 [![Dark Mode](img/dashboard-dark.png)](img/dashboard-dark.png)  
 [![API docs](img/docs.png)](img/docs.png)
+
+## Documentation
+
+- **[docs/OVERVIEW.md](docs/OVERVIEW.md)** — End-to-end flow (setup → data sources → APIs → gateway → clients), feature list, and main configuration.
+- **[docs/TECHNICAL.md](docs/TECHNICAL.md)** — Technical logic: gateway flow, module/path resolution, parameters, concurrent and rate limits, SQL/Jinja2 and script engines, config cache.
 
 ## How To Use It
 
