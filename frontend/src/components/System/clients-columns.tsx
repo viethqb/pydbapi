@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Key } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Key, ExternalLink } from "lucide-react"
+import { Link } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +28,13 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.name}</span>
+      <Link
+        to="/system/clients/$id"
+        params={{ id: row.original.id }}
+        className="font-medium text-primary hover:underline"
+      >
+        {row.original.name}
+      </Link>
     ),
   },
   {
@@ -109,16 +116,25 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={client.canUpdate === false || !client.onEdit}
-                onClick={
-                  client.canUpdate === false || !client.onEdit
-                    ? undefined
-                    : () => client.onEdit?.(client.id)
-                }
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/system/clients/$id"
+                  params={{ id: client.id }}
+                  className="flex cursor-pointer items-center"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild disabled={client.canUpdate === false || !client.onEdit}>
+                <Link
+                  to="/system/clients/$id/edit"
+                  params={{ id: client.id }}
+                  className="flex cursor-pointer items-center"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Link>
               </DropdownMenuItem>
               {client.onRegenerateSecret && (
                 <DropdownMenuItem

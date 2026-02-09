@@ -615,11 +615,25 @@ class ApiAssignmentDebugIn(SQLModel):
 
 
 class AppClientCreate(SQLModel):
-    """Body for POST /clients/create; backend generates client_id, hashes client_secret."""
+    """Body for POST /clients/create.
+
+    By default, the backend generates ``client_id`` and hashes ``client_secret``.
+    For advanced scenarios, a custom ``client_id`` and/or ``client_secret`` can
+    be provided explicitly from the caller.
+    """
 
     name: str = Field(..., min_length=1, max_length=255)
+    client_id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=255,
+        description="Optional custom client_id; if omitted, backend generates one.",
+    )
     client_secret: str = Field(
-        ..., min_length=8, max_length=512, description="Plain secret; stored hashed"
+        ...,
+        min_length=8,
+        max_length=512,
+        description="Plain secret; stored hashed. Frontend may auto-generate if omitted in UI.",
     )
     description: str | None = Field(default=None, max_length=512)
     rate_limit_per_minute: int | None = Field(
@@ -673,7 +687,7 @@ class AppClientPublic(SQLModel):
 
 
 class AppClientDetail(SQLModel):
-    """Detail response for GET /clients/{id}; includes group_ids and api_assignment_ids for API access control."""
+    """Detail response for GET /clients/{id}; includes group_ids, api_assignment_ids, and effective_api_assignment_ids."""
 
     id: uuid.UUID
     name: str
@@ -686,6 +700,11 @@ class AppClientDetail(SQLModel):
     updated_at: datetime
     group_ids: list[uuid.UUID] = Field(default_factory=list)
     api_assignment_ids: list[uuid.UUID] = Field(default_factory=list)
+    effective_api_assignment_ids: list[uuid.UUID] = Field(
+        default_factory=list,
+        description="Union of direct api_assignment_ids + APIs reachable via assigned groups (ApiAssignmentGroupLink). "
+        "This is the actual set of APIs the client can call, matching gateway auth logic.",
+    )
 
 
 class AppClientListIn(SQLModel):

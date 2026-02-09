@@ -28,7 +28,7 @@ from app.core.permission_resources import (
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.core.security import get_password_hash
 from app.models import Message, User
-from app.models_dbapi import AppClient, AppClientApiLink, AppClientGroupLink
+from app.models_dbapi import ApiAssignmentGroupLink, AppClient, AppClientApiLink, AppClientGroupLink
 from app.schemas_dbapi import (
     AppClientCreate,
     AppClientDetail,
@@ -145,8 +145,13 @@ def create_client(
     current_user: CurrentUser,  # noqa: ARG001
     body: AppClientCreate,
 ) -> Any:
-    """Create a new client; generate client_id and hash client_secret. Optionally assign group_ids."""
-    client_id = secrets.token_urlsafe(16)
+    """Create a new client; generate client_id and hash client_secret by default.
+
+    If ``client_id`` is provided in the request body, it will be used instead of a
+    generated value (must be unique). ``client_secret`` is always hashed before
+    storing.
+    """
+    client_id = body.client_id or secrets.token_urlsafe(16)
     hashed_secret = get_password_hash(body.client_secret)
     c = AppClient(
         name=body.name,
@@ -272,10 +277,27 @@ def regenerate_client_secret(
     return AppClientRegenerateSecretOut(client_secret=new_secret)
 
 
-def _to_detail(c: AppClient) -> AppClientDetail:
-    """Build AppClientDetail with group_ids and api_assignment_ids."""
+def _to_detail(c: AppClient, session: SessionDep) -> AppClientDetail:
+    """Build AppClientDetail with group_ids, api_assignment_ids, and effective_api_assignment_ids.
+
+    ``effective_api_assignment_ids`` = union of direct links (AppClientApiLink)
+    + APIs reachable through the client's groups (AppClientGroupLink ∩ ApiAssignmentGroupLink).
+    This matches the exact logic in ``core.gateway.auth.client_can_access_api``.
+    """
     group_ids = [link.api_group_id for link in (c.group_links or [])]
     api_assignment_ids = [link.api_assignment_id for link in (c.api_links or [])]
+
+    # Compute effective APIs (same logic as gateway auth)
+    effective_ids: set[uuid.UUID] = set(api_assignment_ids)
+
+    if group_ids:
+        # APIs reachable via the client's groups
+        group_api_stmt = select(ApiAssignmentGroupLink.api_assignment_id).where(
+            ApiAssignmentGroupLink.api_group_id.in_(group_ids)
+        )
+        group_api_ids = set(session.exec(group_api_stmt).all())
+        effective_ids |= group_api_ids
+
     return AppClientDetail(
         id=c.id,
         name=c.name,
@@ -288,6 +310,7 @@ def _to_detail(c: AppClient) -> AppClientDetail:
         updated_at=c.updated_at,
         group_ids=group_ids,
         api_assignment_ids=api_assignment_ids,
+        effective_api_assignment_ids=sorted(effective_ids),
     )
 
 
@@ -309,8 +332,8 @@ def get_client(
     current_user: CurrentUser,  # noqa: ARG001
     id: uuid.UUID,
 ) -> Any:
-    """Get client detail by id (client_secret omitted; includes group_ids for API access)."""
+    """Get client detail by id (client_secret omitted; includes group_ids and effective API access)."""
     c = session.get(AppClient, id)
     if not c:
         raise HTTPException(status_code=404, detail="AppClient not found")
-    return _to_detail(c)
+    return _to_detail(c, session)

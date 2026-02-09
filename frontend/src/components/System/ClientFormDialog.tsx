@@ -48,6 +48,26 @@ import { handleError } from "@/utils"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
+  client_id: z
+    .string()
+    .max(255)
+    .optional()
+    .refine(
+      (val) => !val || val.trim().length > 0,
+      "Client ID cannot be empty or contain only spaces",
+    )
+    .refine(
+      (val) => !val || val.trim().length >= 1,
+      "Client ID must be at least 1 character",
+    )
+    .refine(
+      (val) => !val || /^[A-Za-z0-9_-]+$/.test(val.trim()),
+      "Client ID can only contain letters, numbers, underscores (_), and hyphens (-)",
+    )
+    .refine(
+      (val) => !val || val === val.trim(),
+      "Client ID cannot have leading or trailing spaces",
+    ),
   client_secret: z
     .string()
     .max(512)
@@ -55,7 +75,11 @@ const formSchema = z.object({
     .refine(
       (val) => !val || val.length >= 8,
       "Secret must be at least 8 characters",
-    ), // Only validate if provided
+    )
+    .refine(
+      (val) => !val || val.length <= 512,
+      "Secret cannot exceed 512 characters",
+    ),
   description: z.string().max(512).optional().nullable(),
   rate_limit_per_minute: z
     .union([z.number().int().positive(), z.null(), z.literal("")])
@@ -151,6 +175,7 @@ export function ClientFormDialog({
     mode: "onBlur",
     defaultValues: {
       name: "",
+      client_id: "",
       client_secret: "",
       description: null,
       rate_limit_per_minute: null,
@@ -165,6 +190,7 @@ export function ClientFormDialog({
     if (client && open) {
       form.reset({
         name: client.name,
+        client_id: "", // client_id is fixed after creation; not editable here
         client_secret: "", // Don't populate secret on edit
         description: client.description,
         rate_limit_per_minute: (client as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
@@ -176,6 +202,7 @@ export function ClientFormDialog({
     } else if (!client && open) {
       form.reset({
         name: "",
+        client_id: "",
         client_secret: "",
         description: null,
         rate_limit_per_minute: null,
@@ -236,13 +263,44 @@ export function ClientFormDialog({
         api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : [],
       })
     } else {
-      if (!data.client_secret) {
-        showErrorToast("Client secret is required")
-        return
+      // Allow optional client_id and client_secret in the UI.
+      // If they are not provided, generate secure random values on the frontend
+      // so the user can see and copy them before the request is sent.
+      const generateRandomString = (length: number) => {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        const array = new Uint32Array(length)
+        if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+          crypto.getRandomValues(array)
+        } else {
+          for (let i = 0; i < length; i++) {
+            // Fallback to Math.random (less secure but should rarely be used)
+            array[i] = Math.floor(Math.random() * 0xffffffff)
+          }
+        }
+        return Array.from(array, (v) => chars[v % chars.length]).join("")
       }
+
+      // Trim and validate client_id
+      const trimmedClientId = data.client_id?.trim() || ""
+      const finalClientId = trimmedClientId.length > 0 ? trimmedClientId : generateRandomString(16)
+      
+      // Trim and validate client_secret
+      const trimmedClientSecret = data.client_secret?.trim() || ""
+      const finalClientSecret = trimmedClientSecret.length >= 8 ? trimmedClientSecret : generateRandomString(32)
+
+      // Update form values so the user can see the generated values (especially secret)
+      // Only update if they were empty (to show generated values)
+      if (!trimmedClientId) {
+        form.setValue("client_id", finalClientId, { shouldValidate: false })
+      }
+      if (!trimmedClientSecret || trimmedClientSecret.length < 8) {
+        form.setValue("client_secret", finalClientSecret, { shouldValidate: false })
+      }
+
       createMutation.mutate({
         name: data.name,
-        client_secret: data.client_secret,
+        client_id: finalClientId,
+        client_secret: finalClientSecret,
         description: data.description,
         rate_limit_per_minute:
           data.rate_limit_per_minute === "" || data.rate_limit_per_minute == null
@@ -263,18 +321,19 @@ export function ClientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Client" : "Create Client"}</DialogTitle>
           <DialogDescription>
             {isEdit
               ? "Update the client information below. Note: Client secret cannot be changed here. Use 'Regenerate Secret' to create a new one."
-              : "Fill in the form below to create a new client. A client_id will be automatically generated."}
+              : "Fill in the form below to create a new client. Client ID and Secret can be customized or left empty to auto-generate."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid gap-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto pr-2">
+              <div className="grid gap-4 py-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -292,26 +351,52 @@ export function ClientFormDialog({
               />
 
               {!isEdit && (
-                <FormField
-                  control={form.control}
-                  name="client_secret"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Client Secret <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Enter client secret (min 8 characters)"
-                          {...field}
-                          required
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <>
+                  <FormField
+                    control={form.control}
+                    name="client_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client ID</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Leave empty to auto-generate (URL-safe: A-Za-z0-9_-)"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Optional. Only letters, numbers, underscores (_), and hyphens (-). Leave empty to auto-generate.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="client_secret"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Client Secret
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="Leave empty to auto-generate (min 8 characters)"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Optional. Minimum 8 characters, maximum 512 characters. Leave empty to auto-generate a secure secret.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
               )}
 
               <FormField
@@ -626,9 +711,10 @@ export function ClientFormDialog({
                   </FormItem>
                 )}
               />
+              </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="mt-4 shrink-0">
               <LoadingButton
                 type="submit"
                 loading={isLoading}

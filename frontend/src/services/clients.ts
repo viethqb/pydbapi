@@ -16,6 +16,8 @@ export type AppClientPublic = {
 export type AppClientDetail = AppClientPublic & {
   group_ids: string[]
   api_assignment_ids: string[]
+  /** Union of direct api_assignment_ids + APIs reachable via assigned groups. Matches gateway auth logic. */
+  effective_api_assignment_ids: string[]
 }
 
 export type AppClientListIn = {
@@ -32,6 +34,7 @@ export type AppClientListOut = {
 
 export type AppClientCreate = {
   name: string
+  client_id?: string
   client_secret: string
   description?: string | null
   rate_limit_per_minute?: number | null

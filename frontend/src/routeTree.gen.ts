@@ -22,7 +22,7 @@ import { Route as LayoutConnectionIndexRouteImport } from './routes/_layout/conn
 import { Route as LayoutApiRepositoryIndexRouteImport } from './routes/_layout/api-repository/index'
 import { Route as LayoutApiDevIndexRouteImport } from './routes/_layout/api-dev/index'
 import { Route as LayoutAdminIndexRouteImport } from './routes/_layout/admin/index'
-import { Route as LayoutSystemClientsRouteImport } from './routes/_layout/system/clients'
+import { Route as LayoutSystemAccessLogsRouteImport } from './routes/_layout/system/access-logs'
 import { Route as LayoutConnectionCreateRouteImport } from './routes/_layout/connection/create'
 import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connection/$id'
 import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
@@ -30,12 +30,15 @@ import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin/use
 import { Route as LayoutAboutSqlJinjaRouteImport } from './routes/_layout/about.sql-jinja'
 import { Route as LayoutAboutPythonScriptRouteImport } from './routes/_layout/about.python-script'
 import { Route as LayoutSystemGroupsIndexRouteImport } from './routes/_layout/system/groups/index'
+import { Route as LayoutSystemClientsIndexRouteImport } from './routes/_layout/system/clients/index'
 import { Route as LayoutSecurityRolesIndexRouteImport } from './routes/_layout/security/roles/index'
 import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
 import { Route as LayoutApiDevMacroDefsIndexRouteImport } from './routes/_layout/api-dev/macro-defs/index'
 import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
 import { Route as LayoutAdminRolesIndexRouteImport } from './routes/_layout/admin/roles/index'
 import { Route as LayoutSystemGroupsIdRouteImport } from './routes/_layout/system/groups/$id'
+import { Route as LayoutSystemClientsCreateRouteImport } from './routes/_layout/system/clients/create'
+import { Route as LayoutSystemClientsIdRouteImport } from './routes/_layout/system/clients/$id'
 import { Route as LayoutSecurityRolesIdRouteImport } from './routes/_layout/security/roles/$id'
 import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id/edit'
 import { Route as LayoutApiDevModulesCreateRouteImport } from './routes/_layout/api-dev/modules/create'
@@ -46,6 +49,7 @@ import { Route as LayoutApiDevApisCreateRouteImport } from './routes/_layout/api
 import { Route as LayoutApiDevApisIdRouteImport } from './routes/_layout/api-dev/apis/$id'
 import { Route as LayoutAdminRolesCreateRouteImport } from './routes/_layout/admin/roles/create'
 import { Route as LayoutAdminRolesIdRouteImport } from './routes/_layout/admin/roles/$id'
+import { Route as LayoutSystemClientsIdEditRouteImport } from './routes/_layout/system/clients/$id.edit'
 import { Route as LayoutApiDevModulesIdEditRouteImport } from './routes/_layout/api-dev/modules/$id.edit'
 import { Route as LayoutApiDevMacroDefsIdEditRouteImport } from './routes/_layout/api-dev/macro-defs/$id.edit'
 import { Route as LayoutApiDevApisIdEditRouteImport } from './routes/_layout/api-dev/apis/$id.edit'
@@ -116,9 +120,9 @@ const LayoutAdminIndexRoute = LayoutAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
-const LayoutSystemClientsRoute = LayoutSystemClientsRouteImport.update({
-  id: '/system/clients',
-  path: '/system/clients',
+const LayoutSystemAccessLogsRoute = LayoutSystemAccessLogsRouteImport.update({
+  id: '/system/access-logs',
+  path: '/system/access-logs',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutConnectionCreateRoute = LayoutConnectionCreateRouteImport.update({
@@ -156,6 +160,12 @@ const LayoutSystemGroupsIndexRoute = LayoutSystemGroupsIndexRouteImport.update({
   path: '/system/groups/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutSystemClientsIndexRoute =
+  LayoutSystemClientsIndexRouteImport.update({
+    id: '/system/clients/',
+    path: '/system/clients/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutSecurityRolesIndexRoute =
   LayoutSecurityRolesIndexRouteImport.update({
     id: '/security/roles/',
@@ -187,6 +197,17 @@ const LayoutAdminRolesIndexRoute = LayoutAdminRolesIndexRouteImport.update({
 const LayoutSystemGroupsIdRoute = LayoutSystemGroupsIdRouteImport.update({
   id: '/system/groups/$id',
   path: '/system/groups/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSystemClientsCreateRoute =
+  LayoutSystemClientsCreateRouteImport.update({
+    id: '/system/clients/create',
+    path: '/system/clients/create',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutSystemClientsIdRoute = LayoutSystemClientsIdRouteImport.update({
+  id: '/system/clients/$id',
+  path: '/system/clients/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutSecurityRolesIdRoute = LayoutSecurityRolesIdRouteImport.update({
@@ -241,6 +262,12 @@ const LayoutAdminRolesIdRoute = LayoutAdminRolesIdRouteImport.update({
   path: '/roles/$id',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
+const LayoutSystemClientsIdEditRoute =
+  LayoutSystemClientsIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => LayoutSystemClientsIdRoute,
+  } as any)
 const LayoutApiDevModulesIdEditRoute =
   LayoutApiDevModulesIdEditRouteImport.update({
     id: '/edit',
@@ -279,7 +306,7 @@ export interface FileRoutesByFullPath {
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
-  '/system/clients': typeof LayoutSystemClientsRoute
+  '/system/access-logs': typeof LayoutSystemAccessLogsRoute
   '/admin/': typeof LayoutAdminIndexRoute
   '/api-dev/': typeof LayoutApiDevIndexRoute
   '/api-repository/': typeof LayoutApiRepositoryIndexRoute
@@ -294,17 +321,21 @@ export interface FileRoutesByFullPath {
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/security/roles/$id': typeof LayoutSecurityRolesIdRoute
+  '/system/clients/$id': typeof LayoutSystemClientsIdRouteWithChildren
+  '/system/clients/create': typeof LayoutSystemClientsCreateRoute
   '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/admin/roles/': typeof LayoutAdminRolesIndexRoute
   '/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
   '/security/roles/': typeof LayoutSecurityRolesIndexRoute
+  '/system/clients/': typeof LayoutSystemClientsIndexRoute
   '/system/groups/': typeof LayoutSystemGroupsIndexRoute
   '/admin/roles/$id/edit': typeof LayoutAdminRolesIdEditRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
+  '/system/clients/$id/edit': typeof LayoutSystemClientsIdEditRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -320,7 +351,7 @@ export interface FileRoutesByTo {
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
-  '/system/clients': typeof LayoutSystemClientsRoute
+  '/system/access-logs': typeof LayoutSystemAccessLogsRoute
   '/admin': typeof LayoutAdminIndexRoute
   '/api-dev': typeof LayoutApiDevIndexRoute
   '/api-repository': typeof LayoutApiRepositoryIndexRoute
@@ -335,17 +366,21 @@ export interface FileRoutesByTo {
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/security/roles/$id': typeof LayoutSecurityRolesIdRoute
+  '/system/clients/$id': typeof LayoutSystemClientsIdRouteWithChildren
+  '/system/clients/create': typeof LayoutSystemClientsCreateRoute
   '/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/admin/roles': typeof LayoutAdminRolesIndexRoute
   '/api-dev/apis': typeof LayoutApiDevApisIndexRoute
   '/api-dev/macro-defs': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules': typeof LayoutApiDevModulesIndexRoute
   '/security/roles': typeof LayoutSecurityRolesIndexRoute
+  '/system/clients': typeof LayoutSystemClientsIndexRoute
   '/system/groups': typeof LayoutSystemGroupsIndexRoute
   '/admin/roles/$id/edit': typeof LayoutAdminRolesIdEditRoute
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
+  '/system/clients/$id/edit': typeof LayoutSystemClientsIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -364,7 +399,7 @@ export interface FileRoutesById {
   '/_layout/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/_layout/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/_layout/connection/create': typeof LayoutConnectionCreateRoute
-  '/_layout/system/clients': typeof LayoutSystemClientsRoute
+  '/_layout/system/access-logs': typeof LayoutSystemAccessLogsRoute
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/api-dev/': typeof LayoutApiDevIndexRoute
   '/_layout/api-repository/': typeof LayoutApiRepositoryIndexRoute
@@ -379,17 +414,21 @@ export interface FileRoutesById {
   '/_layout/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/_layout/connection/$id/edit': typeof LayoutConnectionIdEditRoute
   '/_layout/security/roles/$id': typeof LayoutSecurityRolesIdRoute
+  '/_layout/system/clients/$id': typeof LayoutSystemClientsIdRouteWithChildren
+  '/_layout/system/clients/create': typeof LayoutSystemClientsCreateRoute
   '/_layout/system/groups/$id': typeof LayoutSystemGroupsIdRoute
   '/_layout/admin/roles/': typeof LayoutAdminRolesIndexRoute
   '/_layout/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/_layout/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/_layout/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
   '/_layout/security/roles/': typeof LayoutSecurityRolesIndexRoute
+  '/_layout/system/clients/': typeof LayoutSystemClientsIndexRoute
   '/_layout/system/groups/': typeof LayoutSystemGroupsIndexRoute
   '/_layout/admin/roles/$id/edit': typeof LayoutAdminRolesIdEditRoute
   '/_layout/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/_layout/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/_layout/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
+  '/_layout/system/clients/$id/edit': typeof LayoutSystemClientsIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -408,7 +447,7 @@ export interface FileRouteTypes {
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
-    | '/system/clients'
+    | '/system/access-logs'
     | '/admin/'
     | '/api-dev/'
     | '/api-repository/'
@@ -423,17 +462,21 @@ export interface FileRouteTypes {
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
     | '/security/roles/$id'
+    | '/system/clients/$id'
+    | '/system/clients/create'
     | '/system/groups/$id'
     | '/admin/roles/'
     | '/api-dev/apis/'
     | '/api-dev/macro-defs/'
     | '/api-dev/modules/'
     | '/security/roles/'
+    | '/system/clients/'
     | '/system/groups/'
     | '/admin/roles/$id/edit'
     | '/api-dev/apis/$id/edit'
     | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
+    | '/system/clients/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -449,7 +492,7 @@ export interface FileRouteTypes {
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
-    | '/system/clients'
+    | '/system/access-logs'
     | '/admin'
     | '/api-dev'
     | '/api-repository'
@@ -464,17 +507,21 @@ export interface FileRouteTypes {
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
     | '/security/roles/$id'
+    | '/system/clients/$id'
+    | '/system/clients/create'
     | '/system/groups/$id'
     | '/admin/roles'
     | '/api-dev/apis'
     | '/api-dev/macro-defs'
     | '/api-dev/modules'
     | '/security/roles'
+    | '/system/clients'
     | '/system/groups'
     | '/admin/roles/$id/edit'
     | '/api-dev/apis/$id/edit'
     | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
+    | '/system/clients/$id/edit'
   id:
     | '__root__'
     | '/_layout'
@@ -492,7 +539,7 @@ export interface FileRouteTypes {
     | '/_layout/api-repository/$id'
     | '/_layout/connection/$id'
     | '/_layout/connection/create'
-    | '/_layout/system/clients'
+    | '/_layout/system/access-logs'
     | '/_layout/admin/'
     | '/_layout/api-dev/'
     | '/_layout/api-repository/'
@@ -507,17 +554,21 @@ export interface FileRouteTypes {
     | '/_layout/api-dev/modules/create'
     | '/_layout/connection/$id/edit'
     | '/_layout/security/roles/$id'
+    | '/_layout/system/clients/$id'
+    | '/_layout/system/clients/create'
     | '/_layout/system/groups/$id'
     | '/_layout/admin/roles/'
     | '/_layout/api-dev/apis/'
     | '/_layout/api-dev/macro-defs/'
     | '/_layout/api-dev/modules/'
     | '/_layout/security/roles/'
+    | '/_layout/system/clients/'
     | '/_layout/system/groups/'
     | '/_layout/admin/roles/$id/edit'
     | '/_layout/api-dev/apis/$id/edit'
     | '/_layout/api-dev/macro-defs/$id/edit'
     | '/_layout/api-dev/modules/$id/edit'
+    | '/_layout/system/clients/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -621,11 +672,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminIndexRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
-    '/_layout/system/clients': {
-      id: '/_layout/system/clients'
-      path: '/system/clients'
-      fullPath: '/system/clients'
-      preLoaderRoute: typeof LayoutSystemClientsRouteImport
+    '/_layout/system/access-logs': {
+      id: '/_layout/system/access-logs'
+      path: '/system/access-logs'
+      fullPath: '/system/access-logs'
+      preLoaderRoute: typeof LayoutSystemAccessLogsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/connection/create': {
@@ -677,6 +728,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSystemGroupsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/system/clients/': {
+      id: '/_layout/system/clients/'
+      path: '/system/clients'
+      fullPath: '/system/clients/'
+      preLoaderRoute: typeof LayoutSystemClientsIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/security/roles/': {
       id: '/_layout/security/roles/'
       path: '/security/roles'
@@ -717,6 +775,20 @@ declare module '@tanstack/react-router' {
       path: '/system/groups/$id'
       fullPath: '/system/groups/$id'
       preLoaderRoute: typeof LayoutSystemGroupsIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/system/clients/create': {
+      id: '/_layout/system/clients/create'
+      path: '/system/clients/create'
+      fullPath: '/system/clients/create'
+      preLoaderRoute: typeof LayoutSystemClientsCreateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/system/clients/$id': {
+      id: '/_layout/system/clients/$id'
+      path: '/system/clients/$id'
+      fullPath: '/system/clients/$id'
+      preLoaderRoute: typeof LayoutSystemClientsIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/security/roles/$id': {
@@ -788,6 +860,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/roles/$id'
       preLoaderRoute: typeof LayoutAdminRolesIdRouteImport
       parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/system/clients/$id/edit': {
+      id: '/_layout/system/clients/$id/edit'
+      path: '/edit'
+      fullPath: '/system/clients/$id/edit'
+      preLoaderRoute: typeof LayoutSystemClientsIdEditRouteImport
+      parentRoute: typeof LayoutSystemClientsIdRoute
     }
     '/_layout/api-dev/modules/$id/edit': {
       id: '/_layout/api-dev/modules/$id/edit'
@@ -914,6 +993,19 @@ const LayoutApiDevModulesIdRouteWithChildren =
     LayoutApiDevModulesIdRouteChildren,
   )
 
+interface LayoutSystemClientsIdRouteChildren {
+  LayoutSystemClientsIdEditRoute: typeof LayoutSystemClientsIdEditRoute
+}
+
+const LayoutSystemClientsIdRouteChildren: LayoutSystemClientsIdRouteChildren = {
+  LayoutSystemClientsIdEditRoute: LayoutSystemClientsIdEditRoute,
+}
+
+const LayoutSystemClientsIdRouteWithChildren =
+  LayoutSystemClientsIdRoute._addFileChildren(
+    LayoutSystemClientsIdRouteChildren,
+  )
+
 interface LayoutRouteChildren {
   LayoutAboutRoute: typeof LayoutAboutRouteWithChildren
   LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
@@ -922,7 +1014,7 @@ interface LayoutRouteChildren {
   LayoutApiRepositoryIdRoute: typeof LayoutApiRepositoryIdRoute
   LayoutConnectionIdRoute: typeof LayoutConnectionIdRouteWithChildren
   LayoutConnectionCreateRoute: typeof LayoutConnectionCreateRoute
-  LayoutSystemClientsRoute: typeof LayoutSystemClientsRoute
+  LayoutSystemAccessLogsRoute: typeof LayoutSystemAccessLogsRoute
   LayoutApiDevIndexRoute: typeof LayoutApiDevIndexRoute
   LayoutApiRepositoryIndexRoute: typeof LayoutApiRepositoryIndexRoute
   LayoutConnectionIndexRoute: typeof LayoutConnectionIndexRoute
@@ -933,11 +1025,14 @@ interface LayoutRouteChildren {
   LayoutApiDevModulesIdRoute: typeof LayoutApiDevModulesIdRouteWithChildren
   LayoutApiDevModulesCreateRoute: typeof LayoutApiDevModulesCreateRoute
   LayoutSecurityRolesIdRoute: typeof LayoutSecurityRolesIdRoute
+  LayoutSystemClientsIdRoute: typeof LayoutSystemClientsIdRouteWithChildren
+  LayoutSystemClientsCreateRoute: typeof LayoutSystemClientsCreateRoute
   LayoutSystemGroupsIdRoute: typeof LayoutSystemGroupsIdRoute
   LayoutApiDevApisIndexRoute: typeof LayoutApiDevApisIndexRoute
   LayoutApiDevMacroDefsIndexRoute: typeof LayoutApiDevMacroDefsIndexRoute
   LayoutApiDevModulesIndexRoute: typeof LayoutApiDevModulesIndexRoute
   LayoutSecurityRolesIndexRoute: typeof LayoutSecurityRolesIndexRoute
+  LayoutSystemClientsIndexRoute: typeof LayoutSystemClientsIndexRoute
   LayoutSystemGroupsIndexRoute: typeof LayoutSystemGroupsIndexRoute
 }
 
@@ -949,7 +1044,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiRepositoryIdRoute: LayoutApiRepositoryIdRoute,
   LayoutConnectionIdRoute: LayoutConnectionIdRouteWithChildren,
   LayoutConnectionCreateRoute: LayoutConnectionCreateRoute,
-  LayoutSystemClientsRoute: LayoutSystemClientsRoute,
+  LayoutSystemAccessLogsRoute: LayoutSystemAccessLogsRoute,
   LayoutApiDevIndexRoute: LayoutApiDevIndexRoute,
   LayoutApiRepositoryIndexRoute: LayoutApiRepositoryIndexRoute,
   LayoutConnectionIndexRoute: LayoutConnectionIndexRoute,
@@ -960,11 +1055,14 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiDevModulesIdRoute: LayoutApiDevModulesIdRouteWithChildren,
   LayoutApiDevModulesCreateRoute: LayoutApiDevModulesCreateRoute,
   LayoutSecurityRolesIdRoute: LayoutSecurityRolesIdRoute,
+  LayoutSystemClientsIdRoute: LayoutSystemClientsIdRouteWithChildren,
+  LayoutSystemClientsCreateRoute: LayoutSystemClientsCreateRoute,
   LayoutSystemGroupsIdRoute: LayoutSystemGroupsIdRoute,
   LayoutApiDevApisIndexRoute: LayoutApiDevApisIndexRoute,
   LayoutApiDevMacroDefsIndexRoute: LayoutApiDevMacroDefsIndexRoute,
   LayoutApiDevModulesIndexRoute: LayoutApiDevModulesIndexRoute,
   LayoutSecurityRolesIndexRoute: LayoutSecurityRolesIndexRoute,
+  LayoutSystemClientsIndexRoute: LayoutSystemClientsIndexRoute,
   LayoutSystemGroupsIndexRoute: LayoutSystemGroupsIndexRoute,
 }
 

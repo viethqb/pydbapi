@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, Copy, Check } from "lucide-react"
 import { useState } from "react"
@@ -17,10 +17,8 @@ import {
   clientsColumns,
   type ClientTableData,
 } from "@/components/System/clients-columns"
-import { ClientFormDialog } from "@/components/System/ClientFormDialog"
 import {
   ClientsService,
-  type AppClientDetail,
   type AppClientListIn,
 } from "@/services/clients"
 import useCustomToast from "@/hooks/useCustomToast"
@@ -35,7 +33,7 @@ import {
 } from "@/components/ui/dialog"
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 
-export const Route = createFileRoute("/_layout/system/clients")({
+export const Route = createFileRoute("/_layout/system/clients/")({
   component: ClientsPage,
   head: () => ({
     meta: [
@@ -48,6 +46,7 @@ export const Route = createFileRoute("/_layout/system/clients")({
 
 function ClientsPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [copiedText, copyToClipboard] = useCopyToClipboard()
   const { hasPermission } = usePermissions()
@@ -62,12 +61,6 @@ function ClientsPage() {
     name__ilike: null,
     is_active: null,
   })
-
-  // Form dialog state
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingClient, setEditingClient] = useState<AppClientDetail | null>(
-    null,
-  )
 
   // Regenerate secret dialog state
   const [regeneratedSecret, setRegeneratedSecret] = useState<{
@@ -140,17 +133,11 @@ function ClientsPage() {
   })
 
   const handleCreate = () => {
-    setEditingClient(null)
-    setIsFormOpen(true)
+    navigate({ to: "/system/clients/create" })
   }
 
   const handleEdit = (id: string) => {
-    ClientsService.get(id)
-      .then((detail) => {
-        setEditingClient(detail)
-        setIsFormOpen(true)
-      })
-      .catch((e: Error) => showErrorToast(e.message))
+    navigate({ to: "/system/clients/$id/edit", params: { id } })
   }
 
   const handleDelete = (id: string) => {
@@ -296,18 +283,6 @@ function ClientsPage() {
           </div>
         </div>
       )}
-
-      {/* Create/Edit Dialog */}
-      <ClientFormDialog
-        open={isFormOpen}
-        onOpenChange={(open) => {
-          setIsFormOpen(open)
-          if (!open) {
-            setEditingClient(null)
-          }
-        }}
-        client={editingClient}
-      />
 
       {/* Regenerate Secret Dialog */}
       <Dialog
