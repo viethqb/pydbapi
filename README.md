@@ -20,11 +20,62 @@
 
 ### Screenshots
 
+#### Login
+
 [![Login](img/login.png)](img/login.png)  
-[![Dashboard](img/dashboard.png)](img/dashboard.png)  
-[![Dashboard Items](img/dashboard-items.png)](img/dashboard-items.png)  
-[![Dark Mode](img/dashboard-dark.png)](img/dashboard-dark.png)  
-[![API docs](img/docs.png)](img/docs.png)
+
+#### Dashboard
+
+[![Dashboard](img/dashboard.png)](img/dashboard.png)
+[![Dashboard2](img/dashboard2.png)](img/dashboard2.png)  
+
+#### Connection
+
+[![Connection](img/connection.png)](img/connection.png)
+[![Connection2](img/connection2.png)](img/connection2.png)
+
+#### API Dev/Modules
+
+[![Modules](img/modules.png)](img/modules.png)
+
+#### API Dev/Macro-defs
+
+[![Macro-defs](img/macro-defs.png)](img/macro-defs.png)
+
+#### Api Dev/APIs
+
+**List API**
+[![Api-dev1](img/api-dev1.png)](img/api-dev1.png)
+
+**Create/Edit API**
+[![Api-dev2](img/api-dev2.png)](img/api-dev2.png)
+[![Api-dev3](img/api-dev3.png)](img/api-dev3.png)
+[![Api-dev4](img/api-dev4.png)](img/api-dev4.png)
+
+**API Detail**
+[![Api-dev5](img/api-dev5.png)](img/api-dev5.png)
+[![Api-dev6](img/api-dev6.png)](img/api-dev6.png)
+[![Api-dev7](img/api-dev7.png)](img/api-dev7.png)
+[![Api-dev8](img/api-dev8.png)](img/api-dev8.png)
+
+**API Repository**
+[![API Repository](img/api-repository.png)](img/api-repository.png)
+
+#### Group
+
+[![Group](img/groups.png)](img/groups.png)
+
+#### Clients
+
+[![Clients](img/clients.png)](img/clients.png)
+
+#### Access Logs
+
+[![Access Logs](img/access-logs.png)](img/access-logs.png)
+
+#### RBAC
+
+[![RBAC](img/rbac.png)](img/rbac.png)
 
 ## Documentation
 
