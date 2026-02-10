@@ -18,6 +18,7 @@ from app.api.deps import (
     require_permission_for_body_resource,
     require_permission_for_resource,
 )
+from app.api.pagination import get_allowed_ids, paginate
 from app.core.permission import get_user_permissions, has_permission
 from app.core.permission_resources import (
     ensure_resource_permissions,
@@ -25,7 +26,7 @@ from app.core.permission_resources import (
 )
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models import Message, User
-from app.models_dbapi import ApiMacroDef, MacroDefVersionCommit
+from app.models_dbapi import ApiContext, ApiMacroDef, MacroDefVersionCommit
 from app.schemas_dbapi import (
     ApiMacroDefCreate,
     ApiMacroDefDetail,
@@ -102,24 +103,10 @@ def _list_filters(stmt: Any, body: ApiMacroDefListIn) -> Any:
 def _macro_def_allowed_ids(
     session: Any, current_user: CurrentUser
 ) -> list[uuid.UUID] | None:
-    """None = global read; else list of allowed macro_def ids."""
-    if has_permission(
-        session,
-        current_user,
-        ResourceTypeEnum.MACRO_DEF,
-        PermissionActionEnum.READ,
-        None,
-    ):
-        return None
-    perms = get_user_permissions(session, current_user.id)
-    allowed = [
-        p.resource_id
-        for p in perms
-        if p.resource_type == ResourceTypeEnum.MACRO_DEF
-        and p.action == PermissionActionEnum.READ
-        and p.resource_id is not None
-    ]
-    return allowed if allowed else []
+    """None = global read; else list of allowed macro_def ids (empty list = no access)."""
+    return get_allowed_ids(
+        session, current_user, ResourceTypeEnum.MACRO_DEF, PermissionActionEnum.READ
+    )
 
 
 @router.get(
@@ -138,11 +125,6 @@ def list_macro_defs_simple(
 ) -> Any:
     """Simple list for dropdowns (no pagination). Global + module-specific if module_id given."""
     allowed_ids = _macro_def_allowed_ids(session, current_user)
-    if allowed_ids is not None and not allowed_ids:
-        raise HTTPException(
-            status_code=403,
-            detail="Permission required: macro_def.read",
-        )
     stmt = select(ApiMacroDef).order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
     if module_id is not None:
         stmt = stmt.where(
@@ -170,28 +152,16 @@ def list_macro_defs(
 ) -> Any:
     """List macro_defs with pagination and optional filters."""
     allowed_ids = _macro_def_allowed_ids(session, current_user)
-    if allowed_ids is not None and not allowed_ids:
-        raise HTTPException(
-            status_code=403,
-            detail="Permission required: macro_def.read",
-        )
-    count_stmt = _list_filters(select(func.count()).select_from(ApiMacroDef), body)
-    if allowed_ids is not None:
-        count_stmt = count_stmt.where(ApiMacroDef.id.in_(allowed_ids))
-    total = session.exec(count_stmt).one()
-
-    stmt = _list_filters(select(ApiMacroDef), body)
-    if allowed_ids is not None:
-        stmt = stmt.where(ApiMacroDef.id.in_(allowed_ids))
-    offset = (body.page - 1) * body.page_size
-    stmt = (
-        stmt.order_by(ApiMacroDef.sort_order, ApiMacroDef.name)
-        .offset(offset)
-        .limit(body.page_size)
+    data, total = paginate(
+        session,
+        ApiMacroDef,
+        body,
+        filters_fn=_list_filters,
+        allowed_ids=allowed_ids,
+        order_by=(ApiMacroDef.sort_order, ApiMacroDef.name),
+        to_public=_to_public,
     )
-    rows = session.exec(stmt).all()
-
-    return ApiMacroDefListOut(data=[_to_public(r) for r in rows], total=total)
+    return ApiMacroDefListOut(data=data, total=total)
 
 
 @router.post(
@@ -254,13 +224,22 @@ def update_macro_def(
 
 
 def _count_apis_using_macro_def(m: ApiMacroDef, session) -> int:
-    """Count APIs in scope for this macro_def (global = all APIs, module = APIs in that module)."""
-    stmt = select(ApiAssignment)
-    if m.module_id is None:
-        pass
-    else:
+    """
+    Count APIs that actually reference this macro_def in their content.
+
+    - Global macro (module_id is None): search all ApiContext.content for the macro name.
+    - Module-specific macro: search only APIs in that module.
+    """
+    # Join ApiContext -> ApiAssignment to optionally filter by module_id
+    stmt = (
+        select(func.count())
+        .select_from(ApiContext)
+        .join(ApiAssignment, ApiContext.api_assignment_id == ApiAssignment.id)
+        .where(ApiContext.content.contains(m.name))
+    )
+    if m.module_id is not None:
         stmt = stmt.where(ApiAssignment.module_id == m.module_id)
-    return len(session.exec(stmt).all())
+    return session.exec(stmt).one() or 0
 
 
 @router.delete(

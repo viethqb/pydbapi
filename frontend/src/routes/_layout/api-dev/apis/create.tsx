@@ -867,7 +867,7 @@ function ApiCreate() {
                                             <FormItem>
                                               <FormControl>
                                                 <Input
-                                                  placeholder="Mô tả ý nghĩa param"
+                                                  placeholder="Describe what this param is for"
                                                   {...descField}
                                                   value={descField.value || ""}
                                                   onChange={(e) =>

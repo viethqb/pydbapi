@@ -1,4 +1,4 @@
-import { OpenAPI } from "@/client"
+import { request } from "@/lib/api-request"
 import type { DataSourcePublic } from "@/components/DataSource/columns"
 
 // Types matching backend schemas
@@ -61,37 +61,6 @@ export type DataSourcePreTestIn = {
 export type DataSourceTestResult = {
   ok: boolean
   message: string
-}
-
-const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
-
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  let token: string | null = null
-  if (OpenAPI.TOKEN) {
-    if (typeof OpenAPI.TOKEN === "function") {
-      token = await OpenAPI.TOKEN({} as any)
-    } else {
-      token = OpenAPI.TOKEN
-    }
-  }
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }))
-    throw new Error(error.detail || `HTTP error! status: ${response.status}`)
-  }
-
-  return response.json()
 }
 
 export const DataSourceService = {

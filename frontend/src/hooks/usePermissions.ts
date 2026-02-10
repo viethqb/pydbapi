@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 
 import { UserPermissionsService } from "@/services/user-permissions"
@@ -24,34 +25,41 @@ export function usePermissions() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["myPermissions"],
-    queryFn: () => UserPermissionsService.getMyPermissions(),
+    queryFn: ({ signal }) => UserPermissionsService.getMyPermissions({ signal }),
     enabled: isLoggedIn() && !isSuperuser,
   })
 
-  const permissions: PermissionTuple[] = isSuperuser
-    ? []
-    : (data?.data ?? []).map((p) => ({
-        resource_type: p.resource_type,
-        action: p.action,
-        resource_id: p.resource_id ?? null,
-      }))
+  const permissions: PermissionTuple[] = useMemo(
+    () =>
+      isSuperuser
+        ? []
+        : (data?.data ?? []).map((p) => ({
+            resource_type: p.resource_type,
+            action: p.action,
+            resource_id: p.resource_id ?? null,
+          })),
+    [isSuperuser, data],
+  )
 
-  const hasPermission = (
-    resourceType: string,
-    action: string,
-    resourceId?: string | null,
-  ): boolean => {
-    if (isSuperuser) return true
-    return permissions.some((p) => {
-      if (p.resource_type !== resourceType || p.action !== action) return false
-      const permResourceId = p.resource_id ?? null
-      if (resourceId == null || resourceId === "") {
-        return true // caller doesn't care about specific resource
-      }
-      if (permResourceId == null) return true // perm is "all"
-      return permResourceId === resourceId
-    })
-  }
+  const hasPermission = useCallback(
+    (
+      resourceType: string,
+      action: string,
+      resourceId?: string | null,
+    ): boolean => {
+      if (isSuperuser) return true
+      return permissions.some((p) => {
+        if (p.resource_type !== resourceType || p.action !== action) return false
+        const permResourceId = p.resource_id ?? null
+        if (resourceId == null || resourceId === "") {
+          return true // caller doesn't care about specific resource
+        }
+        if (permResourceId == null) return true // perm is "all"
+        return permResourceId === resourceId
+      })
+    },
+    [isSuperuser, permissions],
+  )
 
   return {
     permissions,

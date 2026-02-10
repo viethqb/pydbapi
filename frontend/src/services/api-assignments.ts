@@ -1,4 +1,4 @@
-import { OpenAPI } from "@/client"
+import { request, type RequestOptions } from "@/lib/api-request"
 
 // Types matching backend schemas
 export type HttpMethodEnum = "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
@@ -56,6 +56,8 @@ export type ApiAssignmentListIn = {
   name__ilike?: string | null
   http_method?: HttpMethodEnum | null
   execute_engine?: ExecuteEngineEnum | null
+  /** Filter by exact list of IDs (for bulk fetch) */
+  ids?: string[] | null
 }
 
 export type ApiAssignmentListOut = {
@@ -161,42 +163,15 @@ export type ApiAssignmentDebugOut = {
   error_type?: string
 }
 
-const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
-
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  let token: string | null = null
-  if (OpenAPI.TOKEN) {
-    if (typeof OpenAPI.TOKEN === "function") {
-      token = await OpenAPI.TOKEN({} as { url: string })
-    } else {
-      token = OpenAPI.TOKEN
-    }
-  }
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }))
-    throw new Error(error.detail || `HTTP error! status: ${response.status}`)
-  }
-
-  return response.json()
-}
-
 export const ApiAssignmentsService = {
-  list: async (body: ApiAssignmentListIn): Promise<ApiAssignmentListOut> => {
+  list: async (
+    body: ApiAssignmentListIn,
+    opts?: Pick<RequestOptions, "signal">,
+  ): Promise<ApiAssignmentListOut> => {
     return request<ApiAssignmentListOut>("/api/v1/api-assignments/list", {
       method: "POST",
       body: JSON.stringify(body),
+      signal: opts?.signal,
     })
   },
 
@@ -220,9 +195,13 @@ export const ApiAssignmentsService = {
     })
   },
 
-  get: async (id: string): Promise<ApiAssignmentDetail> => {
+  get: async (
+    id: string,
+    opts?: Pick<RequestOptions, "signal">,
+  ): Promise<ApiAssignmentDetail> => {
     return request<ApiAssignmentDetail>(`/api/v1/api-assignments/${id}`, {
       method: "GET",
+      signal: opts?.signal,
     })
   },
 

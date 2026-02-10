@@ -6,6 +6,13 @@ import {
 } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+
+import {
+  confirmPasswordSchema,
+  passwordSchema,
+  passwordsMatch,
+  passwordsMismatchError,
+} from "@/lib/validations"
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import {
   Form,
@@ -24,18 +31,10 @@ const formSchema = z
   .object({
     email: z.email(),
     full_name: z.string().min(1, { message: "Full Name is required" }),
-    password: z
-      .string()
-      .min(1, { message: "Password is required" })
-      .min(8, { message: "Password must be at least 8 characters" }),
-    confirm_password: z
-      .string()
-      .min(1, { message: "Password confirmation is required" }),
+    password: passwordSchema,
+    confirm_password: confirmPasswordSchema,
   })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "The passwords don't match",
-    path: ["confirm_password"],
-  })
+  .refine(passwordsMatch, passwordsMismatchError)
 
 type FormData = z.infer<typeof formSchema>
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import useAuth from "@/hooks/useAuth"
+import { usePermissions } from "@/hooks/usePermissions"
 
 interface CanProps {
   permission: string
@@ -10,10 +10,13 @@ interface CanProps {
 /**
  * Renders children only when the current user has the given permission
  * (or is superuser). Use for hiding Create/Edit/Delete buttons etc.
+ *
+ * @param permission — colon-separated string, e.g. "users:read"
  */
 export function Can({ permission, children }: CanProps) {
-  const { hasPermission } = useAuth()
-  if (!hasPermission(permission)) return null
+  const { hasPermission } = usePermissions()
+  const [resource, action] = permission.split(":")
+  if (!hasPermission(resource, action)) return null
   return <>{children}</>
 }
 

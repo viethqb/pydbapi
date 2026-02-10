@@ -1,4 +1,4 @@
-import { OpenAPI } from "@/client"
+import { request } from "@/lib/api-request"
 
 export type AccessLogConfigPublic = {
   datasource_id: string | null
@@ -40,34 +40,6 @@ export type AccessRecordDetail = AccessRecordPublic & {
 export type AccessLogListOut = {
   data: AccessRecordPublic[]
   total: number
-}
-
-const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
-
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  let token: string | null = null
-  if (OpenAPI.TOKEN) {
-    if (typeof OpenAPI.TOKEN === "function") {
-      token = await OpenAPI.TOKEN({} as { url: string })
-    } else {
-      token = OpenAPI.TOKEN
-    }
-  }
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: response.statusText }))
-    throw new Error((error as { detail?: string }).detail || `HTTP error! status: ${response.status}`)
-  }
-  return response.json()
 }
 
 export const AccessLogsService = {

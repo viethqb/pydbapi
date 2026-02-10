@@ -17,6 +17,7 @@ from app.api.deps import (
     require_permission_for_body_resource,
     require_permission_for_resource,
 )
+from app.api.pagination import get_allowed_ids, paginate
 from app.core.permission import get_user_permissions, has_permission
 from app.core.permission_resources import (
     ensure_resource_permissions,
@@ -93,24 +94,9 @@ def list_modules_simple(
     current_user: CurrentUser,
 ) -> Any:
     """Simple list for dropdowns (no pagination)."""
-    allowed_ids: list[uuid.UUID] | None = None
-    if not has_permission(
+    allowed_ids = get_allowed_ids(
         session, current_user, ResourceTypeEnum.MODULE, PermissionActionEnum.READ
-    ):
-        perms = get_user_permissions(session, current_user.id)
-        allowed_ids = [
-            p.resource_id
-            for p in perms
-            if p.resource_type == ResourceTypeEnum.MODULE
-            and p.action == PermissionActionEnum.READ
-            and p.resource_id is not None
-        ]
-        if not allowed_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="Permission required: module.read",
-            )
-
+    )
     stmt = (
         select(ApiModule)
         .where(ApiModule.is_active.is_(True))
@@ -132,41 +118,19 @@ def list_modules(
     body: ApiModuleListIn,
 ) -> Any:
     """List modules with pagination and optional filters (name, is_active)."""
-    allowed_ids: list[uuid.UUID] | None = None
-    if not has_permission(
+    allowed_ids = get_allowed_ids(
         session, current_user, ResourceTypeEnum.MODULE, PermissionActionEnum.READ
-    ):
-        perms = get_user_permissions(session, current_user.id)
-        allowed_ids = [
-            p.resource_id
-            for p in perms
-            if p.resource_type == ResourceTypeEnum.MODULE
-            and p.action == PermissionActionEnum.READ
-            and p.resource_id is not None
-        ]
-        if not allowed_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="Permission required: module.read",
-            )
-
-    count_stmt = _list_filters(select(func.count()).select_from(ApiModule), body)
-    if allowed_ids is not None:
-        count_stmt = count_stmt.where(ApiModule.id.in_(allowed_ids))
-    total = session.exec(count_stmt).one()
-
-    stmt = _list_filters(select(ApiModule), body)
-    if allowed_ids is not None:
-        stmt = stmt.where(ApiModule.id.in_(allowed_ids))
-    offset = (body.page - 1) * body.page_size
-    stmt = (
-        stmt.order_by(ApiModule.sort_order, ApiModule.name)
-        .offset(offset)
-        .limit(body.page_size)
     )
-    rows = session.exec(stmt).all()
-
-    return ApiModuleListOut(data=[_to_public(r) for r in rows], total=total)
+    data, total = paginate(
+        session,
+        ApiModule,
+        body,
+        filters_fn=_list_filters,
+        allowed_ids=allowed_ids,
+        order_by=(ApiModule.sort_order, ApiModule.name),
+        to_public=_to_public,
+    )
+    return ApiModuleListOut(data=data, total=total)
 
 
 @router.post(

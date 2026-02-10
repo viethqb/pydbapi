@@ -1,4 +1,4 @@
-import { OpenAPI } from "@/client"
+import { request, type RequestOptions } from "@/lib/api-request"
 
 export type OverviewStats = {
   datasources: number
@@ -58,83 +58,48 @@ export type TopPathsOut = {
   data: TopPathPoint[]
 }
 
-const API_BASE =
-  OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
-
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  let token: string | null = null
-  if (OpenAPI.TOKEN) {
-    if (typeof OpenAPI.TOKEN === "function") {
-      token = await OpenAPI.TOKEN({ url: endpoint } as { url: string })
-    } else {
-      token = OpenAPI.TOKEN
-    }
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: response.statusText }))
-    throw new Error(error.detail || `HTTP error! status: ${response.status}`)
-  }
-
-  return response.json()
-}
+type Opts = Pick<RequestOptions, "signal">
 
 export const OverviewService = {
-  getStats: async (): Promise<OverviewStats> => {
-    return request<OverviewStats>("/api/v1/overview/stats", { method: "GET" })
+  getStats: async (opts?: Opts): Promise<OverviewStats> => {
+    return request<OverviewStats>("/api/v1/overview/stats", {
+      method: "GET",
+      signal: opts?.signal,
+    })
   },
 
-  getRecentAccess: async (limit = 20): Promise<RecentAccessOut> => {
+  getRecentAccess: async (limit = 20, opts?: Opts): Promise<RecentAccessOut> => {
     const params = new URLSearchParams({ limit: String(limit) })
     return request<RecentAccessOut>(
       `/api/v1/overview/recent-access?${params}`,
-      {
-        method: "GET",
-      },
+      { method: "GET", signal: opts?.signal },
     )
   },
 
-  getRecentCommits: async (limit = 20): Promise<RecentCommitsOut> => {
+  getRecentCommits: async (limit = 20, opts?: Opts): Promise<RecentCommitsOut> => {
     const params = new URLSearchParams({ limit: String(limit) })
     return request<RecentCommitsOut>(
       `/api/v1/overview/recent-commits?${params}`,
-      {
-        method: "GET",
-      },
+      { method: "GET", signal: opts?.signal },
     )
   },
 
-  getRequestsByDay: async (days = 14): Promise<RequestsByDayOut> => {
+  getRequestsByDay: async (days = 14, opts?: Opts): Promise<RequestsByDayOut> => {
     const params = new URLSearchParams({ days: String(days) })
     return request<RequestsByDayOut>(
       `/api/v1/overview/requests-by-day?${params}`,
-      {
-        method: "GET",
-      },
+      { method: "GET", signal: opts?.signal },
     )
   },
 
-  getTopPaths: async (days = 7, limit = 10): Promise<TopPathsOut> => {
+  getTopPaths: async (days = 7, limit = 10, opts?: Opts): Promise<TopPathsOut> => {
     const params = new URLSearchParams({
       days: String(days),
       limit: String(limit),
     })
     return request<TopPathsOut>(`/api/v1/overview/top-paths?${params}`, {
       method: "GET",
+      signal: opts?.signal,
     })
   },
 }

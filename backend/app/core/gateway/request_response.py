@@ -8,6 +8,9 @@ Gateway request/response (Phase 4, Task 4.3): parse_params, keys_to_snake, keys_
 
 import json
 import re
+import uuid
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from typing import Any
 
 from starlette.requests import Request
@@ -240,15 +243,53 @@ def _response_naming(request: Request) -> str:
     return "camel" if h == "camel" else "snake"
 
 
+def _make_json_safe(obj: Any) -> Any:
+    """Recursively convert non-JSON-serializable types to safe primitives.
+
+    Handles: datetime, date, time, timedelta, Decimal, UUID, bytes, sets.
+    This prevents ``TypeError: Object of type datetime is not JSON serializable``
+    when DB rows contain native Python date/time or Decimal values.
+    """
+    if obj is None or isinstance(obj, (bool, int, float, str)):
+        return obj
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, date):
+        return obj.isoformat()
+    if isinstance(obj, time):
+        return obj.isoformat()
+    if isinstance(obj, timedelta):
+        return obj.total_seconds()
+    if isinstance(obj, Decimal):
+        # Preserve integer-valued decimals as int, otherwise float
+        if obj == int(obj):
+            return int(obj)
+        return float(obj)
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    if isinstance(obj, dict):
+        return {k: _make_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_make_json_safe(item) for item in obj]
+    if isinstance(obj, set):
+        return [_make_json_safe(item) for item in sorted(obj, key=str)]
+    # Fallback: use str() for unknown types
+    return str(obj)
+
+
 def format_response(result: dict[str, Any] | Any, request: Request) -> dict[str, Any] | list[Any] | Any:
     """
     Apply response naming and return JSON-serializable structure.
 
     Expects result to be normalized to { success, message, data } (see normalize_api_result).
     If ?naming=camel or X-Response-Naming: camel: recursively convert keys to camelCase.
+
+    Always ensures the output is JSON-safe (datetime, Decimal, UUID etc. are converted).
     """
     if not isinstance(result, dict):
-        return result
+        return _make_json_safe(result)
     if _response_naming(request) == "camel":
-        return keys_to_camel(result)
-    return result
+        return _make_json_safe(keys_to_camel(result))
+    return _make_json_safe(result)

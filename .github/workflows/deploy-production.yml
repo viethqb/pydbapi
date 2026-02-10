@@ -28,5 +28,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - run: docker compose -f docker-compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} build
-      - run: docker compose -f docker-compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} up -d
+
+      - name: Build images
+        run: docker compose -f docker-compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} build
+
+      - name: Deploy (migrations + services)
+        run: docker compose -f docker-compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} up -d
+
+      - name: Wait for backend health check
+        run: |
+          echo "Waiting for backend to become healthy..."
+          CONTAINER=$(docker compose -f docker-compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} ps -q backend)
+          for i in $(seq 1 24); do
+            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER" 2>/dev/null || echo "starting")
+            echo "  Attempt $i/24: $HEALTH"
+            if [ "$HEALTH" = "healthy" ]; then
+              echo "Backend is healthy!"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "ERROR: Backend did not become healthy within 120s"
+          echo "Run: ./scripts/rollback.sh to revert"
+          docker compose -f docker-compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} logs backend --tail=50
+          exit 1
+
+      - name: Verify migration state
+        run: |
+          docker compose -f docker-compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} \
+            exec -T backend alembic current 2>/dev/null | grep "(head)" || {
+              echo "ERROR: Alembic is NOT at head after deploy!"
+              echo "Run: ./scripts/rollback.sh --migrate -1 to revert"
+              exit 1
+            }
+          echo "Migration verification passed."

@@ -294,11 +294,71 @@ function MacroDetail() {
           <CardDescription>{macro.description || "View and manage macro content"}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="content" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue="detail" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="detail">Detail</TabsTrigger>
               <TabsTrigger value="content">Content</TabsTrigger>
               <TabsTrigger value="versions">Versions</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="detail" className="space-y-6 mt-6">
+              <div className="rounded-md border overflow-hidden bg-muted/30">
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="w-40 font-medium">Name</TableCell>
+                      <TableCell className="font-mono break-all">{macro.name}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">ID</TableCell>
+                      <TableCell className="font-mono break-all">{macro.id}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Type</TableCell>
+                      <TableCell>{macro.macro_type}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Scope</TableCell>
+                      <TableCell>{moduleName}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Status</TableCell>
+                      <TableCell>{macro.is_published ? "Published" : "Draft"}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Used by APIs</TableCell>
+                      <TableCell>
+                        {(macro as ApiMacroDefDetail).used_by_apis_count ?? 0}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Published version ID</TableCell>
+                      <TableCell className="font-mono break-all">
+                        {macro.published_version_id || "—"}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Created at</TableCell>
+                      <TableCell>
+                        {new Date(macro.created_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Updated at</TableCell>
+                      <TableCell>
+                        {new Date(macro.updated_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Description</TableCell>
+                      <TableCell className="whitespace-pre-wrap">
+                        {macro.description || "—"}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
 
             <TabsContent value="content" className="space-y-6 mt-6">
               <div className="rounded-md border overflow-hidden bg-muted/30">

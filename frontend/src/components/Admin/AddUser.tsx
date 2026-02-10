@@ -6,6 +6,13 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type UserCreate, UsersService } from "@/client"
+import {
+  confirmPasswordSchema,
+  emailSchema,
+  passwordSchema,
+  passwordsMatch,
+  passwordsMismatchError,
+} from "@/lib/validations"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RolesService } from "@/services/roles"
@@ -35,22 +42,14 @@ import { handleError } from "@/utils"
 
 const formSchema = z
   .object({
-    email: z.email({ message: "Invalid email address" }),
+    email: emailSchema,
     full_name: z.string().optional(),
-    password: z
-      .string()
-      .min(1, { message: "Password is required" })
-      .min(8, { message: "Password must be at least 8 characters" }),
-    confirm_password: z
-      .string()
-      .min(1, { message: "Please confirm your password" }),
+    password: passwordSchema,
+    confirm_password: confirmPasswordSchema,
     is_superuser: z.boolean(),
     is_active: z.boolean(),
   })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "The passwords don't match",
-    path: ["confirm_password"],
-  })
+  .refine(passwordsMatch, passwordsMismatchError)
 
 type FormData = z.infer<typeof formSchema>
 

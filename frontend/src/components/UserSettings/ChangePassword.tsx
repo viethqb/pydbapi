@@ -5,6 +5,12 @@ import { z } from "zod"
 
 import { type UpdatePassword, UsersService } from "@/client"
 import {
+  confirmPasswordSchema,
+  passwordSchema,
+  passwordsMatch,
+  passwordsMismatchError,
+} from "@/lib/validations"
+import {
   Form,
   FormControl,
   FormField,
@@ -19,22 +25,11 @@ import { handleError } from "@/utils"
 
 const formSchema = z
   .object({
-    current_password: z
-      .string()
-      .min(1, { message: "Password is required" })
-      .min(8, { message: "Password must be at least 8 characters" }),
-    new_password: z
-      .string()
-      .min(1, { message: "Password is required" })
-      .min(8, { message: "Password must be at least 8 characters" }),
-    confirm_password: z
-      .string()
-      .min(1, { message: "Password confirmation is required" }),
+    current_password: passwordSchema,
+    new_password: passwordSchema,
+    confirm_password: confirmPasswordSchema,
   })
-  .refine((data) => data.new_password === data.confirm_password, {
-    message: "The passwords don't match",
-    path: ["confirm_password"],
-  })
+  .refine(passwordsMatch, passwordsMismatchError)
 
 type FormData = z.infer<typeof formSchema>
 

@@ -1,7 +1,8 @@
 import { Outlet, useLocation, useNavigate } from "@tanstack/react-router"
-import { useEffect } from "react"
+import { useCallback, useEffect } from "react"
 
 import useAuth from "@/hooks/useAuth"
+import { usePermissions } from "@/hooks/usePermissions"
 
 /**
  * Path prefix -> at least one of these permissions (or menu:*) required to access.
@@ -17,14 +18,20 @@ const PATH_PERMISSIONS: { prefix: string; exact?: boolean; permissions: string[]
   // /settings and /about have no matching entry = allow any logged-in user
 ]
 
-function canAccessPath(pathname: string, hasPermission: (p: string) => boolean): boolean {
+function canAccessPath(
+  pathname: string,
+  checkPermission: (resource: string, action: string) => boolean,
+): boolean {
   const normalized = pathname.replace(/\/$/, "") || "/"
   for (const { prefix, exact, permissions } of PATH_PERMISSIONS) {
     const match = exact
       ? normalized === prefix
       : normalized === prefix || normalized.startsWith(prefix + "/")
     if (match) {
-      return permissions.some((p) => hasPermission(p))
+      return permissions.some((p) => {
+        const [resource, action] = p.split(":")
+        return checkPermission(resource, action)
+      })
     }
   }
   return true
@@ -33,17 +40,22 @@ function canAccessPath(pathname: string, hasPermission: (p: string) => boolean):
 export function RoutePermissionGuard() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, hasPermission } = useAuth()
+  const { user } = useAuth()
+  const { hasPermission } = usePermissions()
+
+  const checkAccess = useCallback(
+    (pathname: string) => canAccessPath(pathname, hasPermission),
+    [hasPermission],
+  )
 
   useEffect(() => {
     if (!user) return
-    const pathname = location.pathname
-    if (!canAccessPath(pathname, hasPermission)) {
+    if (!checkAccess(location.pathname)) {
       navigate({ to: "/", replace: true })
     }
-  }, [user, location.pathname, navigate, hasPermission])
+  }, [user, location.pathname, navigate, checkAccess])
 
-  if (user && !canAccessPath(location.pathname, hasPermission)) {
+  if (user && !checkAccess(location.pathname)) {
     return null
   }
 

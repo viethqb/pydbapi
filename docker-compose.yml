@@ -18,6 +18,14 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
   redis:
     image: redis:7-alpine
@@ -28,6 +36,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 64M
 
   starrocks:
     image: starrocks/allin1-ubuntu:latest
@@ -43,6 +59,14 @@ services:
       timeout: 10s
       retries: 5
       start_period: 90s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
     # Optional: persist BE data (uncomment to keep data across restarts)
     # volumes:
     #   - starrocks-be:/opt/starrocks/be/storage
@@ -58,6 +82,14 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   adminer:
     image: adminer
@@ -69,6 +101,14 @@ services:
       - db
     environment:
       - ADMINER_DESIGN=pepa-linha-dark
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
@@ -116,6 +156,14 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - SCRIPT_EXTRA_MODULES=${SCRIPT_EXTRA_MODULES:-pandas,numpy}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
 
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
@@ -164,6 +212,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    stop_grace_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
     build:
       context: .
@@ -197,6 +256,20 @@ services:
       args:
         - VITE_API_URL=https://api.${DOMAIN?Variable not set}
         - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 32M
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public

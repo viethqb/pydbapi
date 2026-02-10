@@ -170,7 +170,7 @@ async def gateway_proxy(
             pass
         request_params_str: str | None = None
         try:
-            request_params_str = json.dumps(params) if params else None
+            request_params_str = json.dumps(params, default=str) if params else None
         except Exception:
             pass
 

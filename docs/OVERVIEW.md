@@ -135,7 +135,10 @@ This document describes the **end-to-end flow** and **features** of the tool.
 
 ## See also
 
+- [docs/ARCHITECTURE.md](./ARCHITECTURE.md) — System architecture, Mermaid diagrams, data model.
 - [docs/TECHNICAL.md](./TECHNICAL.md) — Technical logic: gateway flow, resolution, parameters, concurrent/rate limits, SQL and script engines.
+- [docs/ENV_REFERENCE.md](./ENV_REFERENCE.md) — Complete environment variable reference.
+- [docs/TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — Common issues, debugging, rollback procedures.
 - [deployment.md](../deployment.md) — Deploy with Docker Compose and Traefik.
 - [development.md](../development.md) — Local development and Docker setup.
 - [backend/README.md](../backend/README.md), [frontend/README.md](../frontend/README.md) — Backend and frontend development.

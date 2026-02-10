@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.api.deps import SessionDep
+from app.api.deps import CurrentSuperuser, SessionDep
 from app.core.security import get_password_hash
 from app.models import (
     User,
@@ -21,9 +21,13 @@ class PrivateUserCreate(BaseModel):
 
 
 @router.post("/users/", response_model=UserPublic)
-def create_user(user_in: PrivateUserCreate, session: SessionDep) -> Any:
+def create_user(
+    user_in: PrivateUserCreate,
+    session: SessionDep,
+    _current_user: CurrentSuperuser,
+) -> Any:
     """
-    Create a new user.
+    Create a new user (superuser only).
     """
 
     user = User(

@@ -18,6 +18,7 @@ from app.api.deps import (
     require_permission_for_body_resource,
     require_permission_for_resource,
 )
+from app.api.pagination import get_allowed_ids, paginate
 from app.core.permission import get_user_permissions, has_permission
 from app.core.permission_resources import (
     ensure_resource_permissions,
@@ -163,37 +164,19 @@ def list_datasources(
     body: DataSourceListIn,
 ) -> Any:
     """List datasources with pagination and optional filters."""
-    allowed_ids: list[uuid.UUID] | None = None
-    if not has_permission(
+    allowed_ids = get_allowed_ids(
         session, current_user, ResourceTypeEnum.DATASOURCE, PermissionActionEnum.READ
-    ):
-        perms = get_user_permissions(session, current_user.id)
-        allowed_ids = [
-            p.resource_id
-            for p in perms
-            if p.resource_type == ResourceTypeEnum.DATASOURCE
-            and p.action == PermissionActionEnum.READ
-            and p.resource_id is not None
-        ]
-        if not allowed_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="Permission required: datasource.read",
-            )
-
-    count_stmt = _list_filters(select(func.count()).select_from(DataSource), body)
-    if allowed_ids is not None:
-        count_stmt = count_stmt.where(DataSource.id.in_(allowed_ids))
-    total = session.exec(count_stmt).one()
-
-    stmt = _list_filters(select(DataSource), body)
-    if allowed_ids is not None:
-        stmt = stmt.where(DataSource.id.in_(allowed_ids))
-    offset = (body.page - 1) * body.page_size
-    stmt = stmt.order_by(DataSource.name).offset(offset).limit(body.page_size)
-    rows = session.exec(stmt).all()
-
-    return DataSourceListOut(data=[_to_public(r) for r in rows], total=total)
+    )
+    data, total = paginate(
+        session,
+        DataSource,
+        body,
+        filters_fn=_list_filters,
+        allowed_ids=allowed_ids,
+        order_by=DataSource.name,
+        to_public=_to_public,
+    )
+    return DataSourceListOut(data=data, total=total)
 
 
 @router.post(

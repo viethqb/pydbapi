@@ -80,7 +80,10 @@
 ## Documentation
 
 - **[docs/OVERVIEW.md](docs/OVERVIEW.md)** — End-to-end flow (setup → data sources → APIs → gateway → clients), feature list, and main configuration.
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture, Mermaid diagrams (deployment, gateway flow, data model, security model).
 - **[docs/TECHNICAL.md](docs/TECHNICAL.md)** — Technical logic: gateway flow, module/path resolution, parameters, concurrent and rate limits, SQL/Jinja2 and script engines, config cache.
+- **[docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md)** — Complete environment variable reference (all settings, defaults, and descriptions).
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — Common issues, error codes, debugging steps, and rollback procedures.
 
 ## How To Use It
 
@@ -104,7 +107,7 @@ Set at least these in `.env` before deployment:
 
 You can (and should) pass these as environment variables from secrets.
 
-See [deployment.md](./deployment.md) for details.
+See [docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md) for all available variables, and [deployment.md](./deployment.md) for deployment details.
 
 ### Generate Secret Keys
 

@@ -1,4 +1,4 @@
-import { OpenAPI } from "@/client"
+import { request } from "@/lib/api-request"
 
 export type MacroTypeEnum = "JINJA" | "PYTHON"
 
@@ -77,39 +77,6 @@ export type ApiMacroDefUpdate = {
   content?: string | null
   description?: string | null
   sort_order?: number | null
-}
-
-const API_BASE = OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
-
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  let token: string | null = null
-  if (OpenAPI.TOKEN) {
-    if (typeof OpenAPI.TOKEN === "function") {
-      token = await OpenAPI.TOKEN({} as { url: string })
-    } else {
-      token = OpenAPI.TOKEN
-    }
-  }
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }))
-    throw new Error(
-      typeof error.detail === "string" ? error.detail : JSON.stringify(error.detail),
-    )
-  }
-
-  return response.json()
 }
 
 export const MacroDefsService = {

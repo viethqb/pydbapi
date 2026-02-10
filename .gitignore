@@ -5,5 +5,10 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 
+# Environment variables (secrets) — use .env.example as template
+.env
+.env.local
+.env.*.local
+
 # Local secrets / scratch
 client.txt

@@ -1,21 +1,36 @@
-import { AxiosError } from "axios"
 import type { ApiError } from "./client"
 
-function extractErrorMessage(err: ApiError): string {
-  if (err instanceof AxiosError) {
-    return err.message
-  }
-
-  const errDetail = (err.body as any)?.detail
-  if (Array.isArray(errDetail) && errDetail.length > 0) {
-    return errDetail[0].msg
-  }
-  return errDetail || "Something went wrong."
+type ErrorBody = {
+  detail?: string | Array<{ msg: string; loc?: string[] }>
 }
 
+function extractErrorMessage(err: ApiError | Error): string {
+  // Plain Error (e.g. from our custom request() function)
+  if (!(err && "body" in err)) {
+    return err?.message || "Something went wrong."
+  }
+
+  // ApiError from generated client — body may contain { detail: ... }
+  const body = err.body as ErrorBody | undefined
+  const detail = body?.detail
+
+  if (typeof detail === "string") {
+    return detail
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((d) => d.msg).join("; ")
+  }
+
+  return err.message || "Something went wrong."
+}
+
+/**
+ * Universal error handler for mutation `onError` callbacks.
+ * Bind a toast function as `this`: `onError: handleError.bind(showErrorToast)`
+ */
 export const handleError = function (
   this: (msg: string) => void,
-  err: ApiError,
+  err: ApiError | Error,
 ) {
   const errorMessage = extractErrorMessage(err)
   this(errorMessage)

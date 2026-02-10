@@ -8,7 +8,10 @@ import logging
 from typing import Any
 from uuid import UUID
 
+import psycopg
+import pymysql
 from sqlmodel import Session
+from trino.exceptions import TrinoExternalError, TrinoUserError
 
 from app.core.config import settings
 from app.core.pool import get_pool_manager
@@ -66,17 +69,40 @@ class ApiExecutor:
             try:
                 sql = SQLTemplateEngine().render(content, _params)
                 _log.debug("Rendered SQL: %s", sql)
+            except ValueError:
+                raise  # already wrapped by SQLTemplateEngine
             except Exception as e:
                 _log.error("SQL template render failed: %s", e, exc_info=True)
-                raise
+                raise ValueError(f"SQL template render failed: {e}") from e
             try:
                 # use_pool=False when close_connection_after_execute (e.g. StarRocks impersonation)
                 use_pool = not close_connection_after_execute
                 out = execute_sql(ds, sql, use_pool=use_pool)
                 return {"data": out}
+            except psycopg.errors.QueryCanceled as e:
+                _log.warning("SQL query timed out: %s", e)
+                raise ValueError("SQL query timed out (statement_timeout)") from e
+            except psycopg.Error as e:
+                _log.error("PostgreSQL error: %s. SQL: %s", e, sql, exc_info=True)
+                raise ValueError(f"SQL execution failed: {e}") from e
+            except pymysql.err.OperationalError as e:
+                _log.error("MySQL operational error: %s. SQL: %s", e, sql, exc_info=True)
+                raise ValueError(f"SQL execution failed: {e}") from e
+            except pymysql.err.ProgrammingError as e:
+                _log.warning("MySQL programming error: %s", e)
+                raise ValueError(f"SQL error: {e}") from e
+            except pymysql.Error as e:
+                _log.error("MySQL error: %s. SQL: %s", e, sql, exc_info=True)
+                raise ValueError(f"SQL execution failed: {e}") from e
+            except (TrinoUserError, TrinoExternalError) as e:
+                _log.error("Trino error: %s. SQL: %s", e, sql, exc_info=True)
+                raise ValueError(f"SQL execution failed: {e}") from e
+            except ConnectionError as e:
+                _log.error("Connection error: %s", e, exc_info=True)
+                raise ValueError(f"Database connection failed: {e}") from e
             except Exception as e:
                 _log.error("SQL execution failed: %s. SQL: %s", e, sql, exc_info=True)
-                raise ValueError(f"SQL execution failed: {str(e)}") from e
+                raise ValueError(f"SQL execution failed: {e}") from e
 
         if engine == ExecuteEngineEnum.SCRIPT:
             if ds is None:

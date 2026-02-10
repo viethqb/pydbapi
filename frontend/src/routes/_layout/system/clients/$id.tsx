@@ -31,7 +31,9 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 import { usePermissions } from "@/hooks/usePermissions"
 
-type ApiWithMeta = Awaited<ReturnType<typeof ApiAssignmentsService.get>> & {
+import type { ApiAssignmentPublic } from "@/services/api-assignments"
+
+type ApiWithMeta = ApiAssignmentPublic & {
   moduleName: string
   fullPath: string
 }
@@ -84,27 +86,25 @@ function ClientDetailPage() {
     enabled: !isEditRoute,
   })
 
-  // Fetch effective APIs — backend computes the exact set matching gateway auth logic
-  // (union of direct assignments + APIs reachable via assigned groups)
+  // Fetch effective APIs — single bulk request instead of per-API fetch
   const effectiveApiIds = client?.effective_api_assignment_ids ?? []
   const { data: apis, isLoading: apisLoading } = useQuery({
     queryKey: ["client-effective-apis", id, effectiveApiIds],
     queryFn: async (): Promise<ApiWithMeta[]> => {
       if (!effectiveApiIds.length) return []
 
-      // Fetch each API assignment detail
-      const results = await Promise.allSettled(
-        effectiveApiIds.map((aid) => ApiAssignmentsService.get(aid)),
-      )
-      const list = results
-        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof ApiAssignmentsService.get>>> => r.status === "fulfilled")
-        .map((r) => r.value)
-      if (!list.length) return []
+      // Bulk fetch via list endpoint with ids filter (1 request instead of N)
+      const [apisResult, modules] = await Promise.all([
+        ApiAssignmentsService.list({
+          ids: effectiveApiIds,
+          page: 1,
+          page_size: effectiveApiIds.length,
+        }),
+        ModulesService.listSimple(),
+      ])
 
-      // Build full paths using module info
-      const modules = await ModulesService.listSimple()
       const moduleMap = new Map(modules.map((m) => [m.id, m]))
-      return list.map((api) => {
+      return apisResult.data.map((api) => {
         const mod = moduleMap.get(api.module_id) ?? null
         return {
           ...api,

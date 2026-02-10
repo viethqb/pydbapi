@@ -42,4 +42,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 WORKDIR /app/backend/
 
+# Graceful shutdown: SIGTERM → FastAPI/Uvicorn finishes in-flight requests
+STOPSIGNAL SIGTERM
+
 CMD ["fastapi", "run", "--workers", "4", "app/main.py"]

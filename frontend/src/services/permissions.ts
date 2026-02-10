@@ -1,42 +1,4 @@
-import { OpenAPI } from "@/client"
-
-const API_BASE =
-  OpenAPI.BASE || import.meta.env.VITE_API_URL || "http://localhost:8000"
-const PREFIX = "/api/v1"
-
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  let token: string | null = null
-  if (OpenAPI.TOKEN) {
-    if (typeof OpenAPI.TOKEN === "function") {
-      token = await OpenAPI.TOKEN({} as { url: string })
-    } else {
-      token = OpenAPI.TOKEN
-    }
-  }
-  const response = await fetch(`${API_BASE}${PREFIX}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers as Record<string, string>),
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: response.statusText }))
-    throw new Error(
-      (error as { detail?: string }).detail ||
-        `HTTP error! status: ${response.status}`,
-    )
-  }
-
-  return response.json()
-}
+import { request } from "@/lib/api-request"
 
 export type PermissionPublic = {
   id: string
@@ -60,10 +22,10 @@ export type ResourceNamesOut = {
 
 export const PermissionsService = {
   list(): Promise<PermissionListOut> {
-    return request<PermissionListOut>("/permissions/list")
+    return request<PermissionListOut>("/api/v1/permissions/list")
   },
 
   getResourceNames(): Promise<ResourceNamesOut> {
-    return request<ResourceNamesOut>("/permissions/resource-names")
+    return request<ResourceNamesOut>("/api/v1/permissions/resource-names")
   },
 }

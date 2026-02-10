@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import delete, select
+from sqlmodel import delete, func, select
 
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
 from app.models import User, UserPublic
@@ -126,8 +126,12 @@ def _get_role_permission_ids(
 
 
 def _get_role_user_count(session: SessionDep, role_id: uuid.UUID) -> int:
-    stmt = select(UserRoleLink.user_id).where(UserRoleLink.role_id == role_id)
-    return len(session.exec(stmt).all())
+    stmt = (
+        select(func.count())
+        .select_from(UserRoleLink)
+        .where(UserRoleLink.role_id == role_id)
+    )
+    return session.exec(stmt).one() or 0
 
 
 class RoleUsersOut(BaseModel):

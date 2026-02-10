@@ -21,6 +21,7 @@ from app.api.deps import (
     require_permission_for_body_resource,
     require_permission_for_resource,
 )
+from app.api.pagination import get_allowed_ids, paginate
 from app.core.permission import get_user_permissions, has_permission
 from app.core.permission_resources import (
     ensure_resource_permissions,
@@ -142,6 +143,8 @@ def _to_detail(a: ApiAssignment) -> ApiAssignmentDetail:
 
 def _list_filters(stmt: Any, body: ApiAssignmentListIn) -> Any:
     """Apply optional filters to ApiAssignment select statement."""
+    if body.ids is not None:
+        stmt = stmt.where(ApiAssignment.id.in_(body.ids))
     if body.module_id is not None:
         stmt = stmt.where(ApiAssignment.module_id == body.module_id)
     if body.is_published is not None:
@@ -172,45 +175,19 @@ def list_api_assignments(
     body: ApiAssignmentListIn,
 ) -> Any:
     """List API assignments with pagination and optional filters."""
-    allowed_ids: list[uuid.UUID] | None = None
-    if not has_permission(
-        session,
-        current_user,
-        ResourceTypeEnum.API_ASSIGNMENT,
-        PermissionActionEnum.READ,
-        None,
-    ):
-        perms = get_user_permissions(session, current_user.id)
-        allowed_ids = [
-            p.resource_id
-            for p in perms
-            if p.resource_type == ResourceTypeEnum.API_ASSIGNMENT
-            and p.action == PermissionActionEnum.READ
-            and p.resource_id is not None
-        ]
-        if not allowed_ids:
-            raise HTTPException(
-                status_code=403,
-                detail="Permission required: api_assignment.read",
-            )
-
-    count_stmt = _list_filters(select(func.count()).select_from(ApiAssignment), body)
-    if allowed_ids is not None:
-        count_stmt = count_stmt.where(ApiAssignment.id.in_(allowed_ids))
-    total = session.exec(count_stmt).one()
-
-    stmt = _list_filters(select(ApiAssignment), body)
-    if allowed_ids is not None:
-        stmt = stmt.where(ApiAssignment.id.in_(allowed_ids))
-    offset = (body.page - 1) * body.page_size
-    stmt = (
-        stmt.order_by(ApiAssignment.sort_order, ApiAssignment.name)
-        .offset(offset)
-        .limit(body.page_size)
+    allowed_ids = get_allowed_ids(
+        session, current_user, ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
     )
-    rows = session.exec(stmt).all()
-
-    return ApiAssignmentListOut(data=[_to_public(r) for r in rows], total=total)
+    data, total = paginate(
+        session,
+        ApiAssignment,
+        body,
+        filters_fn=_list_filters,
+        allowed_ids=allowed_ids,
+        order_by=(ApiAssignment.sort_order, ApiAssignment.name),
+        to_public=_to_public,
+    )
+    return ApiAssignmentListOut(data=data, total=total)
 
 
 @router.post(
