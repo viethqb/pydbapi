@@ -90,6 +90,7 @@ services:
       EMAILS_FROM_EMAIL: "noreply@example.com"
       REDIS_HOST: "redis"
       FRONTEND_HOST: "http://localhost:5173"
+      GATEWAY_ACCESS_LOG_BODY: "true"
 
   mailcatcher:
     image: schickling/mailcatcher
