@@ -1,6 +1,7 @@
 """
-Token (Phase 4, Task 4.2a): POST /token/generate – client credentials → JWT.
-Legacy migration: GET /token/generate?clientId=&secret= → { expireAt, token }.
+Token (Phase 4, Task 4.2a): POST /api/token/generate – client credentials → JWT.
+Backward compat: /token/generate also works (same handler, no /api prefix).
+Legacy migration: GET /api/token/generate?clientId=&secret= → { expireAt, token }.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -95,7 +96,7 @@ def token_generate_get(
     session: SessionDep,
 ) -> Any:
     """
-    Legacy migration: GET /token/generate?clientId=XXXX&secret=YYYY.
+    Legacy migration: GET /token/generate?clientId=XXXX&secret=YYYY (also /api/token/generate).
     Returns { expireAt: unixtime, token } (no Bearer prefix required in Authorization).
     """
     client = _get_client_by_client_id(session, clientId)

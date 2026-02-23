@@ -14,6 +14,18 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["@wasm-fmt/ruff_fmt"],
   },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/token": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
+  },
   plugins: [
     tanstackRouter({
       target: "react",

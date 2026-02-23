@@ -24,7 +24,7 @@ integration-test:
 	@./scripts/integration-test.sh
 
 docker-up:
-	@docker compose -f docker-compose.test.yml up -d --wait
+	@docker compose up -d --wait
 
 docker-down:
-	@docker compose -f docker-compose.test.yml down
+	@docker compose down

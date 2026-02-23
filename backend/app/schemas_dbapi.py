@@ -937,7 +937,7 @@ class AccessLogListOut(SQLModel):
 
 
 class GatewayTokenIn(SQLModel):
-    """Body for POST /token/generate (JSON or form)."""
+    """Body for POST /api/token/generate (JSON or form)."""
 
     client_id: str = Field(..., min_length=1, max_length=255)
     client_secret: str = Field(..., min_length=1, max_length=512)
@@ -945,7 +945,7 @@ class GatewayTokenIn(SQLModel):
 
 
 class GatewayTokenResponse(SQLModel):
-    """Response for POST /token/generate."""
+    """Response for POST /api/token/generate."""
 
     access_token: str
     token_type: str = "bearer"
@@ -953,7 +953,7 @@ class GatewayTokenResponse(SQLModel):
 
 
 class GatewayTokenGenerateGetResponse(SQLModel):
-    """Response for GET /token/generate (legacy migration: expireAt unix + token)."""
+    """Response for GET /api/token/generate (legacy migration: expireAt unix + token)."""
 
     model_config = ConfigDict(serialize_by_alias=True)
 

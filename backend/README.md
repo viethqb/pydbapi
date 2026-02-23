@@ -35,46 +35,28 @@ There are already configurations in place to run the backend through the VS Code
 
 The setup is also already configured so you can run the tests through the VS Code Python tests tab.
 
-## Docker Compose Override
+## Local development (without full Docker app)
 
-During development, you can change Docker Compose settings that will only affect the local development environment in the file `docker-compose.override.yml`.
+The main stack uses a single **app** image (Nginx + FastAPI). For backend-only iteration, run Postgres and Redis with Docker, then run the backend on the host:
 
-The changes to that file only affect the local development environment, not the production environment. So, you can add "temporary" changes that help the development workflow.
-
-For example, the directory with the backend code is synchronized in the Docker container, copying the code you change live to the directory inside the container. That allows you to test your changes right away, without having to build the Docker image again. It should only be done during development, for production, you should build the Docker image with a recent version of the backend code. But during development, it allows you to iterate very fast.
-
-There is also a command override that runs `fastapi run --reload` instead of the default `fastapi run`. It starts a single server process (instead of multiple, as would be for production) and reloads the process whenever the code changes. Have in mind that if you have a syntax error and save the Python file, it will break and exit, and the container will stop. After that, you can restart the container by fixing the error and running again:
-
-```console
-$ docker compose watch
+```bash
+docker compose up -d db redis
+cd backend && uv run uvicorn app.main:app --reload
 ```
 
-There is also a commented out `command` override, you can uncomment it and comment the default one. It makes the backend container run a process that does "nothing", but keeps the container alive. That allows you to get inside your running container and execute commands inside, for example a Python interpreter to test installed dependencies, or start the development server that reloads when it detects changes.
+See [../development.md](../development.md) for full instructions.
 
-To get inside the container with a `bash` session you can start the stack with:
+To get inside the app container (e.g. to run migrations or a shell):
 
 ```console
-$ docker compose watch
+$ docker compose up -d
+$ docker compose exec app bash
 ```
 
-and then in another terminal, `exec` inside the running container:
+You will be in the container; backend code is under `/app/backend`. To run the API with reload from inside the container:
 
 ```console
-$ docker compose exec backend bash
-```
-
-You should see an output like:
-
-```console
-root@7f2607af31c3:/app#
-```
-
-that means that you are in a `bash` session inside your container, as a `root` user, under the `/app` directory, this directory has another directory called "app" inside, that's where your code lives inside the container: `/app/app`.
-
-There you can use the `fastapi run --reload` command to run the debug live reloading server.
-
-```console
-$ uvicorn app.main:app --reload
+$ cd /app/backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ...it will look like:
@@ -115,7 +97,7 @@ If you use GitHub Actions the tests will run automatically.
 If your stack is already up and you just want to run the tests, you can use:
 
 ```bash
-docker compose exec backend bash scripts/tests-start.sh
+docker compose exec app bash -c "cd /app/backend && bash scripts/tests-start.sh"
 ```
 
 That `/app/scripts/tests-start.sh` script just calls `pytest` after making sure that the rest of the stack is running. If you need to pass extra arguments to `pytest`, you can pass them to that command and they will be forwarded.
@@ -123,7 +105,7 @@ That `/app/scripts/tests-start.sh` script just calls `pytest` after making sure 
 For example, to stop on first error:
 
 ```bash
-docker compose exec backend bash scripts/tests-start.sh -x
+docker compose exec app bash -c "cd /app/backend && bash scripts/tests-start.sh" -x
 ```
 
 ### Test Coverage
@@ -139,7 +121,7 @@ Make sure you create a "revision" of your models and that you "upgrade" your dat
 - Start an interactive session in the backend container:
 
 ```console
-$ docker compose exec backend bash
+$ docker compose exec app bash
 ```
 
 - Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.

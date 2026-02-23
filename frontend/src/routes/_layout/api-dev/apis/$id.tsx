@@ -400,17 +400,14 @@ function ApiDetail() {
   }, [generatedToken, apiDetail?.access_type])
 
   // Build API URL with query params (must be before early returns)
-  // Gateway: when path_prefix='/' use /{path}; otherwise /{module}/{path}
+  // Gateway URL = /api/{prefix}/{api.path} (module is for permissions only, not in URL segment)
   const apiUrl = useMemo(() => {
     const currentModule = module
     const currentApiDetail = apiDetail
     if (!currentModule || !currentApiDetail) return ""
     const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
     const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
-    const isRootModule = !currentModule.path_prefix || currentModule.path_prefix.trim() === "/"
-    const url = isRootModule
-      ? `${baseUrl}/${apiPath}`
-      : `${baseUrl}/${currentModule.path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
+    const url = `${baseUrl}/api/${apiPath}`
     
     // Add query params
     const validParams = queryParams.filter((p) => p.key && p.value)
@@ -468,7 +465,7 @@ function ApiDetail() {
     setTokenResponse(null)
     try {
       const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-      const tokenUrl = `${baseUrl}/token/generate`
+      const tokenUrl = `${baseUrl}/api/token/generate`
       
       // Build headers
       const headersObj: Record<string, string> = {}
@@ -1222,7 +1219,7 @@ function ApiDetail() {
                               <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
                                 {(() => {
                                   const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-                                  return `${baseUrl}/token/generate`
+                                  return `${baseUrl}/api/token/generate`
                                 })()}
                               </div>
                               <Button
@@ -1230,7 +1227,7 @@ function ApiDetail() {
                                 size="icon"
                                 onClick={() => {
                                   const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-                                  const tokenUrl = `${baseUrl}/token/generate`
+                                  const tokenUrl = `${baseUrl}/api/token/generate`
                                   navigator.clipboard.writeText(tokenUrl)
                                   showSuccessToast("Token URL copied to clipboard")
                                 }}

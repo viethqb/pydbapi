@@ -14,11 +14,8 @@ graph TB
     end
 
     subgraph Docker["Docker Compose"]
-        Traefik["Traefik<br/>Reverse Proxy<br/>+ TLS (Let's Encrypt)"]
-
         subgraph App["Application"]
-            Frontend["Frontend<br/>React + Nginx<br/>:80"]
-            Backend["Backend<br/>FastAPI + Uvicorn<br/>:8000"]
+            Unified["App<br/>Nginx + FastAPI<br/>:80"]
             Prestart["Prestart<br/>(Migrations + Seed)"]
         end
 
@@ -34,31 +31,27 @@ graph TB
         end
     end
 
-    Browser -->|HTTPS| Traefik
-    ExtClient -->|HTTPS| Traefik
+    Browser -->|HTTP/HTTPS| Unified
+    ExtClient -->|HTTP/HTTPS| Unified
 
-    Traefik -->|"dashboard.DOMAIN"| Frontend
-    Traefik -->|"api.DOMAIN"| Backend
-
-    Backend --> Postgres
-    Backend --> Redis
-    Backend --> PG_Ext
-    Backend --> MySQL_Ext
-    Backend --> Trino_Ext
+    Unified --> Postgres
+    Unified --> Redis
+    Unified --> PG_Ext
+    Unified --> MySQL_Ext
+    Unified --> Trino_Ext
 
     Prestart -->|"alembic + seed"| Postgres
 ```
 
 ### Component Roles
 
-| Component | Image | Role |
-|-----------|-------|------|
-| **Traefik** | `traefik:3.0` | Reverse proxy, TLS termination, HTTP→HTTPS redirect, routing by hostname. |
-| **Frontend** | Bun build → `nginx:1` | Single-page React app served by Nginx. No server-side rendering. |
-| **Backend** | `python:3.10` + `uv` | FastAPI with 4 Uvicorn workers. Serves the management API (`/api/v1/...`) and the gateway (`/{module}/{path}`). |
-| **Prestart** | Same as backend | One-shot container: waits for DB → runs Alembic migrations → seeds initial data. Exits before backend starts. |
-| **PostgreSQL** | `postgres:17` | Stores all application data: users, roles, permissions, modules, APIs, clients, access logs, version commits. |
-| **Redis** | `redis:7-alpine` | Caches gateway config, rate-limit counters (sorted sets), concurrent-request counters. Falls back to in-memory if unavailable. |
+| Component | Role |
+|-----------|------|
+| **App** | Single container: Nginx serves static frontend and proxies `/api`, `/token` to FastAPI. FastAPI serves management API (`/api/v1/...`) and gateway (`/api/{path}`). Built from `docker/Dockerfile`. |
+| **Prestart** | One-shot: waits for DB → Alembic migrations → seeds. Exits before app starts. |
+| **PostgreSQL** | App database: users, roles, permissions, modules, APIs, clients, access logs, version commits. |
+| **Redis** | Gateway config cache, rate-limit and concurrent-request counters. In-memory fallback if unavailable. |
+| **StarRocks / Trino** | Optional services in docker-compose for use as external data sources. |
 
 ---
 
@@ -80,9 +73,9 @@ graph LR
             Health["Health Checks<br/>Liveness + Readiness"]
         end
 
-        subgraph "Gateway (/{module}/{path})"
+        subgraph "Gateway (/api/{path})"
             GW["gateway_proxy()"]
-            Resolver["Resolver<br/>Module → API"]
+            Resolver["Resolver<br/>path + method → API"]
             GWAuth["Auth<br/>JWT Verify"]
             Concurrent["Concurrent Limit"]
             RateLimit["Rate Limit"]
@@ -125,7 +118,7 @@ backend/
 │   │   ├── deps.py              # Dependency injection (auth, session, permissions)
 │   │   ├── pagination.py        # Shared pagination + permission filtering
 │   │   └── routes/
-│   │       ├── gateway.py       # /{module}/{path} — the dynamic API gateway
+│   │       ├── gateway.py       # /api/{path} — the dynamic API gateway
 │   │       ├── token.py         # POST /token/generate (gateway JWT)
 │   │       ├── login.py         # Dashboard auth (login, password reset)
 │   │       ├── users.py         # User management
@@ -148,7 +141,7 @@ backend/
 │   │   ├── pool.py              # External DB connection pool
 │   │   ├── permission.py        # Permission check helpers
 │   │   └── gateway/
-│   │       ├── resolver.py      # Module + API path resolution
+│   │       ├── resolver.py      # path + method → ApiAssignment (module for permissions only)
 │   │       ├── auth.py          # Gateway JWT verification + client access
 │   │       ├── runner.py        # Execute API + write access log
 │   │       ├── concurrent.py    # In-flight request limiter
@@ -194,9 +187,9 @@ sequenceDiagram
     participant Engine as SQL/Script Engine
     participant DB as External DB
 
-    C->>GW: GET /{module}/{path}
-    GW->>Resolver: resolve_module(module)
-    Resolver-->>GW: ApiModule + ApiAssignment
+    C->>GW: GET /api/{path}
+    GW->>Resolver: resolve_gateway_api(path, method)
+    Resolver-->>GW: ApiAssignment + ApiModule
 
     alt API is private
         GW->>Auth: verify JWT + client access
@@ -230,7 +223,7 @@ sequenceDiagram
 | Step | Failure | Code |
 |------|---------|------|
 | Firewall | IP blocked | 403 |
-| Resolve | Module/path not found | 404 |
+| Resolve | Path/method not found | 404 |
 | Auth | Invalid/missing token | 401 |
 | Auth | Client can't access API | 403 |
 | Concurrent | Too many in-flight | 503 |
@@ -397,7 +390,7 @@ graph TB
 ```
 1. Code pushed to master (staging) or release published (production)
 2. GitHub Actions triggers on self-hosted runner
-3. docker compose build        — builds backend + frontend images
+3. docker compose build        — builds app image (from docker/Dockerfile)
 4. docker compose up -d        — starts all services
 5. prestart container:
    a. Waits for PostgreSQL health check

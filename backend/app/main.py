@@ -25,6 +25,8 @@ if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
     generate_unique_id_function=custom_generate_unique_id,
 )
 
@@ -76,9 +78,10 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
-# Add specific routes FIRST (they have higher priority)
-app.include_router(token_router)
+# All routes under /api — specific routes FIRST (higher priority)
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(token_router, prefix="/api")
+app.include_router(token_router)  # backward compat: /token/generate
 
-# Add gateway router LAST (catch-all route /{module}/{path:path})
-app.include_router(gateway_router)
+# Gateway catch-all LAST: /api/{module}/{path:path}
+app.include_router(gateway_router, prefix="/api")

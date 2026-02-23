@@ -1,13 +1,12 @@
-"""Unit tests for gateway resolver: path_to_regex, resolve_module, resolve_api_assignment (Phase 4, Task 4.1)."""
+"""Unit tests for gateway resolver: path_to_regex, resolve_gateway_api (Phase 4, Task 4.1)."""
 
 from sqlmodel import Session
 
 from app.core.gateway.resolver import (
-    get_root_modules,
     path_to_regex,
     resolve_api_assignment,
+    resolve_gateway_api,
     resolve_module,
-    resolve_root_module,
 )
 from app.models_dbapi import HttpMethodEnum
 from tests.utils.api_assignment import create_random_assignment
@@ -46,8 +45,10 @@ def test_path_to_regex_special_chars_static() -> None:
     assert r.match("v10/report") is None
 
 
+# --- Legacy resolve_module / resolve_api_assignment (kept for backward compat) ---
+
+
 def test_resolve_module_by_path_prefix(db: Session) -> None:
-    # Use a unique segment so other tests' modules (e.g. path_prefix=/public) don't match
     seg = f"r-{random_lower_string()}"
     m = create_random_module(db, path_prefix=f"/{seg}", is_active=True)
     got = resolve_module(seg, db)
@@ -63,15 +64,6 @@ def test_resolve_module_not_found(db: Session) -> None:
 def test_resolve_module_inactive(db: Session) -> None:
     create_random_module(db, path_prefix="/hidden", is_active=False)
     assert resolve_module("hidden", db) is None
-
-
-def test_resolve_module_path_prefix_slash(db: Session) -> None:
-    """path_prefix '/' -> derived key is ''; we need a segment. Use _slug(name) when stripped is empty."""
-    m = create_random_module(db, path_prefix="/", name="default", is_active=True)
-    # _module_gateway_key: stripped("/") = "" -> _slug("default") = "default"
-    got = resolve_module("default", db)
-    assert got is not None
-    assert got.id == m.id
 
 
 def test_resolve_api_assignment_static_path(db: Session) -> None:
@@ -142,19 +134,12 @@ def test_resolve_api_assignment_wrong_method(db: Session) -> None:
     assert resolve_api_assignment(mod.id, "r", "GET", db) is None
 
 
-def test_get_root_modules(db: Session) -> None:
-    """path_prefix='/' -> in root modules; path_prefix='/x' -> not."""
-    m_root = create_random_module(db, path_prefix="/", name="default", is_active=True)
-    create_random_module(db, path_prefix="/api", is_active=True)
-    roots = get_root_modules(db)
-    assert len(roots) >= 1
-    ids = [m.id for m in roots]
-    assert m_root.id in ids
+# --- resolve_gateway_api: the main resolver (module not in URL) ---
 
 
-def test_resolve_root_module_path(db: Session) -> None:
-    """path_prefix='/' module with path 'ping' -> resolve_root_module('ping') finds it."""
-    mod = create_random_module(db, path_prefix="/", name="root", is_active=True)
+def test_resolve_gateway_api_simple(db: Session) -> None:
+    """api.path='ping' -> resolve 'ping'. Module prefix is irrelevant to URL."""
+    mod = create_random_module(db, path_prefix="/whatever", is_active=True)
     ds = create_random_datasource(db)
     a = create_random_assignment(
         db,
@@ -165,7 +150,7 @@ def test_resolve_root_module_path(db: Session) -> None:
         is_published=True,
         content="SELECT 1 as x",
     )
-    resolved = resolve_root_module("ping", "GET", db)
+    resolved = resolve_gateway_api("ping", "GET", db)
     assert resolved is not None
     api, params, m = resolved
     assert api.id == a.id
@@ -173,9 +158,30 @@ def test_resolve_root_module_path(db: Session) -> None:
     assert params == {}
 
 
-def test_resolve_root_module_multi_segment(db: Session) -> None:
-    """path_prefix='/' with path 'users/{id}' -> resolve_root_module('users/abc') finds it."""
-    mod = create_random_module(db, path_prefix="/", name="api", is_active=True)
+def test_resolve_gateway_api_nested_path(db: Session) -> None:
+    """api.path='users/list' -> resolve 'users/list'. Module prefix NOT in URL."""
+    mod = create_random_module(db, path_prefix="/admin", is_active=True)
+    ds = create_random_datasource(db)
+    a = create_random_assignment(
+        db,
+        module_id=mod.id,
+        path="users/list",
+        http_method=HttpMethodEnum.GET,
+        datasource_id=ds.id,
+        is_published=True,
+        content="SELECT 1",
+    )
+    resolved = resolve_gateway_api("users/list", "GET", db)
+    assert resolved is not None
+    api, params, m = resolved
+    assert api.id == a.id
+    assert m.id == mod.id
+    assert params == {}
+
+
+def test_resolve_gateway_api_with_path_params(db: Session) -> None:
+    """api.path='users/{id}' -> resolve 'users/abc'."""
+    mod = create_random_module(db, path_prefix="/some-group", is_active=True)
     ds = create_random_datasource(db)
     a = create_random_assignment(
         db,
@@ -186,8 +192,29 @@ def test_resolve_root_module_multi_segment(db: Session) -> None:
         is_published=True,
         content="SELECT 1",
     )
-    resolved = resolve_root_module("users/xyz", "GET", db)
+    resolved = resolve_gateway_api("users/abc", "GET", db)
     assert resolved is not None
     api, params, _ = resolved
     assert api.id == a.id
-    assert params == {"id": "xyz"}
+    assert params == {"id": "abc"}
+
+
+def test_resolve_gateway_api_not_found(db: Session) -> None:
+    """No matching api.path -> None."""
+    assert resolve_gateway_api("nonexistent", "GET", db) is None
+
+
+def test_resolve_gateway_api_inactive_module(db: Session) -> None:
+    """Inactive module -> not resolved even if api.path matches."""
+    mod = create_random_module(db, path_prefix="/hidden", is_active=False)
+    ds = create_random_datasource(db)
+    create_random_assignment(
+        db,
+        module_id=mod.id,
+        path="ping",
+        http_method=HttpMethodEnum.GET,
+        datasource_id=ds.id,
+        is_published=True,
+        content="SELECT 1",
+    )
+    assert resolve_gateway_api("ping", "GET", db) is None

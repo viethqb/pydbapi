@@ -1,6 +1,6 @@
 /**
  * Gateway API Key (JWT) for calling private APIs.
- * Obtained from POST /token/generate with client_id and client_secret.
+ * Obtained from POST /api/token/generate with client_id and client_secret.
  * Stored in localStorage; used when testing private APIs in API Repository and API Dev.
  */
 

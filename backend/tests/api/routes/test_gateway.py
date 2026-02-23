@@ -208,7 +208,7 @@ def test_gateway_proxy_200(
     client: TestClient,
     db: Session,
 ) -> None:
-    """GET /{module}/{path} with Bearer: resolve, run SQL, 200 JSON."""
+    """GET /api/{path} with Bearer: resolve, run SQL, 200 JSON."""
     _allow_localhost(db)
 
     def _db_override() -> Generator[Session, None, None]:
@@ -233,7 +233,7 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
     db.add(c)
     db.commit()
 
-    # Module /public -> segment "public"
+    # Module /public (for permissions); api.path="ping" -> URL: /api/ping
     mod = create_random_module(db, path_prefix="/public", is_active=True)
     ds = create_random_datasource(db)
     create_random_assignment(
@@ -255,9 +255,9 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
     assert tr.status_code == 200
     token = tr.json()["access_token"]
 
-    # Gateway: /{module}/{path}
+    # Gateway: /api/{api.path} — module prefix NOT in URL
     r = client.get(
-        "/public/ping",
+        "/api/ping",
         headers=_gw_headers(token),
     )
     assert r.status_code == 200
@@ -291,14 +291,14 @@ def test_gateway_proxy_401_without_auth(client: TestClient, db: Session) -> None
         )
         db.commit()
 
-        r = client.get("/a/r", headers=_gw_headers())
+        r = client.get("/api/r", headers=_gw_headers())
         assert r.status_code == 401
     finally:
         app.dependency_overrides.pop(get_db, None)
 
 
 def test_gateway_proxy_404_module(client: TestClient, db: Session) -> None:
-    """Gateway with unknown module -> 404."""
+    """Gateway with unknown path -> 404."""
     _allow_localhost(db)
 
     def _ov() -> Generator[Session, None, None]:
@@ -321,7 +321,7 @@ def test_gateway_proxy_404_module(client: TestClient, db: Session) -> None:
         token = tr.json()["access_token"]
 
         r = client.get(
-            "/nonexistent/any",
+            "/api/nonexistent",
             headers=_gw_headers(token),
         )
         assert r.status_code == 404
@@ -330,7 +330,7 @@ def test_gateway_proxy_404_module(client: TestClient, db: Session) -> None:
 
 
 def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
-    """Gateway with unknown path in module -> 404."""
+    """Gateway with path that exists in module prefix but no matching API -> 404."""
     _allow_localhost(db)
 
     def _ov() -> Generator[Session, None, None]:
@@ -356,7 +356,7 @@ def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
         token = tr.json()["access_token"]
 
         r = client.get(
-            "/m/nonexistent",
+            "/api/nonexistent-path",
             headers=_gw_headers(token),
         )
         assert r.status_code == 404

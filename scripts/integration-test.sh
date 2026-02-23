@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Integration test: start db+redis with docker-compose.test.yml,
+# Integration test: start db+redis with docker-compose.yml,
 # run alembic migrate and pytest, then tear down.
 
 set -e
@@ -13,7 +13,7 @@ if [ -f .env ]; then
   set +a
 fi
 
-# Override to point at local Docker services (must match docker-compose.test.yml)
+# Override to point at local Docker services (must match docker-compose.yml)
 export POSTGRES_SERVER=localhost
 export POSTGRES_PORT=5432
 export POSTGRES_USER=postgres
@@ -31,12 +31,12 @@ export SECRET_KEY=${SECRET_KEY:-secret-key-for-integration-test}
 export FIRST_SUPERUSER=${FIRST_SUPERUSER:-admin@example.com}
 export FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD:-changethis}
 
-echo "Starting db and redis (docker-compose.test.yml)..."
-docker compose -f docker-compose.test.yml up -d --wait
+echo "Starting db and redis (docker-compose.yml)..."
+docker compose up -d db redis --wait
 
 cleanup() {
-  echo "Stopping docker-compose.test.yml..."
-  docker compose -f docker-compose.test.yml down
+  echo "Stopping docker-compose..."
+  docker compose down
 }
 trap cleanup EXIT
 

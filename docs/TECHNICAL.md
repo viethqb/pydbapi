@@ -6,7 +6,7 @@ This document describes the **technical logic** of the gateway, parameters, engi
 
 ## 1. Gateway request flow
 
-**Route:** `GET|POST|PUT|PATCH|DELETE /{module}/{path:path}` (no `/api` prefix; full URL = backend base + `/{module}/{path}`).  
+**Route:** `GET|POST|PUT|PATCH|DELETE /api/{path:path}` (full URL = app base + `/api/{path}`).  
 **Handler:** `backend/app/api/routes/gateway.py` → `gateway_proxy()`
 
 Order of steps (and status codes when a step fails):
@@ -15,7 +15,7 @@ Order of steps (and status codes when a step fails):
 |------|--------|------------|
 | 1 | **Client IP** from `X-Forwarded-For` (rightmost) or `request.client.host` | — |
 | 2 | **Firewall** `check_firewall(ip, session)` | 403 Forbidden |
-| 3 | **Resolve** `resolve_module(module)` then `resolve_api_assignment(module_id, path, method)`; if no module match, try **root modules** `resolve_root_module(full_path, method)` | 404 Not Found |
+| 3 | **Resolve** `resolve_gateway_api(path, method, session)` → (ApiAssignment, path_params, ApiModule); path + HTTP method are unique globally | 404 Not Found |
 | 4 | **Access type** If API is **private**, require auth | — |
 | 5 | **Auth** `verify_gateway_client(request, session)` (JWT) | 401 Unauthorized |
 | 6 | **Group/API access** `client_can_access_api(session, app_client_id, api_id)` | 403 Forbidden |
@@ -32,27 +32,14 @@ Order of steps (and status codes when a step fails):
 
 ---
 
-## 2. Module and path resolution
+## 2. Path and method resolution
 
-**Files:** `backend/app/core/gateway/resolver.py`
+**Files:** `backend/app/core/gateway/resolver.py` → `resolve_gateway_api(path, method, session)`
 
-### 2.1 Module URL segment (gateway key)
-
-- **Source:** `ApiModule.path_prefix` or `ApiModule.name`.
-- **Rule:** `gateway_key = (path_prefix or "/").strip("/")`. If that is empty (root module), then `gateway_key = _slug(name)` (lowercase, alphanumeric and hyphens only).
-- **Match:** Incoming URL segment `{module}` is compared to `gateway_key` for each active module (`is_active=True`). First match by `sort_order`, then `id`.
-
-### 2.2 Root modules
-
-- **Root module:** `path_prefix` is `/` (after strip, empty string), so its gateway_key is empty and it never matches the `{module}` URL segment. When **no** module matches the first segment, the gateway builds `full_path = "{module}/{path}".rstrip("/")` (e.g. `something/rest/of/path`) and calls `resolve_root_module(full_path, method, session)`.
-- **Resolution:** Root modules (active, path_prefix='/') are tried in `sort_order`; for each, `resolve_api_assignment(module_id, full_path, method)` is called. The first module that has a matching API assignment (path regex matches `full_path`) wins. So for root modules, the **entire** path after the gateway prefix is matched against API paths (e.g. an API path `users/{id}` would match request path `users/123`).
-
-### 2.3 API assignment (path + method)
-
-- **Input:** `module_id`, `path` (no leading/trailing slash), HTTP method.
-- **Filter:** `ApiAssignment` with `module_id`, `is_published=True`, `http_method=method`. Sorted by `sort_order`, then `id`.
-- **Path pattern:** `ApiAssignment.path` supports placeholders `{name}`. Converted to regex: `{name}` → `(?P<name>[^/]+)`. Example: `users/{id}` → `^users/(?P<id>[^/]+)$`.
-- **Match:** First assignment whose regex matches `path` wins. Captured groups become `path_params` (e.g. `{"id": "123"}`).
+- **URL:** Gateway route is `/api/{path}`. Module is **not** part of the URL; it is used only for grouping and permissions.
+- **Uniqueness:** (path, http_method) must be unique across all API assignments (enforced on create/update).
+- **Resolution:** Over all active modules (by `sort_order`), over all published API assignments for that module and method, the first whose `ApiAssignment.path` (regex pattern) matches the incoming `path` wins. Returns (ApiAssignment, path_params, ApiModule).
+- **Path pattern:** `ApiAssignment.path` supports placeholders `{name}`. Converted to regex: `{name}` → `(?P<name>[^/]+)`. Example: `users/{id}` matches request path `users/123` → `path_params = {"id": "123"}`.
 
 ---
 

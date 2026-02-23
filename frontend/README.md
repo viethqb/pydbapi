@@ -19,17 +19,9 @@ Notice that this live server is not running inside Docker, it's for local develo
 
 Check the file `package.json` to see other available options.
 
-### Removing the frontend
+### API-only deployment
 
-If you are developing an API-only app and want to remove the frontend, you can do it easily:
-
-* Remove the `./frontend` directory.
-
-* In the `docker-compose.yml` file, remove the whole service / section `frontend`.
-
-* In the `docker-compose.override.yml` file, remove the whole service / section `frontend` and `playwright`.
-
-Done, you have a frontend-less (api-only) app. 🤓
+The default Docker image serves both the frontend (Nginx) and the backend (FastAPI). To deploy without the dashboard you would need a backend-only image and a custom docker-compose or deployment setup.
 
 ---
 
@@ -95,7 +87,7 @@ The frontend code is structured as follows:
 The frontend includes initial end-to-end tests using Playwright. To run the tests, you need to have the Docker Compose stack running. Start the stack with the following command:
 
 ```bash
-docker compose up -d --wait backend
+docker compose up -d --wait
 ```
 
 Then, you can run the tests with the following command:

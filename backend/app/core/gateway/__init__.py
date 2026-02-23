@@ -16,6 +16,7 @@ from app.core.gateway.request_response import (
 from app.core.gateway.resolver import (
     path_to_regex,
     resolve_api_assignment,
+    resolve_gateway_api,
     resolve_module,
 )
 from app.core.gateway.runner import run as run_api
@@ -33,6 +34,7 @@ __all__ = [
     "path_to_regex",
     "release_concurrent_slot",
     "resolve_api_assignment",
+    "resolve_gateway_api",
     "resolve_module",
     "run_api",
     "verify_gateway_client",

@@ -39,13 +39,11 @@ type ApiWithMeta = ApiAssignmentPublic & {
 }
 
 function buildApiPath(
-  module: { path_prefix: string; name: string } | null,
+  _module: { path_prefix: string; name: string } | null,
   api: { path: string },
 ): string {
-  if (!module) return ""
   const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-  const isRootModule = !module.path_prefix || module.path_prefix.trim() === "/"
-  return isRootModule ? `/${apiPath}` : `/${module.path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
+  return `/api/${apiPath}`
 }
 
 export const Route = createFileRoute("/_layout/system/clients/$id")({

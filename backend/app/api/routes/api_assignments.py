@@ -35,6 +35,7 @@ from app.models_dbapi import (
     ApiAssignment,
     ApiAssignmentGroupLink,
     ApiContext,
+    HttpMethodEnum,
     VersionCommit,
 )
 from app.core.param_type import ParamTypeError, validate_and_coerce_params
@@ -92,6 +93,46 @@ def _api_assignment_resource_id_from_body(
 ) -> uuid.UUID | None:
     """Get api_assignment id from body (update/publish/debug)."""
     return getattr(body, "id", None)
+
+
+def _normalize_path(path: str | None) -> str:
+    """Normalize path for gateway: no leading/trailing slashes (matches resolver)."""
+    return (path or "").strip().strip("/")
+
+
+def _assert_path_method_unique(
+    session: Session,
+    path: str,
+    http_method: HttpMethodEnum,
+    *,
+    exclude_id: uuid.UUID | None = None,
+) -> None:
+    """
+    Ensure (path, http_method) is unique across all modules.
+    Gateway URL is /api/{path}; one path+method must map to one API.
+    Raises HTTPException 400 if another API already uses this path+method.
+    """
+    norm = _normalize_path(path)
+    if not norm:
+        raise HTTPException(
+            status_code=400,
+            detail="API path cannot be empty.",
+        )
+    stmt = select(ApiAssignment).where(
+        ApiAssignment.path == norm,
+        ApiAssignment.http_method == http_method,
+    )
+    if exclude_id is not None:
+        stmt = stmt.where(ApiAssignment.id != exclude_id)
+    existing = session.exec(stmt).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Another API already uses path '{norm}' with method {http_method.value}. "
+                "Path + HTTP method must be unique across all modules."
+            ),
+        )
 
 
 def _to_public(a: ApiAssignment) -> ApiAssignmentPublic:
@@ -221,6 +262,10 @@ def create_api_assignment(
             "result_transform",
         }
     )
+    assign_data["path"] = _normalize_path(assign_data.get("path"))
+    _assert_path_method_unique(
+        session, assign_data["path"], body.http_method, exclude_id=None
+    )
     a = ApiAssignment(**assign_data)
     session.add(a)
     session.flush()
@@ -320,6 +365,20 @@ def update_api_assignment(
             detail="DataSource is required for SQL and SCRIPT engines.",
         )
 
+    # Path + method must be unique across all modules (gateway is /api/{path})
+    if "path" in body.model_fields_set or "http_method" in body.model_fields_set:
+        new_path = _normalize_path(
+            body.path if "path" in body.model_fields_set else a.path
+        )
+        new_method = (
+            body.http_method
+            if "http_method" in body.model_fields_set
+            else a.http_method
+        )
+        _assert_path_method_unique(
+            session, new_path, new_method, exclude_id=body.id
+        )
+
     update_data = body.model_dump(
         exclude_unset=True,
         exclude={
@@ -331,6 +390,8 @@ def update_api_assignment(
             "result_transform",
         },
     )
+    if "path" in update_data:
+        update_data["path"] = _normalize_path(update_data["path"])
     if update_data:
         a.sqlmodel_update(update_data)
         session.add(a)

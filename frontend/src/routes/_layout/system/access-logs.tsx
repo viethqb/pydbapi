@@ -169,11 +169,8 @@ function AccessLogsPage() {
 
   const moduleById = new Map((modulesList ?? []).map((m) => [m.id, m]))
   const formatApiFullPath = (api: { module_id: string; path: string }) => {
-    const mod = moduleById.get(api.module_id)
-    const prefix = (mod?.path_prefix || "/").replace(/^\/+|\/+$/g, "")
     const p = (api.path || "").replace(/^\/+|\/+$/g, "")
-    const full = `/${prefix}/${p}`.replace(/\/+/g, "/")
-    return full === "/" ? "/" : full.replace(/\/$/, "")
+    return `/api/${p}`
   }
   const formatApiLabel = (api: { http_method: string; name: string; module_id: string; path: string }) => {
     const modName = moduleById.get(api.module_id)?.name ?? "Unknown module"

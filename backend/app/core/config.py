@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
-    # DBAPI Phase 4: Gateway & auth (JWT only, from POST /token/generate)
+    # DBAPI Phase 4: Gateway & auth (JWT only, from POST /api/token/generate)
     # -------------------------------------------------------------------------
     GATEWAY_JWT_EXPIRE_SECONDS: int = 3600
     GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True  # When no rule matches

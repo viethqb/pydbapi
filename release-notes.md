@@ -1,5 +1,7 @@
 # Release Notes
 
+> Historical entries below are from the original full-stack-fastapi-template. For pyDBAPI-specific changes see the git history and the [README](README.md).
+
 ## Latest Changes
 
 ### Internal

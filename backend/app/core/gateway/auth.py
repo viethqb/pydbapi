@@ -1,7 +1,7 @@
 """
 Gateway auth (Phase 4, Task 4.2a): verify_gateway_client.
 
-Supports only Bearer JWT (obtained from POST /token/generate with client_id and client_secret).
+Supports only Bearer JWT (obtained from POST /api/token/generate with client_id and client_secret).
 
 Also: client_can_access_api — client can only call private APIs that belong to at least one
 ApiGroup assigned to the client (app_client_group_link + api_assignment_group_link), or that are
@@ -40,7 +40,7 @@ def verify_gateway_client(request: Request, session: Session) -> AppClient | Non
     - Authorization: Bearer <token> (JWT)
     - Authorization: <token> (raw token, legacy migration)
 
-    JWT is obtained from POST /token/generate or GET /token/generate?clientId=&secret=.
+    JWT is obtained from POST /api/token/generate or GET /api/token/generate?clientId=&secret=.
 
     Returns AppClient or None.
     """

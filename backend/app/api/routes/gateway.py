@@ -1,5 +1,8 @@
 """
-Gateway (Phase 4, Task 4.1): dynamic /{module}/{path:path}.
+Gateway (Phase 4, Task 4.1): dynamic /api/{path:path}.
+
+Module is only for grouping/permissions — it does NOT appear in the URL.
+URL pattern: /api/{path} where path = module.path_prefix + api.path.
 
 Flow: IP -> firewall -> auth -> rate limit -> resolve -> parse_params -> run -> format_response.
 runner_run is sync/blocking; run it in a thread pool so the event loop can accept
@@ -28,11 +31,7 @@ from app.core.gateway import (
     verify_gateway_client,
 )
 from app.core.gateway.config_cache import get_or_load_gateway_config
-from app.core.gateway.resolver import (
-    resolve_api_assignment,
-    resolve_module,
-    resolve_root_module,
-)
+from app.core.gateway.resolver import resolve_gateway_api
 from app.core.gateway.runner import run as runner_run
 from app.models_dbapi import ApiAccessTypeEnum, ApiAssignment
 
@@ -70,7 +69,7 @@ def _run_runner_in_thread(
 
 
 def _get_client_ip(request: Request) -> str:
-    """Client IP: X-Forwarded-For (rightmost) or request.client.host. Plan: rightmost if multiple."""
+    """Client IP: X-Forwarded-For (rightmost) or request.client.host."""
     xff = request.headers.get("x-forwarded-for")
     if xff:
         return xff.split(",")[-1].strip()
@@ -84,37 +83,25 @@ def _gateway_error(request: Request, status_code: int, detail: str) -> JSONRespo
 
 
 @router.api_route(
-    "/{module}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
+    "/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
 )
 async def gateway_proxy(
-    module: str,
     path: str,
     request: Request,
     session: SessionDep,
 ) -> JSONResponse:
     """
-    Dynamic gateway: resolve {module}/{path} to ApiAssignment, run SQL/Script, return JSON.
-    For public APIs: no auth required. For private APIs: requires auth (Bearer/Basic/X-API-Key).
-    Always requires: firewall allow, rate limit. 404 if no match.
+    Dynamic gateway: resolve /api/{path} to ApiAssignment, run SQL/Script, return JSON.
+    Module is resolved internally for permissions — not part of URL.
     """
     ip = _get_client_ip(request)
     if not check_firewall(ip, session):
         return _gateway_error(request, 403, "Forbidden")
 
-    mod = resolve_module(module, session)
-    if not mod:
-        # Try root modules (path_prefix='/'): endpoint is /{path} without module segment
-        full_path = f"{module}/{path}".rstrip("/") if path else module
-        root_resolved = resolve_root_module(full_path, request.method, session)
-        if root_resolved:
-            api, path_params, mod = root_resolved
-        else:
-            return _gateway_error(request, 404, "Not Found")
-    else:
-        resolved = resolve_api_assignment(mod.id, path, request.method, session)
-        if not resolved:
-            return _gateway_error(request, 404, "Not Found")
-        api, path_params = resolved
+    resolved = resolve_gateway_api(path, request.method, session)
+    if not resolved:
+        return _gateway_error(request, 404, "Not Found")
+    api, path_params, mod = resolved
 
     # Check access_type: public APIs don't require authentication
     app_client = None
@@ -122,7 +109,6 @@ async def gateway_proxy(
         app_client = verify_gateway_client(request, session)
         if not app_client:
             return _gateway_error(request, 401, "Unauthorized")
-        # Client can only call APIs in assigned groups (or direct API links)
         if not client_can_access_api(session, app_client.id, api.id):
             return _gateway_error(request, 403, "Forbidden")
 
@@ -134,7 +120,7 @@ async def gateway_proxy(
     if not acquire_concurrent_slot(client_key, client_max):
         return _gateway_error(request, 503, "Service Unavailable")
 
-    # Rate limit: only when API or client has rate_limit_per_minute configured (default: no limit)
+    # Rate limit: only when API or client has rate_limit_per_minute configured
     api_limit = getattr(api, "rate_limit_per_minute", None)
     client_limit = (
         getattr(app_client, "rate_limit_per_minute", None) if app_client else None
@@ -150,11 +136,10 @@ async def gateway_proxy(
     if effective_limit is not None and not check_rate_limit(
         rate_limit_key, limit=effective_limit
     ):
-        release_concurrent_slot(client_key)  # release slot we just acquired
+        release_concurrent_slot(client_key)
         return _gateway_error(request, 429, "Too Many Requests")
 
     try:
-        # Get params definition from cache or DB (for header extraction)
         config = get_or_load_gateway_config(api, session)
         params_definition = (
             (config.get("params_definition") or None) if config else None
@@ -174,7 +159,6 @@ async def gateway_proxy(
         except Exception:
             pass
 
-        # Run in thread pool so event loop is not blocked; concurrent limit can then work
         result = await asyncio.to_thread(
             _run_runner_in_thread,
             api.id,
@@ -182,16 +166,14 @@ async def gateway_proxy(
             app_client.id if app_client else None,
             ip,
             request.method,
-            f"{module}/{path}".rstrip("/"),
+            path,
             body_for_log,
             request_headers_str,
             request_params_str,
         )
     except HTTPException as he:
-        # Convert to standard envelope; preserve status code
         return _gateway_error(request, he.status_code, str(he.detail))
     except Exception as e:
-        # Return standard envelope on error: { success: false, message: "...", data: [] }
         error_body = {"success": False, "message": str(e), "data": []}
         out = format_response(error_body, request)
         return JSONResponse(status_code=500, content=out)

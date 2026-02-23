@@ -60,8 +60,7 @@ const repositoryColumns: ColumnDef<ApiRepositoryTableData>[] = [
     cell: ({ row }) => {
       const api = row.original
       const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-      const isRootModule = !api.module_path_prefix || api.module_path_prefix.trim() === "/"
-      const fullPath = isRootModule ? `/${apiPath}` : `/${api.module_path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
+      const fullPath = `/api/${apiPath}`
       
       return (
         <span className="font-mono text-sm">

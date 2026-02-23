@@ -62,7 +62,7 @@ Redis is **optional**. When unavailable, rate limiting and caching fall back to 
 Error starting userland proxy: listen tcp4 0.0.0.0:5432: bind: address already in use
 ```
 
-**Fix:** Stop the conflicting service or change the published port in `docker-compose.override.yml`.
+**Fix:** Stop the conflicting service or set a different port in `.env` (e.g. `APP_PORT=8080`) and use `docker compose up -d`.
 
 ---
 
@@ -77,10 +77,10 @@ alembic.util.exc.CommandError: Can't locate revision identified by '...'
 **Cause:** The DB has a revision that doesn't exist in the code (e.g. manual migration was run then reverted in code).
 
 **Fix:**
-1. Check current revision: `docker compose exec backend alembic current`
-2. Check available heads: `docker compose exec backend alembic heads`
-3. If the DB revision is ahead of code, stamp it: `docker compose exec backend alembic stamp head`
-4. If the DB has a non-existent revision, manually set it:
+1. Check current revision: `docker compose exec app bash -c "cd /app/backend && alembic current"`
+2. Check available heads: `docker compose exec app bash -c "cd /app/backend && alembic heads"`
+3. If the DB revision is ahead of code, stamp it: `docker compose exec app bash -c "cd /app/backend && alembic stamp head"`
+4. If the DB has a non-existent revision, set it manually:
    ```bash
    docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB \
      -c "UPDATE alembic_version SET version_num = '<correct_revision>';"
@@ -106,8 +106,8 @@ Use the rollback script:
 Or manually:
 
 ```bash
-docker compose exec backend alembic downgrade -1
-docker compose restart backend
+docker compose exec app bash -c "cd /app/backend && alembic downgrade -1"
+docker compose restart app
 ```
 
 ---
@@ -117,11 +117,11 @@ docker compose restart backend
 **Cause:** Migration ran but models reference a table/column that wasn't included.
 
 **Fix:**
-1. Check if migration is at head: `docker compose exec backend alembic current`
-2. If not, run: `docker compose exec backend alembic upgrade head`
+1. Check if migration is at head: `docker compose exec app bash -c "cd /app/backend && alembic current"`
+2. If not, run: `docker compose exec app bash -c "cd /app/backend && alembic upgrade head"`
 3. If already at head, the migration script may be incomplete — generate a new one:
    ```bash
-   docker compose exec backend alembic revision --autogenerate -m "add missing tables"
+   docker compose exec app bash -c "cd /app/backend && alembic revision --autogenerate -m 'add missing tables'"
    ```
 
 ---
@@ -134,7 +134,7 @@ docker compose restart backend
 
 **In production:** Only `"Internal server error"` is shown. Check server logs:
 ```bash
-docker compose logs backend --tail=100
+docker compose logs app --tail=100
 ```
 
 If Sentry is configured (`SENTRY_DSN`), the full traceback appears there.
@@ -151,7 +151,7 @@ If Sentry is configured (`SENTRY_DSN`), the full traceback appears there.
 |---------|---------|-----|
 | `postgres` | Cannot reach the app database | Check `db` container health. Verify `POSTGRES_SERVER`, `POSTGRES_PORT`, credentials. |
 | `redis` | Cannot reach Redis (only when `CACHE_ENABLED` or rate limiting is on) | Check `redis` container. If Redis is intentionally off, set `CACHE_ENABLED=False` and `FLOW_CONTROL_RATE_LIMIT_ENABLED=False`. |
-| `migrations_not_at_head` | DB schema doesn't match code | Run `docker compose exec backend alembic upgrade head` or redeploy. |
+| `migrations_not_at_head` | DB schema doesn't match code | Run `docker compose exec app bash -c "cd /app/backend && alembic upgrade head"` or redeploy. |
 
 ---
 
@@ -195,15 +195,14 @@ Only top-level module names are supported (not `pandas.io`).
 
 ## Gateway
 
-### 404 on gateway call (`/{module}/{path}`)
+### 404 on gateway call (`/api/{path}`)
 
 **Checklist:**
-1. Is the API **published**? Only published APIs are routed by the gateway.
-2. Does the module `path_prefix` match the URL segment? (e.g. module prefix `sales` → `GET /sales/users`).
-3. Does the API `path` match? Path parameters use `{name}` syntax (e.g. `users/{id}`).
-4. Does the HTTP **method** match? (GET vs POST, etc.)
-5. Is the module **active** (`is_active=True`)?
-6. Check config cache: if you just published, the cache may still have the old config. Wait up to `GATEWAY_CONFIG_CACHE_TTL_SECONDS` (default 300s) or restart the backend.
+1. Is the API **published**? Only published APIs are routed.
+2. Does the request **path** match the API's `path`? (e.g. API path `users/{id}` → request `GET /api/users/123`). Module is not in the URL.
+3. Does the HTTP **method** match? (GET vs POST, etc.) Path + method must be unique.
+4. Is the module **active** (`is_active=True`)?
+5. Config cache: after publishing, wait up to `GATEWAY_CONFIG_CACHE_TTL_SECONDS` (default 300s) or restart the app.
 
 ---
 
@@ -212,7 +211,7 @@ Only top-level module names are supported (not `pandas.io`).
 **Cause:** API has `access_type = private` and no valid token.
 
 **Fix:**
-1. Obtain a token: `POST /token/generate` with `client_id` and `client_secret`.
+1. Obtain a token: `POST /api/token/generate` (or `POST /token/generate`) with `client_id` and `client_secret`.
 2. Pass it: `Authorization: Bearer <token>`.
 3. Check token expiry (`GATEWAY_JWT_EXPIRE_SECONDS`, default 3600s).
 4. Verify the client is **active** (`is_active=True`).
@@ -260,9 +259,8 @@ Check in the UI: System → Clients → [client] → assigned groups and APIs.
 
 **Checklist:**
 1. Check browser console for errors (F12 → Console).
-2. Verify `VITE_API_URL` was set correctly at **build time** (it's baked into the JS bundle).
-3. Check nginx is serving: `curl http://localhost:80/health` should return `ok`.
-4. If using Traefik, check routing: `curl -H "Host: dashboard.example.com" http://localhost:80/`.
+2. Verify `VITE_API_URL` was set correctly at **build time** (empty = same origin). For production behind one host, use empty or the same origin.
+3. Check app is serving: `curl http://localhost/health` should return `ok`.
 
 ---
 
@@ -285,7 +283,7 @@ BACKEND_CORS_ORIGINS="https://dashboard.example.com,http://localhost:5173"
 **Cause:** Frontend can't reach backend.
 
 **Checklist:**
-1. Is the backend running and healthy? `docker compose ps backend`
+1. Is the app running and healthy? `docker compose ps app`
 2. Is `VITE_API_URL` pointing to the correct backend URL?
 3. Are there firewall/proxy rules blocking the connection?
 4. Check browser Network tab (F12) for the actual request URL and response.
@@ -340,7 +338,7 @@ BACKEND_CORS_ORIGINS="https://dashboard.example.com,http://localhost:5173"
 
 **Diagnosis:**
 ```bash
-docker compose logs backend --tail=100
+docker compose logs app --tail=100
 docker compose logs prestart --tail=50
 ```
 
@@ -367,7 +365,7 @@ docker compose logs prestart --tail=50
 After rollback, verify:
 ```bash
 docker compose ps                    # all services running
-docker compose exec backend alembic current  # check migration state
+docker compose exec app bash -c "cd /app/backend && alembic current"  # check migration state
 curl -f http://localhost:8000/api/v1/utils/health-check/  # readiness
 ```
 
@@ -390,14 +388,14 @@ ValueError: The value of SECRET_KEY is "changethis", for security, please change
 docker compose ps
 
 # View logs (last 50 lines, follow)
-docker compose logs backend --tail=50 -f
+docker compose logs app --tail=50 -f
 
 # Run alembic inside container
-docker compose exec backend alembic current
-docker compose exec backend alembic history --verbose
+docker compose exec app bash -c "cd /app/backend && alembic current"
+docker compose exec app bash -c "cd /app/backend && alembic history --verbose"
 
 # Open a Python shell in the backend
-docker compose exec backend python
+docker compose exec app bash -c "cd /app/backend && python"
 
 # Open a psql shell in the app DB
 docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB
@@ -407,8 +405,8 @@ docker compose exec redis redis-cli ping
 docker compose exec redis redis-cli keys "gateway:*"
 
 # Restart a single service
-docker compose restart backend
+docker compose restart app
 
 # Rebuild and restart
-docker compose up -d --build backend
+docker compose up -d --build app
 ```

@@ -17,10 +17,8 @@ POSTGRES_SERVER=db            # "db" inside Docker, "localhost" outside
 FIRST_SUPERUSER=admin@example.com
 FIRST_SUPERUSER_PASSWORD=<strong-password>
 PROJECT_NAME=pyDBAPI
-DOMAIN=localhost              # your domain for Traefik
-STACK_NAME=pydbapi
-DOCKER_IMAGE_BACKEND=backend
-DOCKER_IMAGE_FRONTEND=frontend
+DOCKER_IMAGE_BACKEND=pydbapi  # image name for app (unified Nginx+FastAPI)
+TAG=latest
 ```
 
 ---
@@ -146,23 +144,11 @@ Created automatically on first startup (by `initial_data.py`).
 
 | Variable | Type | Default | Required | Description |
 |----------|------|---------|----------|-------------|
-| `DOMAIN` | string | — | **Yes** | Domain name for Traefik routing (e.g. `example.com`). Backend → `api.DOMAIN`, frontend → `dashboard.DOMAIN`. |
-| `STACK_NAME` | string | — | **Yes** | Docker Compose project name and Traefik label prefix. |
-| `DOCKER_IMAGE_BACKEND` | string | — | **Yes** | Docker image name for the backend (e.g. `ghcr.io/org/pydbapi-backend`). |
-| `DOCKER_IMAGE_FRONTEND` | string | — | **Yes** | Docker image name for the frontend. |
+| `DOCKER_IMAGE_BACKEND` | string | `pydbapi` | No | Docker image name for the app (unified Nginx + FastAPI). |
 | `TAG` | string | `latest` | No | Docker image tag. |
-
----
-
-## Traefik (Reverse Proxy)
-
-Set in `docker-compose.traefik.yml`. Only needed when using the Traefik setup.
-
-| Variable | Type | Default | Required | Description |
-|----------|------|---------|----------|-------------|
-| `EMAIL` | email | — | **Yes** | Email for Let's Encrypt TLS certificate registration. |
-| `USERNAME` | string | — | **Yes** | Traefik dashboard HTTP Basic Auth username. |
-| `HASHED_PASSWORD` | string | — | **Yes** | Traefik dashboard password (hashed). Generate with: `openssl passwd -apr1`. |
+| `APP_PORT` | int | `80` | No | Port exposed by the app container (e.g. `80` or `8080`). |
+| `DOMAIN` | string | `localhost` | No | Domain for emails and optional reverse-proxy config. |
+| `STACK_NAME` | string | — | No | Docker Compose project name (optional; used by some CI workflows). |
 
 ---
 
@@ -172,7 +158,7 @@ These are Vite build-time variables, set as Docker build args or in `frontend/.e
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `VITE_API_URL` | URL | `http://localhost:8000` | Backend API base URL baked into the frontend build. |
+| `VITE_API_URL` | URL | `""` | Backend API base URL baked into the frontend build. Empty = same origin (recommended when app is served from one host). |
 | `NODE_ENV` | string | `development` | `"production"` enables minification and optimizations. |
 
 ---

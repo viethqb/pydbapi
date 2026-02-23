@@ -183,17 +183,14 @@ function ApiRepositoryDetail() {
     }
   }, [generatedToken, apiDetail?.access_type])
 
-  // Build API URL: when path_prefix='/' use /{path}; otherwise /{module}/{path}
+  // Build gateway URL: /api/{prefix}/{api.path} (module is for permissions only)
   const apiUrl = useMemo(() => {
     const currentModule = module
     const currentApiDetail = apiDetail
     if (!currentModule || !currentApiDetail) return ""
     const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
     const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
-    const isRootModule = !currentModule.path_prefix || currentModule.path_prefix.trim() === "/"
-    let url = isRootModule
-      ? `${baseUrl}/${apiPath}`
-      : `${baseUrl}/${currentModule.path_prefix.trim().replace(/^\/+|\/+$/g, "")}/${apiPath}`
+    let url = `${baseUrl}/api/${apiPath}`
     const validParams = queryParams.filter((p) => p.key && p.value)
     if (validParams.length > 0) {
       const urlObj = new URL(url)
@@ -248,7 +245,7 @@ function ApiRepositoryDetail() {
     setTokenResponse(null)
     try {
       const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-      const tokenUrl = `${baseUrl}/token/generate`
+      const tokenUrl = `${baseUrl}/api/token/generate`
       
       // Build headers
       const headersObj: Record<string, string> = {}
@@ -717,7 +714,7 @@ function ApiRepositoryDetail() {
                               <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
                                 {(() => {
                                   const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-                                  return `${baseUrl}/token/generate`
+                                  return `${baseUrl}/api/token/generate`
                                 })()}
                               </div>
                               <Button
@@ -725,7 +722,7 @@ function ApiRepositoryDetail() {
                                 size="icon"
                                 onClick={() => {
                                   const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-                                  const tokenUrl = `${baseUrl}/token/generate`
+                                  const tokenUrl = `${baseUrl}/api/token/generate`
                                   navigator.clipboard.writeText(tokenUrl)
                                   showSuccessToast("Token URL copied to clipboard")
                                 }}

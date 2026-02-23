@@ -26,7 +26,7 @@ This document describes the **end-to-end flow** and **features** of the tool.
 - **API Assignments** define each endpoint:
   - **Engine**: SQL (Jinja2 template) or Python script (RestrictedPython sandbox).
   - **DataSource**: which DB to use (for SQL) or which DB is available in script context.
-  - **Path**: URL path under the module (e.g. `users`, `users/{id}`). Supports path parameters.
+  - **Path**: URL path of the API (e.g. `users`, `users/{id}`). Supports path parameters. Must be unique per HTTP method across all modules.
   - **HTTP method**: GET, POST, PUT, PATCH, DELETE.
   - **Parameters**: name, location (query / header / body), type, required, validation (regex or Python).
   - **Content**: SQL template or Python script body. For SQL you can use **macro definitions** (reusable snippets).
@@ -39,11 +39,11 @@ This document describes the **end-to-end flow** and **features** of the tool.
 
 ### 5. Call the gateway
 
-- **Obtain a token**: `POST /token/generate` with `client_id` and `client_secret` → returns a JWT.
+- **Obtain a token**: `POST /api/token/generate` or `POST /token/generate` with `client_id` and `client_secret` → returns a JWT.
 - **Call the API**:  
-  `GET|POST|PUT|PATCH|DELETE /{module}/{path}`  
-  e.g. `GET /sales/users?status=active`  
-  (full URL = your backend base URL + `/{module}/{path}`; the gateway route has no `/api` prefix.)  
+  `GET|POST|PUT|PATCH|DELETE /api/{path}`  
+  e.g. `GET /api/users?status=active`  
+  (full URL = app base URL + `/api/{path}`. Module is for grouping/permissions only; it is not part of the URL.)  
   Use header `Authorization: Bearer <token>` for private APIs.
 - **Parameters**: path params from URL; query from `?key=value`; body from JSON or form; headers from HTTP headers. When the API has a **params definition**, each param is taken only from its configured location (query, body, or header). Merged priority: path > query > body > header. Naming can be forced to camelCase via `?naming=camel` or `X-Response-Naming: camel`.
 - **Response**: JSON (and optionally naming convention). Access is logged (AccessRecord) when enabled.
@@ -82,7 +82,7 @@ This document describes the **end-to-end flow** and **features** of the tool.
 
 ### Gateway
 
-- **Dynamic routing**: `/{module}/{path}` (no `/api` prefix) — module and path resolved to a single API assignment (path can include placeholders, e.g. `users/{id}`).
+- **Dynamic routing**: `/api/{path}` — path + HTTP method are unique globally; path can include placeholders (e.g. `users/{id}`). Module is used only for grouping and permissions.
 - **Flow**: resolve → (firewall) → auth (if private) → concurrent limit → rate limit → parse params → run (SQL or script) → format response → write access record.
 - **Concurrent limit**: max concurrent requests per client (or per IP for public APIs). Checked before rate limit; slot is released in all cases (success, 429, 5xx). Redis (shared across workers) or in-memory fallback; per-client override via `app_client.max_concurrent`; global default `FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT`.
 - **Rate limiting**: sliding window, configurable per minute; Redis (preferred) or in-memory. See `FLOW_CONTROL_RATE_LIMIT_*`.
@@ -91,7 +91,7 @@ This document describes the **end-to-end flow** and **features** of the tool.
 
 ### Authentication and authorization
 
-- **Gateway auth**: JWT only. Token from `POST /api/token/generate` with `client_id` and `client_secret`. Bearer token required for private APIs.
+- **Gateway auth**: JWT only. Token from `POST /api/token/generate` (or `POST /token/generate`) with `client_id` and `client_secret`. Bearer token required for private APIs.
 - **Dashboard auth**: login, signup, password recovery (email), secure password hashing. Role-based access to Admin, Security, API Dev, Connection, System.
 
 ### Admin UI (React frontend)
@@ -109,7 +109,7 @@ This document describes the **end-to-end flow** and **features** of the tool.
 
 ### Operations and deployment
 
-- **Docker Compose**: backend, frontend, PostgreSQL, Redis (optional), Traefik for HTTPS (Let’s Encrypt). See [deployment.md](../deployment.md) and [development.md](../development.md).
+- **Docker Compose**: single app (Nginx + FastAPI), PostgreSQL, Redis, optional StarRocks/Trino. See [deployment.md](../deployment.md) and [development.md](../development.md).
 - **Tests**: Pytest; CI/CD with GitHub Actions.
 
 ### Configuration (main environment variables)
@@ -139,6 +139,6 @@ This document describes the **end-to-end flow** and **features** of the tool.
 - [docs/TECHNICAL.md](./TECHNICAL.md) — Technical logic: gateway flow, resolution, parameters, concurrent/rate limits, SQL and script engines.
 - [docs/ENV_REFERENCE.md](./ENV_REFERENCE.md) — Complete environment variable reference.
 - [docs/TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — Common issues, debugging, rollback procedures.
-- [deployment.md](../deployment.md) — Deploy with Docker Compose and Traefik.
+- [deployment.md](../deployment.md) — Deploy with Docker Compose.
 - [development.md](../development.md) — Local development and Docker setup.
 - [backend/README.md](../backend/README.md), [frontend/README.md](../frontend/README.md) — Backend and frontend development.

@@ -517,7 +517,7 @@ function ApiCreate() {
                                   </SelectContent>
                                 </Select>
                                 <FormDescription className="mt-1">
-                                  Public APIs can be accessed without authentication. Private APIs require a token from /token/generate.
+                                  Public APIs can be accessed without authentication. Private APIs require a token from /api/token/generate.
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>

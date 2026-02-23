@@ -4,12 +4,12 @@
 
 In the Frontend (or DB):
 
-- **Module**: e.g. `test` (path prefix `/test`)
+- **Module**: any (e.g. `test`); module is for grouping only, not in the URL.
 - **API**: path `sleep`, method GET
 - **Content (SQL)**: `SELECT pg_sleep(10), 1 AS x`
 - Publish the API and assign it to the client used for testing.
 
-Gateway URL will look like: `http://localhost:8000/test/sleep`
+Gateway URL: `http://localhost/api/sleep` (or with port 80 if different)
 
 ## 2. Client configuration
 
@@ -24,7 +24,7 @@ pip install requests
 
 # Test 20 concurrent requests; 1 gets 200, 19 get 503
 python scripts/test_concurrent.py \
-  --url "http://localhost:8000/test/sleep" \
+  --url "http://localhost/api/sleep" \
   --token "YOUR_JWT" \
   --concurrent 20
 ```

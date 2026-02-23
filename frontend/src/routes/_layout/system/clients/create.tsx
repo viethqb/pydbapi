@@ -35,9 +35,9 @@ import {
 } from "@/services/clients"
 import { GroupsService } from "@/services/groups"
 import { ApiAssignmentsService } from "@/services/api-assignments"
-import { ModulesService } from "@/services/modules"
+
 import type { ApiAssignmentPublic } from "@/services/api-assignments"
-import type { ApiModulePublic } from "@/services/modules"
+
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -119,30 +119,15 @@ function CreateClientPage() {
     queryFn: () => ApiAssignmentsService.list({ is_published: true, page: 1, page_size: 100 }),
   })
 
-  const { data: modulesData } = useQuery({
-    queryKey: ["modules-simple"],
-    queryFn: () => ModulesService.list({ page: 1, page_size: 100 }),
-  })
-
   const [groupSearch, setGroupSearch] = useState("")
   const [apiSearch, setApiSearch] = useState("")
 
-  const modulesMap = useMemo(() => {
-    const m: Record<string, ApiModulePublic> = {}
-    for (const mod of modulesData?.data ?? []) m[mod.id] = mod
-    return m
-  }, [modulesData?.data])
-
   const getApiFullPath = useCallback(
     (api: ApiAssignmentPublic): string => {
-      const mod = modulesMap[api.module_id]
-      if (!mod) return `/${api.path || ""}`.replace(/\/+/g, "/")
       const p = (api.path || "").replace(/^\//, "")
-      const raw = (mod.path_prefix || "/").replace(/^\/+|\/+$/g, "")
-      if (!raw) return `/${p}`.replace(/\/+/g, "/")
-      return `/${raw}/${p}`.replace(/\/+/g, "/")
+      return `/api/${p}`
     },
-    [modulesMap],
+    [],
   )
 
   const filteredGroups = useMemo(() => {
