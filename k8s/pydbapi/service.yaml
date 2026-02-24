@@ -1,0 +1,14 @@
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pydbapi
+  namespace: pydbapi
+spec:
+  selector:
+    app: pydbapi
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP # Hoặc LoadBalancer nếu muốn expose ra ngoài

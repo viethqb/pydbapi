@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pydbapi
+  namespace: pydbapi
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "pydbapi.thaoduocanmien.vn"
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: pydbapi
+                port:
+                  number: 80
+  # tls:
+  #   - hosts:
+  #       - "pydbapi.thaoduocanmien.vn"
+  #     secretName: cert-tls

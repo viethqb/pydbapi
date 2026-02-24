@@ -1,0 +1,95 @@
+# job-prestart.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pydbapi-app-prestart
+  namespace: pydbapi
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    spec:
+      containers:
+        - name: prestart
+          image: viet1846/pydbapi:1.0
+          command: ["bash", "scripts/prestart.sh"]
+          workingDir: /app/backend
+          env:
+            - name: PROJECT_NAME
+              value: "PyDBAPI"
+            # Database variables
+            - name: POSTGRES_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: POSTGRES_SERVER
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: POSTGRES_PASSWORD
+
+            # Superuser variables
+            - name: FIRST_SUPERUSER
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: FIRST_SUPERUSER
+            - name: FIRST_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: FIRST_SUPERUSER_PASSWORD
+
+            # App variables
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: SECRET_KEY
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: ENVIRONMENT
+            - name: DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: DOMAIN
+            - name: FRONTEND_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: FRONTEND_HOST
+            - name: BACKEND_CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: BACKEND_CORS_ORIGINS
+
+            # Script modules
+            - name: SCRIPT_EXTRA_MODULES
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: SCRIPT_EXTRA_MODULES
+      restartPolicy: Never
+  backoffLimit: 3

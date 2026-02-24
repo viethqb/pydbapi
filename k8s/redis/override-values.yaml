@@ -1,0 +1,28 @@
+image:
+  registry: docker.io
+  repository: bitnamilegacy/redis
+  tag: 8.0.2-debian-12-r3
+  digest: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  debug: false
+
+architecture: standalone
+
+auth:
+  enabled: false
+
+master:
+  persistence:
+    ## @param master.persistence.enabled Enable persistence on Redis(R) master nodes using Persistent Volume Claims
+    ##
+    enabled: true
+    path: /data
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+
+global:
+  security:
+    allowInsecureImages: "True"

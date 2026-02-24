@@ -1,0 +1,18 @@
+# configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pydbapi-app-config
+  namespace: pydbapi
+data:
+  POSTGRES_SERVER: "pydbapi-db-postgresql-hl"
+  POSTGRES_PORT: "5432"
+  REDIS_HOST: "redis-master"
+  ENVIRONMENT: "production"
+  DOMAIN: "pydbapi.thaoduocanmien.vn"
+  FRONTEND_HOST: "http://pydbapi.thaoduocanmien.vn"
+  BACKEND_CORS_ORIGINS: "http://pydbapi.thaoduocanmien.vn"
+  SCRIPT_EXTRA_MODULES: "pandas,numpy"
+  FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: "10"
+  CONCURRENT_DEBUG: "0"
+  GATEWAY_ACCESS_LOG_BODY: "true"

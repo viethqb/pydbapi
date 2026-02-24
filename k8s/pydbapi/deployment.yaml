@@ -1,0 +1,149 @@
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+  labels:
+    app: pydbapi
+  namespace: pydbapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pydbapi
+  template:
+    metadata:
+      labels:
+        app: pydbapi
+    spec:
+      containers:
+        - name: pydbapi
+          image: viet1846/pydbapi:1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: PROJECT_NAME
+              value: "PyDBAPI"
+            # Database variables
+            - name: POSTGRES_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: POSTGRES_SERVER
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: POSTGRES_PASSWORD
+
+            # Redis variables
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: REDIS_HOST
+
+            # Superuser variables
+            - name: FIRST_SUPERUSER
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: FIRST_SUPERUSER
+            - name: FIRST_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: FIRST_SUPERUSER_PASSWORD
+
+            # App core variables
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pydbapi-app-secrets
+                  key: SECRET_KEY
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: ENVIRONMENT
+            - name: DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: DOMAIN
+            - name: FRONTEND_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: FRONTEND_HOST
+            - name: BACKEND_CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: BACKEND_CORS_ORIGINS
+
+            # Script modules
+            - name: SCRIPT_EXTRA_MODULES
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: SCRIPT_EXTRA_MODULES
+
+            # Flow control variables
+            - name: FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT
+            - name: CONCURRENT_DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: CONCURRENT_DEBUG
+
+            # Gateway logging
+            - name: GATEWAY_ACCESS_LOG_BODY
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-app-config
+                  key: GATEWAY_ACCESS_LOG_BODY
+
+          resources: {}
+            # requests:
+            #   memory: "256Mi"
+            #   cpu: "250m"
+            # limits:
+            #   memory: "512Mi"
+            #   cpu: "500m"
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 80
+          #   initialDelaySeconds: 30
+          #   periodSeconds: 15
+          #   timeoutSeconds: 5
+          #   failureThreshold: 5
+          # readinessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 80
+          #   initialDelaySeconds: 20
+          #   periodSeconds: 10
+          #   timeoutSeconds: 5
+          #   failureThreshold: 3
