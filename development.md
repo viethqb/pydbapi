@@ -26,6 +26,18 @@ Run backend and frontend on the host for faster iteration.
    ```
    Frontend: `http://localhost:5173`. Vite proxies `/api` and `/token` to `http://localhost:8000` (see `frontend/vite.config.ts`). Set `VITE_API_URL=` in `frontend/.env` so the app uses relative URLs.
 
+## Kubernetes (dev with kind)
+
+Besides Docker Compose, you can run the full stack on Kubernetes (kind) for a deployment-like environment.
+
+See **`k8s/k8s.md`** for the full guide. Summary:
+
+1. Create kind cluster: `kind create cluster --config k8s/kind.yaml`
+2. Install ingress-nginx, PostgreSQL, Redis (exact commands in `k8s/k8s.md`)
+3. Deploy pyDBAPI: `kubectl apply -f k8s/pydbapi/`
+4. Add dev host: `echo "127.0.0.1 pydbapi.local" | sudo tee -a /etc/hosts`
+5. Open app at `http://pydbapi.local`, API docs at `http://pydbapi.local/api/docs`
+
 ## pyDBAPI: venv, tests, migrations
 
 - **Venv:** `make venv` or `./scripts/setup-venv.sh` (prefer [uv](https://docs.astral.sh/uv/)).

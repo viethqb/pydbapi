@@ -1,17 +1,20 @@
-# configmap.yaml
+# configmap.yaml — non-sensitive app settings
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: pydbapi-app-config
+  name: pydbapi-config
   namespace: pydbapi
 data:
   POSTGRES_SERVER: "pydbapi-db-postgresql-hl"
   POSTGRES_PORT: "5432"
   REDIS_HOST: "redis-master"
-  ENVIRONMENT: "production"
-  DOMAIN: "pydbapi.thaoduocanmien.vn"
-  FRONTEND_HOST: "http://pydbapi.thaoduocanmien.vn"
-  BACKEND_CORS_ORIGINS: "http://pydbapi.thaoduocanmien.vn"
+  # Environment name for the app. For dev kind cluster, keep as "local" or "staging".
+  ENVIRONMENT: "local"
+  # Example dev domain behind ingress. Change to your own domain in non-dev envs.
+  DOMAIN: "pydbapi.local"
+  FRONTEND_HOST: "http://pydbapi.local"
+  # Allow both ingress host and local frontend dev (Vite) origin.
+  BACKEND_CORS_ORIGINS: "http://pydbapi.local,http://localhost:5173"
   SCRIPT_EXTRA_MODULES: "pandas,numpy"
   FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: "10"
   CONCURRENT_DEBUG: "0"

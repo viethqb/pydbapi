@@ -1,13 +1,19 @@
-# deployment.yaml
+# deployment.yaml — main app (Nginx + FastAPI)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: app-deployment
+  name: pydbapi
   labels:
     app: pydbapi
+    environment: dev
   namespace: pydbapi
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: pydbapi
@@ -15,10 +21,12 @@ spec:
     metadata:
       labels:
         app: pydbapi
+        environment: dev
     spec:
       containers:
         - name: pydbapi
-          image: viet1846/pydbapi:1.0
+          # Example dev image. Update tag to match your build.
+          image: viet1846/pydbapi:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -29,121 +37,121 @@ spec:
             - name: POSTGRES_SERVER
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: POSTGRES_SERVER
             - name: POSTGRES_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: POSTGRES_PORT
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: pydbapi-app-secrets
+                  name: pydbapi-secrets
                   key: POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: pydbapi-app-secrets
+                  name: pydbapi-secrets
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: pydbapi-app-secrets
+                  name: pydbapi-secrets
                   key: POSTGRES_PASSWORD
 
             # Redis variables
             - name: REDIS_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: REDIS_HOST
 
             # Superuser variables
             - name: FIRST_SUPERUSER
               valueFrom:
                 secretKeyRef:
-                  name: pydbapi-app-secrets
+                  name: pydbapi-secrets
                   key: FIRST_SUPERUSER
             - name: FIRST_SUPERUSER_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: pydbapi-app-secrets
+                  name: pydbapi-secrets
                   key: FIRST_SUPERUSER_PASSWORD
 
             # App core variables
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: pydbapi-app-secrets
+                  name: pydbapi-secrets
                   key: SECRET_KEY
             - name: ENVIRONMENT
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: ENVIRONMENT
             - name: DOMAIN
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: DOMAIN
             - name: FRONTEND_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: FRONTEND_HOST
             - name: BACKEND_CORS_ORIGINS
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: BACKEND_CORS_ORIGINS
 
             # Script modules
             - name: SCRIPT_EXTRA_MODULES
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: SCRIPT_EXTRA_MODULES
 
             # Flow control variables
             - name: FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT
             - name: CONCURRENT_DEBUG
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: CONCURRENT_DEBUG
 
             # Gateway logging
             - name: GATEWAY_ACCESS_LOG_BODY
               valueFrom:
                 configMapKeyRef:
-                  name: pydbapi-app-config
+                  name: pydbapi-config
                   key: GATEWAY_ACCESS_LOG_BODY
 
-          resources: {}
-            # requests:
-            #   memory: "256Mi"
-            #   cpu: "250m"
-            # limits:
-            #   memory: "512Mi"
-            #   cpu: "500m"
-          # livenessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 80
-          #   initialDelaySeconds: 30
-          #   periodSeconds: 15
-          #   timeoutSeconds: 5
-          #   failureThreshold: 5
-          # readinessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 80
-          #   initialDelaySeconds: 20
-          #   periodSeconds: 10
-          #   timeoutSeconds: 5
-          #   failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/utils/liveness/
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/v1/utils/health-check/
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3

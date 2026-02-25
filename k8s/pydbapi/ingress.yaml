@@ -1,12 +1,17 @@
+# ingress.yaml — routes host to app service
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pydbapi
+  name: pydbapi-ingress
   namespace: pydbapi
+  labels:
+    app: pydbapi
+    environment: dev
 spec:
   ingressClassName: nginx
   rules:
-    - host: "pydbapi.thaoduocanmien.vn"
+    # Dev host for kind. Add to /etc/hosts: 127.0.0.1 pydbapi.local
+    - host: "pydbapi.local"
       http:
         paths:
           - path: /
@@ -17,6 +22,5 @@ spec:
                 port:
                   number: 80
   # tls:
-  #   - hosts:
-  #       - "pydbapi.thaoduocanmien.vn"
-  #     secretName: cert-tls
+  #   - hosts: ["pydbapi.local"]
+  #     secretName: pydbapi-tls
