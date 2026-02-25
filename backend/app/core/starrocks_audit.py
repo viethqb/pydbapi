@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE} (
   `request_body` VARCHAR(65533) NULL COMMENT "Request body (optional, may be truncated)",
   `request_headers` VARCHAR(65533) NULL COMMENT "Request headers JSON",
   `request_params` VARCHAR(65533) NULL COMMENT "Request params JSON",
-  `created_at` DATETIME NOT NULL COMMENT "Record time"
+  `created_at` DATETIME NOT NULL COMMENT "Record time",
+  `duration_ms` INT NULL COMMENT "Request duration in milliseconds"
 ) ENGINE = OLAP
 DUPLICATE KEY (`id`)
 COMMENT "pydbapi gateway access log"
@@ -57,6 +58,7 @@ def write_starrocks_audit_row(
     request_headers: str | None = None,
     request_params: str | None = None,
     created_at: datetime | None = None,
+    duration_ms: int | None = None,
 ) -> None:
     """Insert one gateway access record into starrocks_audit_db__.pydbapi_access_log_tbl__."""
     ts = created_at or datetime.now(timezone.utc)
@@ -67,8 +69,8 @@ def write_starrocks_audit_row(
     params_val = (request_params[:65533] + "...") if request_params and len(request_params) > 65533 else request_params
     sql = text(f"""
     INSERT INTO {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
-    (`id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`)
-    VALUES (:id, :api_assignment_id, :app_client_id, :ip_address, :http_method, :path, :status_code, :request_body, :request_headers, :request_params, :created_at)
+    (`id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`, `duration_ms`)
+    VALUES (:id, :api_assignment_id, :app_client_id, :ip_address, :http_method, :path, :status_code, :request_body, :request_headers, :request_params, :created_at, :duration_ms)
     """)
     with engine.connect() as conn:
         conn.execute(
@@ -85,6 +87,7 @@ def write_starrocks_audit_row(
                 "request_headers": headers_val,
                 "request_params": params_val,
                 "created_at": ts,
+                "duration_ms": duration_ms,
             },
         )
         conn.commit()
@@ -104,6 +107,7 @@ def _row_to_dict(row: dict) -> dict:
         "request_headers": row.get("request_headers"),
         "request_params": row.get("request_params"),
         "created_at": row.get("created_at"),
+        "duration_ms": row.get("duration_ms"),
     }
 
 
@@ -164,7 +168,7 @@ def read_starrocks_audit_list(
         f"SELECT COUNT(*) AS c FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE} WHERE {where_sql}"
     )
     list_sql = text(f"""
-    SELECT `id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`
+    SELECT `id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`, `duration_ms`
     FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
     WHERE {where_sql}
     ORDER BY `created_at` DESC
@@ -193,7 +197,7 @@ def read_starrocks_audit_list(
 def read_starrocks_audit_detail(engine: Engine, log_id: str) -> dict | None:
     """Get one row by id."""
     sql = text(f"""
-    SELECT `id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`
+    SELECT `id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`, `duration_ms`
     FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
     WHERE `id` = :id
     LIMIT 1
@@ -265,7 +269,7 @@ def read_starrocks_audit_recent(
 ) -> list[dict]:
     """Query recent access records from StarRocks audit table. Returns list of row dicts."""
     sql = text(f"""
-    SELECT `id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`
+    SELECT `id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`, `duration_ms`
     FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
     ORDER BY `created_at` DESC
     LIMIT :limit

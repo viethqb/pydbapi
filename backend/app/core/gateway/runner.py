@@ -7,6 +7,7 @@ latency to the API response.
 """
 
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from uuid import UUID, uuid4
@@ -76,11 +77,11 @@ class _AccessLogContext:
         self.request_headers = request_headers
         self.request_params = request_params
 
-    def write(self, status_code: int) -> None:
+    def write(self, status_code: int, duration_ms: int | None = None) -> None:
         """Fire-and-forget write in background thread."""
-        _log_pool.submit(self._do_write, status_code)
+        _log_pool.submit(self._do_write, status_code, duration_ms)
 
-    def _do_write(self, status_code: int) -> None:
+    def _do_write(self, status_code: int, duration_ms: int | None = None) -> None:
         try:
             with Session(main_engine) as session:
                 write_access_record(
@@ -95,6 +96,7 @@ class _AccessLogContext:
                     request_body=self.request_body,
                     request_headers=self.request_headers,
                     request_params=self.request_params,
+                    duration_ms=duration_ms,
                 )
         except Exception:
             logger.exception(
@@ -109,9 +111,10 @@ def _fail(
     detail: str,
     *,
     exc: Exception | None = None,
+    duration_ms: int | None = None,
 ) -> HTTPException:
     """Log + raise HTTPException in one call."""
-    log_ctx.write(status_code)
+    log_ctx.write(status_code, duration_ms=duration_ms)
     if exc is not None:
         raise HTTPException(status_code=status_code, detail=detail) from exc
     raise HTTPException(status_code=status_code, detail=detail)
@@ -134,11 +137,14 @@ def run(
     request_body: str | None = None,
     request_headers: str | None = None,
     request_params: str | None = None,
+    gateway_start_time: float | None = None,
 ) -> dict:
     """Load ApiContext (from cache or DB), run ApiExecutor, write AccessRecord.
 
     Returns result dict from executor.
+    When gateway_start_time is set, duration_ms is from that time (gateway entry) to log write.
     """
+    start = gateway_start_time if gateway_start_time is not None else time.perf_counter()
     log_ctx = _AccessLogContext(
         api_assignment_id=api.id,
         app_client_id=app_client_id,
@@ -152,7 +158,7 @@ def run(
 
     config = get_or_load_gateway_config(api, session)
     if not config:
-        log_ctx.write(500)
+        log_ctx.write(500, duration_ms=int((time.perf_counter() - start) * 1000))
         raise RuntimeError("ApiContext not found for ApiAssignment")
 
     content_to_run = config["content"]
@@ -181,13 +187,24 @@ def run(
             and (params or {}).get(pd["name"]) in (None, "")
         ]
         if missing:
-            _fail(log_ctx, 400, f"Missing required parameters: {', '.join(missing)}")
+            _fail(
+                log_ctx,
+                400,
+                f"Missing required parameters: {', '.join(missing)}",
+                duration_ms=int((time.perf_counter() - start) * 1000),
+            )
 
     # --- Coerce params ---
     try:
         params = validate_and_coerce_params(params_definition, params)
     except ParamTypeError as e:
-        _fail(log_ctx, 400, str(e), exc=e)
+        _fail(
+            log_ctx,
+            400,
+            str(e),
+            exc=e,
+            duration_ms=int((time.perf_counter() - start) * 1000),
+        )
 
     # --- Custom param validates ---
     if param_validates_definition:
@@ -196,11 +213,17 @@ def run(
                 param_validates_definition, params, macros_prepend=macros_python
             )
         except ParamValidateError as e:
-            _fail(log_ctx, 400, str(e), exc=e)
+            _fail(
+                log_ctx,
+                400,
+                str(e),
+                exc=e,
+                duration_ms=int((time.perf_counter() - start) * 1000),
+            )
 
     # --- Datasource active check ---
     if api.datasource_id and api.datasource and not api.datasource.is_active:
-        log_ctx.write(400)
+        log_ctx.write(400, duration_ms=int((time.perf_counter() - start) * 1000))
         raise RuntimeError("DataSource is inactive and cannot be used")
 
     # --- Execute ---
@@ -226,12 +249,18 @@ def run(
                     macros_prepend=macros_python,
                 )
             except ResultTransformError as e:
-                _fail(log_ctx, 400, str(e), exc=e)
+                _fail(
+                    log_ctx,
+                    400,
+                    str(e),
+                    exc=e,
+                    duration_ms=int((time.perf_counter() - start) * 1000),
+                )
 
-        log_ctx.write(200)
+        log_ctx.write(200, duration_ms=int((time.perf_counter() - start) * 1000))
         return result
     except HTTPException:
         raise
     except Exception:
-        log_ctx.write(500)
+        log_ctx.write(500, duration_ms=int((time.perf_counter() - start) * 1000))
         raise

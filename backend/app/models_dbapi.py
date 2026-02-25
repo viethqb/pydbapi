@@ -561,6 +561,7 @@ class AccessRecord(SQLModel, table=True):
     request_headers: str | None = Field(default=None, sa_column=Column(Text))
     request_params: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=_utc_now)
+    duration_ms: int | None = Field(default=None, description="Request duration in milliseconds")
 
     api_assignment: "ApiAssignment" = Relationship(back_populates="access_records")
     app_client: "AppClient" = Relationship(back_populates="access_records")

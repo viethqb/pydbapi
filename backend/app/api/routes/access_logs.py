@@ -62,6 +62,7 @@ def _to_public(r: AccessRecord) -> AccessRecordPublic:
         path=r.path,
         status_code=r.status_code,
         created_at=r.created_at,
+        duration_ms=getattr(r, "duration_ms", None),
         request_body=_truncate(r.request_body),
         request_headers=_truncate(r.request_headers),
         request_params=_truncate(r.request_params),
@@ -289,6 +290,7 @@ def list_access_logs(
                     path=r.get("path") or "",
                     status_code=int(r["status_code"]) if r.get("status_code") is not None else 0,
                     created_at=r["created_at"],
+                    duration_ms=r.get("duration_ms"),
                     request_body=_truncate(r.get("request_body")),
                     request_headers=_truncate(r.get("request_headers")),
                     request_params=_truncate(r.get("request_params")),
@@ -388,6 +390,7 @@ def get_access_log_detail(
             request_headers=out.get("request_headers"),
             request_params=out.get("request_params"),
             created_at=out["created_at"],
+            duration_ms=out.get("duration_ms"),
             api_display=api_display,
             app_client_display=app_client_display,
         )
@@ -408,6 +411,7 @@ def get_access_log_detail(
             request_headers=rec.request_headers,
             request_params=rec.request_params,
             created_at=rec.created_at,
+            duration_ms=getattr(rec, "duration_ms", None),
             api_display=api_display,
             app_client_display=app_client_display,
         )
@@ -429,7 +433,8 @@ CREATE TABLE IF NOT EXISTS access_record (
     request_body TEXT,
     request_headers TEXT,
     request_params TEXT,
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP NOT NULL,
+    duration_ms INTEGER NULL
 );
 CREATE INDEX IF NOT EXISTS ix_access_record_created_at ON access_record (created_at);
 CREATE INDEX IF NOT EXISTS ix_access_record_api_assignment_id ON access_record (api_assignment_id);
@@ -449,6 +454,7 @@ CREATE TABLE IF NOT EXISTS access_record (
     request_headers TEXT,
     request_params TEXT,
     created_at DATETIME(6) NOT NULL,
+    duration_ms INT NULL,
     INDEX ix_access_record_created_at (created_at),
     INDEX ix_access_record_api_assignment_id (api_assignment_id),
     INDEX ix_access_record_app_client_id (app_client_id)

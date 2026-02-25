@@ -18,6 +18,7 @@ export type AccessRecordPublic = {
   path: string
   status_code: number
   created_at: string
+  duration_ms?: number | null
 }
 
 export type RecentAccessOut = {

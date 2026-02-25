@@ -419,6 +419,7 @@ def upgrade():
         sa.Column("request_headers", sa.Text(), nullable=True),
         sa.Column("request_params", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("duration_ms", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
             ["api_assignment_id"], ["api_assignment.id"], ondelete="SET NULL"
         ),

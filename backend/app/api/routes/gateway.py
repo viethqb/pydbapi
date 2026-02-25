@@ -11,6 +11,7 @@ concurrent requests and the concurrent limit (max_concurrent per client) works.
 
 import asyncio
 import json
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
@@ -48,6 +49,8 @@ def _run_runner_in_thread(
     request_body: str | None,
     request_headers: str | None = None,
     request_params: str | None = None,
+    *,
+    gateway_start_time: float | None = None,
 ) -> dict:
     """Run runner_run in a thread with a fresh session (session is not thread-safe).
 
@@ -72,6 +75,7 @@ def _run_runner_in_thread(
             request_body=request_body,
             request_headers=request_headers,
             request_params=request_params,
+            gateway_start_time=gateway_start_time,
         )
 
 
@@ -101,6 +105,7 @@ async def gateway_proxy(
     Dynamic gateway: resolve /api/{path} to ApiAssignment, run SQL/Script, return JSON.
     Module is resolved internally for permissions — not part of URL.
     """
+    gateway_start = time.perf_counter()
     ip = _get_client_ip(request)
     if not check_firewall(ip, session):
         return _gateway_error(request, 403, "Forbidden")
@@ -177,6 +182,7 @@ async def gateway_proxy(
             body_for_log,
             request_headers_str,
             request_params_str,
+            gateway_start_time=gateway_start,
         )
     except HTTPException as he:
         return _gateway_error(request, he.status_code, str(he.detail))

@@ -130,6 +130,7 @@ def write_access_record(
     request_body: str | None = None,
     request_headers: str | None = None,
     request_params: str | None = None,
+    duration_ms: int | None = None,
 ) -> None:
     """
     Write one access record. Uses main DB, external access_record table,
@@ -150,6 +151,7 @@ def write_access_record(
             request_body=request_body,
             request_headers=request_headers,
             request_params=request_params,
+            duration_ms=duration_ms,
         )
         main_session.add(rec)
         main_session.commit()
@@ -176,6 +178,7 @@ def write_access_record(
             request_headers=request_headers,
             request_params=request_params,
             created_at=datetime.now(timezone.utc),
+            duration_ms=duration_ms,
         )
         return
 
@@ -192,6 +195,7 @@ def write_access_record(
             request_body=request_body,
             request_headers=request_headers,
             request_params=request_params,
+            duration_ms=duration_ms,
         )
         log_session.add(rec)
         log_session.commit()

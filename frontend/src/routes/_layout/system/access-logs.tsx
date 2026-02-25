@@ -618,6 +618,7 @@ function AccessLogsPage() {
                     <TableHead>Method</TableHead>
                     <TableHead>Full path</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Duration</TableHead>
                     <TableHead>IP</TableHead>
                     <TableHead className="max-w-[140px]">Body</TableHead>
                     <TableHead className="max-w-[140px]">Headers</TableHead>
@@ -648,6 +649,9 @@ function AccessLogsPage() {
                         <Badge variant={statusVariant(r.status_code)}>
                           {r.status_code}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {r.duration_ms != null ? `${r.duration_ms} ms` : "—"}
                       </TableCell>
                       <TableCell className="max-w-[120px] truncate">{r.ip_address}</TableCell>
                       <TableCell

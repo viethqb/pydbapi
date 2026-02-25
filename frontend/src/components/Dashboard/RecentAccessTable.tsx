@@ -86,6 +86,7 @@ export function RecentAccessTable(props: {
                 <TableHead>Method</TableHead>
                 <TableHead>Path</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Duration</TableHead>
                 <TableHead>IP</TableHead>
                 <TableHead>Time</TableHead>
               </TableRow>
@@ -115,6 +116,9 @@ export function RecentAccessTable(props: {
                     <Badge variant={statusVariant(r.status_code)}>
                       {r.status_code}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {r.duration_ms != null ? `${r.duration_ms} ms` : "—"}
                   </TableCell>
                   <TableCell>{r.ip_address}</TableCell>
                   <TableCell>{formatDateTime(r.created_at)}</TableCell>

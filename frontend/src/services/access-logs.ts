@@ -24,6 +24,7 @@ export type AccessRecordPublic = {
   path: string
   status_code: number
   created_at: string
+  duration_ms?: number | null
   request_body?: string | null
   request_headers?: string | null
   request_params?: string | null
