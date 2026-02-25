@@ -121,7 +121,13 @@ class ScriptContext:
             self._in_tx = False
 
     def release_script_connection(self) -> None:
-        """Call at script end: rollback if still in tx, then release or close the connection."""
+        """Call at script end: close http client, rollback if still in tx, then release or close the connection."""
+        if hasattr(self.http, "close"):
+            try:
+                self.http.close()
+            except Exception:
+                pass
+
         if self._tx_conn is None:
             return
         try:

@@ -11,7 +11,6 @@ To fail closed (reject on Redis error), you would need a separate config.
 
 import threading
 import time
-import uuid
 
 from app.core.config import settings
 from app.core.redis_client import get_redis
@@ -19,25 +18,42 @@ from app.core.redis_client import get_redis
 _REDIS_KEY_PREFIX = "ratelimit:gateway:"
 _memory: dict[str, list[float]] = {}
 _memory_lock = threading.Lock()
+_memory_last_gc: float = 0.0
+_MEMORY_GC_INTERVAL = 60.0
 
 
-def _check_redis(key: str, limit: int, window_sec: float) -> bool:
+def _check_redis(key: str, limit: int, window_sec: float, r: "redis.Redis") -> bool:  # type: ignore[name-defined]
     k = _REDIS_KEY_PREFIX + key
     now = time.time()
     cutoff = now - window_sec
-    r = get_redis(decode_responses=False)
-    if r is None:
-        return True  # no Redis: allow (in-memory will be used by caller)
     try:
-        r.zremrangebyscore(k, "-inf", cutoff)
-        n = r.zcard(k)
+        pipe = r.pipeline(transaction=False)
+        pipe.zremrangebyscore(k, "-inf", cutoff)
+        pipe.zcard(k)
+        results = pipe.execute()
+        n = results[1]
         if n >= limit:
             return False
-        r.zadd(k, {str(uuid.uuid4()): now})
-        r.expire(k, int(window_sec) + 1)
+        pipe2 = r.pipeline(transaction=False)
+        pipe2.zadd(k, {f"{now}": now})
+        pipe2.expire(k, int(window_sec) + 1)
+        pipe2.execute()
         return True
     except Exception:
-        return True  # fail-open: on Redis error, allow
+        return True  # fail-open
+
+
+def _gc_memory() -> None:
+    """Remove empty or fully-expired keys from in-memory store."""
+    global _memory_last_gc
+    now = time.time()
+    if (now - _memory_last_gc) < _MEMORY_GC_INTERVAL:
+        return
+    _memory_last_gc = now
+    cutoff = now - 60.0
+    dead = [k for k, v in _memory.items() if not v or v[-1] < cutoff]
+    for k in dead:
+        _memory.pop(k, None)
 
 
 def _check_memory(key: str, limit: int, window_sec: float) -> bool:
@@ -47,9 +63,11 @@ def _check_memory(key: str, limit: int, window_sec: float) -> bool:
         arr = _memory.get(key, [])
         arr = [t for t in arr if t > cutoff]
         if len(arr) >= limit:
+            _memory[key] = arr
             return False
         arr.append(now)
         _memory[key] = arr
+        _gc_memory()
         return True
 
 
@@ -60,7 +78,7 @@ def check_rate_limit(key: str, limit: int | None = None) -> bool:
     - If limit is None or <= 0: always True (no limit).
     - If FLOW_CONTROL_RATE_LIMIT_ENABLED is False: always True (kill switch).
     - Sliding window: limit requests per 60 seconds.
-    - Redis: key ratelimit:gateway:{key}, sliding window via sorted set.
+    - Redis: pipelined sliding-window via sorted set (2 round-trips).
     - Falls back to in-memory on Redis error/unavailable.
     - In-memory: dict of timestamps; not shared across processes.
     """
@@ -72,6 +90,7 @@ def check_rate_limit(key: str, limit: int | None = None) -> bool:
         return True
     limit = max(1, limit)
     window_sec = 60.0
-    if get_redis(decode_responses=False) is not None:
-        return _check_redis(key, limit, window_sec)
+    r = get_redis(decode_responses=False)
+    if r is not None:
+        return _check_redis(key, limit, window_sec, r)
     return _check_memory(key, limit, window_sec)

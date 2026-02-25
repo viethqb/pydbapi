@@ -25,6 +25,7 @@ from app.core.permission_resources import (
 )
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models import Message, User
+from app.core.gateway.resolver import invalidate_route_cache
 from app.models_dbapi import ApiModule
 from app.schemas_dbapi import (
     ApiModuleCreate,
@@ -157,6 +158,7 @@ def create_module(
         MODULE_RESOURCE_ACTIONS,
     )
     session.commit()
+    invalidate_route_cache()
     session.refresh(m)
     return _to_public(m)
 
@@ -185,6 +187,7 @@ def update_module(
     m.sqlmodel_update(update)
     session.add(m)
     session.commit()
+    invalidate_route_cache()
     session.refresh(m)
     return _to_public(m)
 
@@ -211,6 +214,7 @@ def delete_module(
     remove_resource_permissions(session, ResourceTypeEnum.MODULE, id)
     session.delete(m)
     session.commit()
+    invalidate_route_cache()
     return Message(message="ApiModule deleted successfully")
 
 

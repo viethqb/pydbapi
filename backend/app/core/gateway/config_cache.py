@@ -1,5 +1,5 @@
 """
-Gateway config cache (Redis): cache ApiContext + VersionCommit snapshot to reduce DB load.
+Gateway config cache: two-tier (in-process + Redis) to reduce DB load.
 
 Caches content, params, param_validates, result_transform by api_assignment_id.
 TTL configurable via GATEWAY_CONFIG_CACHE_TTL_SECONDS.
@@ -8,6 +8,8 @@ TTL configurable via GATEWAY_CONFIG_CACHE_TTL_SECONDS.
 import json
 import logging
 import re
+import threading
+import time
 from typing import Any
 from uuid import UUID
 
@@ -28,15 +30,52 @@ from app.models_dbapi import (
 _LOG = logging.getLogger(__name__)
 _KEY_PREFIX = "gateway:config:"
 
+# In-process L1 cache: {api_assignment_id: (config_dict, expires_at_monotonic)}
+_LOCAL_CACHE: dict[UUID, tuple[dict[str, Any], float]] = {}
+_LOCAL_LOCK = threading.Lock()
+_LOCAL_TTL = 10.0  # short TTL to stay fresh while avoiding Redis on every request
+_LOCAL_MAX_SIZE = 2048
+
 
 def _cache_key(api_assignment_id: UUID) -> str:
     return f"{_KEY_PREFIX}{api_assignment_id}"
 
 
+def _local_get(api_assignment_id: UUID) -> dict[str, Any] | None:
+    entry = _LOCAL_CACHE.get(api_assignment_id)
+    if entry is None:
+        return None
+    config, expires_at = entry
+    if time.monotonic() > expires_at:
+        return None
+    return config
+
+
+def _local_set(api_assignment_id: UUID, config: dict[str, Any]) -> None:
+    with _LOCAL_LOCK:
+        if len(_LOCAL_CACHE) >= _LOCAL_MAX_SIZE:
+            now = time.monotonic()
+            expired = [k for k, (_, exp) in _LOCAL_CACHE.items() if now > exp]
+            for k in expired:
+                _LOCAL_CACHE.pop(k, None)
+            if len(_LOCAL_CACHE) >= _LOCAL_MAX_SIZE:
+                _LOCAL_CACHE.clear()
+        _LOCAL_CACHE[api_assignment_id] = (config, time.monotonic() + _LOCAL_TTL)
+
+
+def _local_delete(api_assignment_id: UUID) -> None:
+    _LOCAL_CACHE.pop(api_assignment_id, None)
+
+
 def get_gateway_config(api_assignment_id: UUID) -> dict[str, Any] | None:
     """
-    Get cached gateway config for api_assignment_id. Returns None on miss or Redis unavailable.
+    Get cached gateway config: L1 in-process, then L2 Redis.
+    Returns None on miss.
     """
+    local = _local_get(api_assignment_id)
+    if local is not None:
+        return local
+
     r = get_redis()
     if r is None:
         return None
@@ -44,14 +83,18 @@ def get_gateway_config(api_assignment_id: UUID) -> dict[str, Any] | None:
         raw = r.get(_cache_key(api_assignment_id))
         if raw is None:
             return None
-        return json.loads(raw)
+        config = json.loads(raw)
+        _local_set(api_assignment_id, config)
+        return config
     except Exception as e:
         _LOG.debug("Cache get failed for %s: %s", api_assignment_id, e)
         return None
 
 
 def set_gateway_config(api_assignment_id: UUID, config: dict[str, Any]) -> None:
-    """Store gateway config in cache with TTL."""
+    """Store gateway config in L1 + L2 cache with TTL."""
+    _local_set(api_assignment_id, config)
+
     r = get_redis()
     if r is None:
         return
@@ -65,6 +108,8 @@ def set_gateway_config(api_assignment_id: UUID, config: dict[str, Any]) -> None:
 
 def invalidate_gateway_config(api_assignment_id: UUID) -> None:
     """Invalidate cached config (e.g. when API/version is updated)."""
+    _local_delete(api_assignment_id)
+
     r = get_redis()
     if r is None:
         return

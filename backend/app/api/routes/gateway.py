@@ -49,7 +49,14 @@ def _run_runner_in_thread(
     request_headers: str | None = None,
     request_params: str | None = None,
 ) -> dict:
-    """Run runner_run in a thread with a fresh session (session is not thread-safe)."""
+    """Run runner_run in a thread with a fresh session (session is not thread-safe).
+
+    We must re-fetch ApiAssignment because SQLModel objects are bound to their
+    originating session and are not safe to share across threads.
+    The session.get() call will hit SQLAlchemy's identity map (no DB round-trip)
+    if the object was already loaded in this session, but since this is a new
+    session we accept the single SELECT as necessary.
+    """
     with Session(engine) as session:
         api = session.get(ApiAssignment, api_id)
         if not api:

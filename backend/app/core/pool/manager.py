@@ -22,9 +22,13 @@ _log = logging.getLogger(__name__)
 _DEFAULT_MAX_AGE_SEC = 600  # 10 minutes
 
 
+_PING_IDLE_THRESHOLD = 30.0  # only ping connections idle longer than this (seconds)
+
+
 class _PoolEntry(NamedTuple):
     conn: Any
     created_at: float  # time.monotonic() when the connection was opened
+    last_used: float   # time.monotonic() when last returned to pool
 
 
 class PoolManager:
@@ -41,6 +45,7 @@ class PoolManager:
     def get_connection(self, datasource: DataSource) -> Any:
         """Get a healthy connection for *datasource* (from pool or freshly opened)."""
         ds_id = datasource.id
+        now = time.monotonic()
         while True:
             entry = self._pop(ds_id)
             if entry is None:
@@ -48,7 +53,8 @@ class PoolManager:
             if self._is_expired(entry):
                 self._close_quiet(entry.conn)
                 continue
-            if not self._is_alive(entry.conn):
+            idle_sec = now - entry.last_used
+            if idle_sec > _PING_IDLE_THRESHOLD and not self._is_alive(entry.conn):
                 self._close_quiet(entry.conn)
                 continue
             try:
@@ -71,7 +77,8 @@ class PoolManager:
         with self._lock:
             pool = self._pools.setdefault(datasource_id, [])
             if len(pool) < self._pool_size:
-                pool.append(_PoolEntry(conn=conn, created_at=time.monotonic()))
+                now = time.monotonic()
+                pool.append(_PoolEntry(conn=conn, created_at=now, last_used=now))
                 return
 
         self._close_quiet(conn)

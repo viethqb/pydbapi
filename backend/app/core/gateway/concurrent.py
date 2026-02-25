@@ -25,15 +25,14 @@ _memory: dict[str, int] = {}
 _memory_lock = threading.Lock()
 
 
-def _acquire_redis(key: str, max_concurrent: int) -> bool:
-    r = get_redis(decode_responses=False)
-    if r is None:
-        return True  # no Redis: allow (fail-open; in-memory used below)
+def _acquire_redis(key: str, max_concurrent: int, r: "redis.Redis") -> bool:  # type: ignore[name-defined]
     k = _CONCURRENT_KEY_PREFIX + key
     try:
-        n = r.incr(k)
-        if n == 1:
-            r.expire(k, _KEY_TTL_SECONDS)
+        pipe = r.pipeline(transaction=True)
+        pipe.incr(k)
+        pipe.expire(k, _KEY_TTL_SECONDS)
+        results = pipe.execute()
+        n = results[0]
         if n > max_concurrent:
             r.decr(k)
             return False
@@ -42,10 +41,7 @@ def _acquire_redis(key: str, max_concurrent: int) -> bool:
         return True  # on Redis error: allow (fail-open)
 
 
-def _release_redis(key: str) -> None:
-    r = get_redis(decode_responses=False)
-    if r is None:
-        return
+def _release_redis(key: str, r: "redis.Redis") -> None:  # type: ignore[name-defined]
     k = _CONCURRENT_KEY_PREFIX + key
     try:
         r.decr(k)
@@ -80,7 +76,7 @@ def acquire_concurrent_slot(
     - max_concurrent_override: per-client limit (e.g. from AppClient.max_concurrent). If set and > 0, use it; else use global FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT.
     - If effective limit <= 0: no limit (always True).
     - Empty/invalid client_key: allow (True).
-    - Redis: INCR key; if over limit, DECR and return False.
+    - Redis: pipelined INCR+EXPIRE; if over limit, DECR and return False.
     - On Redis error: allow (fail-open).
     - In-memory fallback when Redis unavailable; not shared across processes.
     """
@@ -107,13 +103,13 @@ def acquire_concurrent_slot(
         return True
     if not client_key or not isinstance(client_key, str):
         return True
-    use_redis = get_redis(decode_responses=False) is not None
+    r = get_redis(decode_responses=False)
     ok = (
-        _acquire_redis(client_key, max_c)
-        if use_redis
+        _acquire_redis(client_key, max_c, r)
+        if r is not None
         else _acquire_memory(client_key, max_c)
     )
-    msg = f"[concurrent] acquire client_key={ck_short} max_c={max_c} redis={use_redis} ok={ok}"
+    msg = f"[concurrent] acquire client_key={ck_short} max_c={max_c} redis={r is not None} ok={ok}"
     _LOG.debug(msg)
     if _CONCURRENT_DEBUG:
         print(msg, flush=True)
@@ -129,7 +125,8 @@ def release_concurrent_slot(client_key: str) -> None:
     """
     if not client_key or not isinstance(client_key, str):
         return
-    if get_redis(decode_responses=False) is not None:
-        _release_redis(client_key)
+    r = get_redis(decode_responses=False)
+    if r is not None:
+        _release_redis(client_key, r)
     else:
         _release_memory(client_key)

@@ -14,6 +14,7 @@ from app.core.gateway.request_response import (
     parse_params,
 )
 from app.core.gateway.resolver import (
+    invalidate_route_cache,
     path_to_regex,
     resolve_api_assignment,
     resolve_gateway_api,
@@ -27,6 +28,7 @@ __all__ = [
     "check_rate_limit",
     "client_can_access_api",
     "format_response",
+    "invalidate_route_cache",
     "keys_to_camel",
     "keys_to_snake",
     "normalize_api_result",

@@ -59,6 +59,7 @@ from app.schemas_dbapi import (
 )
 from app.core.result_transform import ResultTransformError, run_result_transform
 from app.core.gateway.config_cache import invalidate_gateway_config, load_macros_for_api
+from app.core.gateway.resolver import invalidate_route_cache
 from app.core.gateway.request_response import normalize_api_result
 
 _log = logging.getLogger(__name__)
@@ -332,6 +333,7 @@ def create_api_assignment(
         API_ASSIGNMENT_RESOURCE_ACTIONS,
     )
     session.commit()
+    invalidate_route_cache()
     session.refresh(a)
     return _to_public(a)
 
@@ -505,6 +507,7 @@ def update_api_assignment(
         or "result_transform" in body.model_fields_set
     ):
         invalidate_gateway_config(a.id)
+        invalidate_route_cache()
     session.refresh(a)
     return _to_public(a)
 
@@ -548,6 +551,7 @@ def publish_api_assignment(
     session.add(a)
     session.commit()
     invalidate_gateway_config(a.id)
+    invalidate_route_cache()
     session.refresh(a)
     return _to_public(a)
 
@@ -578,6 +582,7 @@ def unpublish_api_assignment(
     session.add(a)
     session.commit()
     invalidate_gateway_config(a.id)
+    invalidate_route_cache()
     session.refresh(a)
     return _to_public(a)
 
@@ -770,6 +775,7 @@ def delete_api_assignment(
     remove_resource_permissions(session, ResourceTypeEnum.API_ASSIGNMENT, a.id)
     session.delete(a)
     session.commit()
+    invalidate_route_cache()
     return Message(message="ApiAssignment deleted successfully")
 
 
@@ -1029,6 +1035,7 @@ def restore_version(
 
     session.commit()
     invalidate_gateway_config(a.id)
+    invalidate_route_cache()
     a = session.get(ApiAssignment, id)
     return _to_detail(a)
 

@@ -79,38 +79,65 @@ def _check_url_allowed(url: str, allowed_hosts: frozenset[str]) -> None:
         )
 
 
+class _HttpModule:
+    """HTTP module that reuses a single httpx.Client for the lifetime of a
+    script execution, avoiding repeated TCP/TLS handshakes."""
+
+    __slots__ = ("_client", "_hosts", "_timeout")
+
+    def __init__(
+        self,
+        *,
+        timeout: float = DEFAULT_HTTP_TIMEOUT,
+        allowed_hosts: frozenset[str] | None = None,
+    ) -> None:
+        self._timeout = timeout
+        self._hosts = allowed_hosts if allowed_hosts is not None else frozenset()
+        self._client: httpx.Client | None = None
+
+    def _get_client(self) -> httpx.Client:
+        if self._client is None:
+            self._client = httpx.Client(timeout=self._timeout)
+        return self._client
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> Any:
+        _check_url_allowed(url, self._hosts)
+        resp = self._get_client().request(method, url, **kwargs)
+        resp.raise_for_status()
+        ct = resp.headers.get("content-type", "")
+        if "application/json" in ct:
+            return resp.json()
+        return resp.text
+
+    def get(self, url: str, **kwargs: Any) -> Any:
+        return self._request("GET", url, **kwargs)
+
+    def post(self, url: str, **kwargs: Any) -> Any:
+        return self._request("POST", url, **kwargs)
+
+    def put(self, url: str, **kwargs: Any) -> Any:
+        return self._request("PUT", url, **kwargs)
+
+    def delete(self, url: str, **kwargs: Any) -> Any:
+        return self._request("DELETE", url, **kwargs)
+
+    def close(self) -> None:
+        if self._client is not None:
+            try:
+                self._client.close()
+            except Exception:
+                pass
+            self._client = None
+
+
 def make_http_module(
     *,
     timeout: float = DEFAULT_HTTP_TIMEOUT,
     allowed_hosts: frozenset[str] | None = None,
-) -> Any:
+) -> _HttpModule:
     """Build the ``http`` object: get, post, put, delete.
 
     *allowed_hosts*: parsed from ``SCRIPT_HTTP_ALLOWED_HOSTS``.
     Empty set means **no** outbound HTTP is permitted from scripts.
     """
-    hosts = allowed_hosts if allowed_hosts is not None else frozenset()
-
-    def _request(method: str, url: str, **kwargs: Any) -> Any:
-        _check_url_allowed(url, hosts)
-        with httpx.Client(timeout=timeout) as client:
-            resp = client.request(method, url, **kwargs)
-            resp.raise_for_status()
-            ct = resp.headers.get("content-type", "")
-            if "application/json" in ct:
-                return resp.json()
-            return resp.text
-
-    def get(url: str, **kwargs: Any) -> Any:
-        return _request("GET", url, **kwargs)
-
-    def post(url: str, **kwargs: Any) -> Any:
-        return _request("POST", url, **kwargs)
-
-    def put(url: str, **kwargs: Any) -> Any:
-        return _request("PUT", url, **kwargs)
-
-    def delete(url: str, **kwargs: Any) -> Any:
-        return _request("DELETE", url, **kwargs)
-
-    return SimpleNamespace(get=get, post=post, put=put, delete=delete)
+    return _HttpModule(timeout=timeout, allowed_hosts=allowed_hosts)
