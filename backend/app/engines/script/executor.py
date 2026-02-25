@@ -10,6 +10,9 @@ Optional: SCRIPT_EXTRA_MODULES (comma-separated) exposes whitelisted modules (e.
 import importlib
 import re
 import signal
+import threading
+from collections import OrderedDict
+from hashlib import md5
 from typing import Any
 
 from app.core.config import settings
@@ -19,6 +22,29 @@ from .sandbox import build_restricted_globals, compile_script
 
 # Only allow top-level module names (e.g. pandas, numpy), no submodules
 _SAFE_MODULE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+_SCRIPT_CACHE_MAX_SIZE = 256
+_script_cache: "OrderedDict[str, object]" = OrderedDict()
+_script_cache_lock = threading.Lock()
+
+
+def _compile_script_cached(script: str) -> object:
+    """
+    Compile script with a small LRU cache keyed by content hash.
+    Reuses code objects across executions for identical script text.
+    """
+    key = md5(script.encode("utf-8"), usedforsecurity=False).hexdigest()
+    with _script_cache_lock:
+        code = _script_cache.get(key)
+        if code is not None:
+            _script_cache.move_to_end(key)
+            return code
+    code = compile_script(script)
+    with _script_cache_lock:
+        _script_cache[key] = code
+        if len(_script_cache) > _SCRIPT_CACHE_MAX_SIZE:
+            _script_cache.popitem(last=False)
+    return code
 
 
 class ScriptTimeoutError(TimeoutError):
@@ -64,12 +90,12 @@ class ScriptExecutor:
 
     def execute(self, script: str, context: ScriptContext) -> Any:
         """
-        Compile script, exec in restricted globals, return result.
+        Compile script (with LRU cache), exec in restricted globals, return result.
         The script must assign to `result`. On success, returns context['result']; if missing, returns None.
         If SCRIPT_EXEC_TIMEOUT is set and SIGALRM is available (Unix), aborts after N seconds.
         Always calls context.release_script_connection() in finally.
         """
-        code = compile_script(script)
+        code = _compile_script_cached(script)
         g = build_restricted_globals(context.to_dict())
         _inject_extra_modules(g)
         timeout = settings.SCRIPT_EXEC_TIMEOUT

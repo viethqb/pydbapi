@@ -8,6 +8,8 @@ ApiGroup assigned to the client (app_client_group_link + api_assignment_group_li
 assigned directly (app_client_api_link).
 """
 
+import threading
+import time
 from uuid import UUID
 
 import jwt
@@ -25,13 +27,37 @@ from app.models_dbapi import (
 from app.core.security import ALGORITHM, TOKEN_TYPE_DASHBOARD
 
 
+_CLIENT_CACHE_TTL_SEC = 30.0
+_CLIENT_CACHE_LOCK = threading.Lock()
+_CLIENT_CACHE: dict[str, tuple[AppClient | None, float]] = {}
+
+_PERM_CACHE_TTL_SEC = 10.0
+_PERM_CACHE_LOCK = threading.Lock()
+_PERM_CACHE: dict[tuple[UUID, UUID], tuple[bool, float]] = {}
+_PERM_CACHE_MAX_SIZE = 10_000
+
+
 def _get_client_by_client_id(session: Session, client_id: str) -> AppClient | None:
-    """Fetch AppClient by client_id, is_active=True."""
+    """Fetch AppClient by client_id, is_active=True, with a short-lived in-process cache."""
+    now = time.monotonic()
+    with _CLIENT_CACHE_LOCK:
+        entry = _CLIENT_CACHE.get(client_id)
+        if entry is not None:
+            client, expires_at = entry
+            if now < expires_at:
+                return client
+            _CLIENT_CACHE.pop(client_id, None)
+
     stmt = select(AppClient).where(
         AppClient.client_id == client_id,
         AppClient.is_active.is_(True),
     )
-    return session.exec(stmt).first()
+    client = session.exec(stmt).first()
+
+    with _CLIENT_CACHE_LOCK:
+        _CLIENT_CACHE[client_id] = (client, now + _CLIENT_CACHE_TTL_SEC)
+
+    return client
 
 
 def verify_gateway_client(request: Request, session: Session) -> AppClient | None:
@@ -86,6 +112,17 @@ def client_can_access_api(
     (1) Group: API belongs to at least one ApiGroup assigned to the client;
     (2) Direct API: API is in app_client_api_link (client assigned directly).
     """
+    cache_key = (app_client_id, api_assignment_id)
+    now = time.monotonic()
+
+    with _PERM_CACHE_LOCK:
+        entry = _PERM_CACHE.get(cache_key)
+        if entry is not None:
+            allowed, expires_at = entry
+            if now < expires_at:
+                return allowed
+            _PERM_CACHE.pop(cache_key, None)
+
     # (2) Direct API: check app_client_api_link
     direct = session.exec(
         select(AppClientApiLink).where(
@@ -94,19 +131,34 @@ def client_can_access_api(
         )
     ).first()
     if direct is not None:
-        return True
-
-    # (1) Group: client's groups intersect with API's groups
-    client_group_ids_stmt = select(AppClientGroupLink.api_group_id).where(
-        AppClientGroupLink.app_client_id == app_client_id
-    )
-    client_group_ids = set(session.exec(client_group_ids_stmt).all())
-    if not client_group_ids:
-        return False
-    overlap = session.exec(
-        select(ApiAssignmentGroupLink.api_group_id).where(
-            ApiAssignmentGroupLink.api_assignment_id == api_assignment_id,
-            ApiAssignmentGroupLink.api_group_id.in_(client_group_ids),
+        allowed = True
+    else:
+        # (1) Group: client's groups intersect with API's groups
+        client_group_ids_stmt = select(AppClientGroupLink.api_group_id).where(
+            AppClientGroupLink.app_client_id == app_client_id
         )
-    ).first()
-    return overlap is not None
+        client_group_ids = set(session.exec(client_group_ids_stmt).all())
+        if not client_group_ids:
+            allowed = False
+        else:
+            overlap = session.exec(
+                select(ApiAssignmentGroupLink.api_group_id).where(
+                    ApiAssignmentGroupLink.api_assignment_id == api_assignment_id,
+                    ApiAssignmentGroupLink.api_group_id.in_(client_group_ids),
+                )
+            ).first()
+            allowed = overlap is not None
+
+    with _PERM_CACHE_LOCK:
+        if len(_PERM_CACHE) >= _PERM_CACHE_MAX_SIZE:
+            now_ts = time.monotonic()
+            expired_keys = [
+                k for k, (_, exp) in _PERM_CACHE.items() if now_ts >= exp
+            ]
+            for k in expired_keys:
+                _PERM_CACHE.pop(k, None)
+            if len(_PERM_CACHE) >= _PERM_CACHE_MAX_SIZE:
+                _PERM_CACHE.clear()
+        _PERM_CACHE[cache_key] = (allowed, now + _PERM_CACHE_TTL_SEC)
+
+    return allowed
