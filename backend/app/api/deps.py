@@ -13,6 +13,7 @@ from app.core import security
 from app.core.config import settings
 from app.core.db import engine
 from app.core.permission import has_permission
+from app.core.security import TOKEN_TYPE_GATEWAY
 from app.models import TokenPayload, User
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 
@@ -40,6 +41,11 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
+        )
+    if payload.get("type") == TOKEN_TYPE_GATEWAY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Gateway tokens cannot access management API",
         )
     user = session.get(User, token_data.sub)
     if not user:

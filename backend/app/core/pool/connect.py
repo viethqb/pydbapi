@@ -13,6 +13,7 @@ from trino.auth import BasicAuthentication
 from trino.dbapi import connect as trino_connect
 
 from app.core.config import settings
+from app.core.security import decrypt_value
 from app.models_dbapi import ProductTypeEnum
 
 
@@ -51,7 +52,7 @@ def connect(
     port = _get(datasource, "port") or 5432
     database = _get(datasource, "database")
     username = _get(datasource, "username")
-    password = _get(datasource, "password")
+    raw_password = _get(datasource, "password")
 
     for name, val in [
         ("host", host),
@@ -60,7 +61,7 @@ def connect(
     ]:
         if val is None:
             raise ValueError(f"datasource must provide {name}")
-    password = password if password is not None else ""
+    password = decrypt_value(raw_password) if raw_password else ""
 
     timeout = settings.EXTERNAL_DB_CONNECT_TIMEOUT
 

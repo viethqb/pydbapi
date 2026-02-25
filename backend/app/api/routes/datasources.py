@@ -26,6 +26,7 @@ from app.core.permission_resources import (
 )
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.core.pool import connect, health_check
+from app.core.security import encrypt_value
 from app.models import Message
 from app.models_dbapi import DataSource, ProductTypeEnum
 from app.models import User
@@ -195,6 +196,8 @@ def create_datasource(
 ) -> Any:
     """Create a new datasource."""
     ds = DataSource.model_validate(body)
+    if ds.password:
+        ds.password = encrypt_value(ds.password)
     session.add(ds)
     session.flush()
     ensure_resource_permissions(
@@ -229,6 +232,8 @@ def update_datasource(
     if not ds:
         raise HTTPException(status_code=404, detail="DataSource not found")
     update = body.model_dump(exclude_unset=True, exclude={"id"})
+    if "password" in update and update["password"]:
+        update["password"] = encrypt_value(update["password"])
     ds.sqlmodel_update(update)
     session.add(ds)
     session.commit()

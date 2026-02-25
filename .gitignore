@@ -5,6 +5,12 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 
+# Build artifacts
+frontend/dist/
+
+# Linter / tool caches
+.ruff_cache/
+
 # Environment variables (secrets) — use .env.example as template
 .env
 .env.local

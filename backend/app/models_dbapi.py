@@ -94,7 +94,7 @@ class DataSource(SQLModel, table=True):
     port: int = Field(default=5432)
     database: str = Field(max_length=255)
     username: str = Field(max_length=255)
-    password: str = Field(max_length=512)  # Consider encryption in Phase 4+
+    password: str = Field(max_length=512)  # Encrypted via Fernet (core.security)
     driver_version: str | None = Field(default=None, max_length=64)
     description: str | None = Field(default=None, max_length=512)
     is_active: bool = Field(default=True)

@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 
 from app.api.deps import SessionDep
 from app.core.config import settings
-from app.core.security import create_access_token, verify_password
+from app.core.security import TOKEN_TYPE_GATEWAY, create_access_token, verify_password
 from app.models_dbapi import AppClient
 from app.schemas_dbapi import (
     GatewayTokenGenerateGetResponse,
@@ -79,7 +79,9 @@ async def token_generate(
 
     expires_delta = timedelta(seconds=settings.GATEWAY_JWT_EXPIRE_SECONDS)
     access_token = create_access_token(
-        subject=client.client_id, expires_delta=expires_delta
+        subject=client.client_id,
+        expires_delta=expires_delta,
+        token_type=TOKEN_TYPE_GATEWAY,
     )
 
     return GatewayTokenResponse(
@@ -114,7 +116,9 @@ def token_generate_get(
     expire_dt = datetime.now(timezone.utc) + expires_delta
     expire_at = int(expire_dt.timestamp())
     access_token = create_access_token(
-        subject=client.client_id, expires_delta=expires_delta
+        subject=client.client_id,
+        expires_delta=expires_delta,
+        token_type=TOKEN_TYPE_GATEWAY,
     )
 
     return GatewayTokenGenerateGetResponse(

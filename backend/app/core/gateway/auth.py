@@ -22,7 +22,7 @@ from app.models_dbapi import (
     AppClientApiLink,
     AppClientGroupLink,
 )
-from app.core.security import ALGORITHM
+from app.core.security import ALGORITHM, TOKEN_TYPE_DASHBOARD
 
 
 def _get_client_by_client_id(session: Session, client_id: str) -> AppClient | None:
@@ -64,6 +64,9 @@ def verify_gateway_client(request: Request, session: Session) -> AppClient | Non
             options={"verify_exp": True},
         )
     except InvalidTokenError:
+        return None
+
+    if payload.get("type") == TOKEN_TYPE_DASHBOARD:
         return None
 
     client_id = payload.get("sub")
