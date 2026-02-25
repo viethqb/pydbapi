@@ -31,6 +31,7 @@ services:
 
   starrocks:
     image: starrocks/allin1-ubuntu:latest
+    profiles: ["starrocks", "full"]
     restart: always
     ports:
       - "${STARROCKS_PORT:-9030}:9030"
@@ -47,6 +48,7 @@ services:
 
   trino:
     image: trinodb/trino:latest
+    profiles: ["trino", "full"]
     restart: always
     ports:
       - "${TRINO_PORT:-8080}:8080"

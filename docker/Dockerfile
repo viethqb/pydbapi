@@ -20,7 +20,7 @@ RUN bun run build
 # ==============================================================
 # Stage 2: Install Python dependencies
 # ==============================================================
-FROM python:3.10-slim AS backend-build
+FROM python:3.12-slim AS backend-build
 
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
 
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ==============================================================
 # Stage 3: Final unified image (nginx + FastAPI)
 # ==============================================================
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

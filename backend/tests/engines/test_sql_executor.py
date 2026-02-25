@@ -4,6 +4,7 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 from app.engines.sql import execute_sql
+from app.engines.sql.executor import _split_statements
 from app.models_dbapi import DataSource, ProductTypeEnum
 
 
@@ -104,3 +105,53 @@ def test_execute_sql_with_cte_treated_as_select(
 
     assert out == [[]]
     mock_execute.assert_called_once()
+
+
+class TestSplitStatements:
+    """Tests for the quote-aware SQL statement splitter."""
+
+    def test_single(self):
+        assert _split_statements("SELECT 1") == ["SELECT 1"]
+
+    def test_two_statements(self):
+        assert _split_statements("SELECT 1; SELECT 2") == ["SELECT 1", "SELECT 2"]
+
+    def test_trailing_semicolon(self):
+        assert _split_statements("SELECT 1;") == ["SELECT 1"]
+
+    def test_empty(self):
+        assert _split_statements("") == []
+        assert _split_statements("  ;  ;  ") == []
+
+    def test_semicolon_in_single_quotes(self):
+        sql = "SELECT * FROM t WHERE name = 'foo;bar'"
+        assert _split_statements(sql) == [sql]
+
+    def test_semicolon_in_double_quotes(self):
+        sql = 'SELECT * FROM t WHERE "col;name" = 1'
+        assert _split_statements(sql) == [sql]
+
+    def test_escaped_quote(self):
+        sql = "SELECT 'it''s;here'"
+        assert _split_statements(sql) == [sql]
+
+    def test_dollar_quoting(self):
+        sql = "SELECT $$semi;colon$$"
+        assert _split_statements(sql) == [sql]
+
+    def test_line_comment(self):
+        sql = "SELECT 1 -- comment; not a split\n; SELECT 2"
+        result = _split_statements(sql)
+        assert len(result) == 2
+        assert "SELECT 2" in result[1]
+
+    def test_block_comment(self):
+        sql = "SELECT /* ; */ 1; SELECT 2"
+        result = _split_statements(sql)
+        assert len(result) == 2
+
+    def test_mixed_real_world(self):
+        sql = "INSERT INTO t(name) VALUES ('a;b'); SELECT * FROM t WHERE id = 1"
+        result = _split_statements(sql)
+        assert len(result) == 2
+        assert "'a;b'" in result[0]

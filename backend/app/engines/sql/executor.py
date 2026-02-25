@@ -20,23 +20,94 @@ from app.models_dbapi import DataSource
 def _is_select_like(sql: str) -> bool:
     """True if the statement is SELECT or WITH (CTE); otherwise DML (INSERT/UPDATE/DELETE etc)."""
     s = sql.strip()
-    # Ignore leading semicolons and blanks
     s = re.sub(r"^[\s;]+", "", s)
     if not s:
-        return True  # treat empty as select -> []
+        return True
     first = s.split()[0].upper() if s.split() else ""
     return first in ("SELECT", "WITH")
 
 
 def _split_statements(sql: str) -> list[str]:
-    """
-    Naively split SQL string into statements by ';'.
+    """Split SQL into statements on ``;`` while respecting quoted strings.
 
-    This is intentionally simple and assumes semicolons only appear as
-    statement terminators, not inside string literals.
+    Handles single-quoted (``'...'``), double-quoted (``"..."``), and
+    dollar-quoted (``$$...$$``) literals so that semicolons inside them
+    are not treated as statement terminators.
     """
-    parts = [s.strip() for s in sql.split(";")]
-    return [p for p in parts if p]
+    stmts: list[str] = []
+    current: list[str] = []
+    i = 0
+    length = len(sql)
+
+    while i < length:
+        ch = sql[i]
+
+        if ch in ("'", '"'):
+            quote = ch
+            current.append(ch)
+            i += 1
+            while i < length:
+                c = sql[i]
+                current.append(c)
+                if c == quote:
+                    if i + 1 < length and sql[i + 1] == quote:
+                        current.append(sql[i + 1])
+                        i += 2
+                        continue
+                    i += 1
+                    break
+                if c == "\\" and i + 1 < length:
+                    current.append(sql[i + 1])
+                    i += 2
+                    continue
+                i += 1
+            continue
+
+        if ch == "$" and i + 1 < length and sql[i + 1] == "$":
+            tag_end = sql.find("$$", i + 2)
+            if tag_end == -1:
+                current.append(sql[i:])
+                i = length
+            else:
+                current.append(sql[i : tag_end + 2])
+                i = tag_end + 2
+            continue
+
+        if ch == "-" and i + 1 < length and sql[i + 1] == "-":
+            end = sql.find("\n", i)
+            if end == -1:
+                current.append(sql[i:])
+                i = length
+            else:
+                current.append(sql[i : end + 1])
+                i = end + 1
+            continue
+
+        if ch == "/" and i + 1 < length and sql[i + 1] == "*":
+            end = sql.find("*/", i + 2)
+            if end == -1:
+                current.append(sql[i:])
+                i = length
+            else:
+                current.append(sql[i : end + 2])
+                i = end + 2
+            continue
+
+        if ch == ";":
+            stmt = "".join(current).strip()
+            if stmt:
+                stmts.append(stmt)
+            current = []
+            i += 1
+            continue
+
+        current.append(ch)
+        i += 1
+
+    tail = "".join(current).strip()
+    if tail:
+        stmts.append(tail)
+    return stmts
 
 
 def execute_sql(
