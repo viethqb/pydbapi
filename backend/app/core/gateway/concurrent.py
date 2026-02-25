@@ -10,6 +10,7 @@ import os
 import threading
 
 from app.core.config import settings
+from app.core.redis_client import get_redis
 
 _LOG = logging.getLogger(__name__)
 _CONCURRENT_DEBUG = os.environ.get("CONCURRENT_DEBUG", "").strip().lower() in (
@@ -18,39 +19,14 @@ _CONCURRENT_DEBUG = os.environ.get("CONCURRENT_DEBUG", "").strip().lower() in (
     "yes",
 )
 
-try:
-    import redis
-except ImportError:
-    redis = None  # type: ignore[assignment]
-
 _CONCURRENT_KEY_PREFIX = "concurrent:gateway:"
 _KEY_TTL_SECONDS = 300  # expire key so stale slots are released if process dies
-_redis_client: "redis.Redis | None" = None
-_redis_tried = False
 _memory: dict[str, int] = {}
 _memory_lock = threading.Lock()
 
 
-def _get_redis() -> "redis.Redis | None":
-    global _redis_client, _redis_tried
-    if _redis_tried:
-        return _redis_client
-    _redis_tried = True
-    if redis is None:
-        _redis_client = None
-        return None
-    try:
-        r = redis.Redis.from_url(settings.redis_url, decode_responses=False)
-        r.ping()
-        _redis_client = r
-        return r
-    except Exception:
-        _redis_client = None
-        return None
-
-
 def _acquire_redis(key: str, max_concurrent: int) -> bool:
-    r = _get_redis()
+    r = get_redis(decode_responses=False)
     if r is None:
         return True  # no Redis: allow (fail-open; in-memory used below)
     k = _CONCURRENT_KEY_PREFIX + key
@@ -67,7 +43,7 @@ def _acquire_redis(key: str, max_concurrent: int) -> bool:
 
 
 def _release_redis(key: str) -> None:
-    r = _get_redis()
+    r = get_redis(decode_responses=False)
     if r is None:
         return
     k = _CONCURRENT_KEY_PREFIX + key
@@ -131,7 +107,7 @@ def acquire_concurrent_slot(
         return True
     if not client_key or not isinstance(client_key, str):
         return True
-    use_redis = _get_redis() is not None
+    use_redis = get_redis(decode_responses=False) is not None
     ok = (
         _acquire_redis(client_key, max_c)
         if use_redis
@@ -153,7 +129,7 @@ def release_concurrent_slot(client_key: str) -> None:
     """
     if not client_key or not isinstance(client_key, str):
         return
-    if _get_redis() is not None:
+    if get_redis(decode_responses=False) is not None:
         _release_redis(client_key)
     else:
         _release_memory(client_key)

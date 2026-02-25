@@ -11,11 +11,7 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.core.db import engine
-
-try:
-    import redis as _redis_lib
-except ImportError:
-    _redis_lib = None  # type: ignore[assignment]
+from app.core.redis_client import ping as redis_ping
 
 logger = logging.getLogger(__name__)
 
@@ -35,15 +31,8 @@ def check_postgres() -> bool:
 
 
 def check_redis() -> bool:
-    """Check Redis by PING. Returns True if ok or Redis not available (no redis lib)."""
-    if _redis_lib is None:
-        return True  # redis lib not installed: skip check
-    try:
-        r = _redis_lib.Redis.from_url(settings.redis_url, decode_responses=False)
-        r.ping()
-        return True
-    except Exception:
-        return False
+    """Check Redis by PING via shared client. Returns True if ok or Redis not configured."""
+    return redis_ping()
 
 
 def check_migrations() -> bool:

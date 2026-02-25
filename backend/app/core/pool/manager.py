@@ -2,102 +2,142 @@
 Connection pool for external DataSources (Phase 3, Task 3.1).
 
 Reuses connections per datasource_id to avoid open/close on every request.
+Includes health-check on checkout, max-age eviction, and thread-safe
+singleton initialisation.
 """
 
+import logging
 import threading
+import time
 import uuid
-from typing import Any
+from typing import Any, NamedTuple
 
 from app.core.config import settings
 from app.models_dbapi import DataSource
 
 from .connect import connect
 
+_log = logging.getLogger(__name__)
+
+_DEFAULT_MAX_AGE_SEC = 600  # 10 minutes
+
+
+class _PoolEntry(NamedTuple):
+    conn: Any
+    created_at: float  # time.monotonic() when the connection was opened
+
 
 class PoolManager:
-    """
-    Per-datasource_id connection pool. get_connection / release / dispose.
-    """
+    """Per-datasource_id connection pool with health-check and max-age."""
 
     def __init__(self) -> None:
-        self._pools: dict[uuid.UUID, list[Any]] = {}
+        self._pools: dict[uuid.UUID, list[_PoolEntry]] = {}
         self._lock = threading.Lock()
-        self._pool_size = settings.EXTERNAL_DB_POOL_SIZE
+        self._pool_size: int = settings.EXTERNAL_DB_POOL_SIZE
+        self._max_age: float = float(
+            getattr(settings, "EXTERNAL_DB_POOL_MAX_AGE_SEC", _DEFAULT_MAX_AGE_SEC)
+        )
 
     def get_connection(self, datasource: DataSource) -> Any:
-        """
-        Get a connection for the datasource. Reuses from pool or creates via connect().
-        If reusing from pool, rollback any pending transaction to ensure clean state.
-        """
+        """Get a healthy connection for *datasource* (from pool or freshly opened)."""
         ds_id = datasource.id
-        with self._lock:
-            pool = self._pools.setdefault(ds_id, [])
-            if pool:
-                conn = pool.pop()
-                # Rollback any pending transaction to ensure clean state
-                # This prevents "current transaction is aborted" errors
-                try:
-                    conn.rollback()
-                except Exception:
-                    # If rollback fails, connection might be broken, create new one
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-                    return connect(datasource)
-                return conn
+        while True:
+            entry = self._pop(ds_id)
+            if entry is None:
+                break
+            if self._is_expired(entry):
+                self._close_quiet(entry.conn)
+                continue
+            if not self._is_alive(entry.conn):
+                self._close_quiet(entry.conn)
+                continue
+            try:
+                entry.conn.rollback()
+            except Exception:
+                self._close_quiet(entry.conn)
+                continue
+            return entry.conn
+
         return connect(datasource)
 
     def release(self, conn: Any, datasource_id: uuid.UUID) -> None:
-        """
-        Return a connection to the pool. If pool is full, close the connection.
-        Rollback any pending transaction before returning to pool to ensure clean state.
-        """
-        # Rollback any pending transaction before returning to pool
-        # This prevents "current transaction is aborted" errors on next use
+        """Return a connection to the pool (or close it if pool is full)."""
         try:
             conn.rollback()
         except Exception:
-            # If rollback fails, connection might be broken, close it instead of pooling
-            try:
-                conn.close()
-            except Exception:
-                pass
+            self._close_quiet(conn)
             return
-        
+
         with self._lock:
-            pool = self._pools.get(datasource_id, [])
+            pool = self._pools.setdefault(datasource_id, [])
             if len(pool) < self._pool_size:
-                pool.append(conn)
+                pool.append(_PoolEntry(conn=conn, created_at=time.monotonic()))
                 return
+
+        self._close_quiet(conn)
+
+    def dispose(self, datasource_id: uuid.UUID | None = None) -> None:
+        """Close pooled connections. ``None`` = dispose all pools."""
+        with self._lock:
+            if datasource_id is not None:
+                entries = self._pools.pop(datasource_id, [])
+            else:
+                entries = [e for pool in self._pools.values() for e in pool]
+                self._pools.clear()
+        for e in entries:
+            self._close_quiet(e.conn)
+
+    def stats(self) -> dict[str, int]:
+        """Return pool statistics for monitoring."""
+        with self._lock:
+            total = sum(len(p) for p in self._pools.values())
+            return {
+                "datasources": len(self._pools),
+                "idle_connections": total,
+            }
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _pop(self, ds_id: uuid.UUID) -> _PoolEntry | None:
+        with self._lock:
+            pool = self._pools.get(ds_id)
+            if pool:
+                return pool.pop()
+        return None
+
+    def _is_expired(self, entry: _PoolEntry) -> bool:
+        return (time.monotonic() - entry.created_at) > self._max_age
+
+    @staticmethod
+    def _is_alive(conn: Any) -> bool:
+        """Lightweight ping: attempt a no-op query to detect broken connections."""
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            cur.close()
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _close_quiet(conn: Any) -> None:
         try:
             conn.close()
         except Exception:
             pass
 
-    def dispose(self, datasource_id: uuid.UUID | None = None) -> None:
-        """
-        Close pooled connections. If datasource_id is None, dispose all pools.
-        """
-        with self._lock:
-            if datasource_id is not None:
-                conns = self._pools.pop(datasource_id, [])
-            else:
-                conns = [c for pool in self._pools.values() for c in pool]
-                self._pools.clear()
-        for c in conns:
-            try:
-                c.close()
-            except Exception:
-                pass
-
 
 _pool_manager: PoolManager | None = None
+_pool_lock = threading.Lock()
 
 
 def get_pool_manager() -> PoolManager:
-    """Return the singleton PoolManager."""
+    """Return the singleton PoolManager (thread-safe double-checked locking)."""
     global _pool_manager
     if _pool_manager is None:
-        _pool_manager = PoolManager()
+        with _pool_lock:
+            if _pool_manager is None:
+                _pool_manager = PoolManager()
     return _pool_manager

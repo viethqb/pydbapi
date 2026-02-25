@@ -14,42 +14,18 @@ import time
 import uuid
 
 from app.core.config import settings
-
-try:
-    import redis
-except ImportError:
-    redis = None  # type: ignore[assignment]
+from app.core.redis_client import get_redis
 
 _REDIS_KEY_PREFIX = "ratelimit:gateway:"
-_redis_client: "redis.Redis | None" = None
-_redis_tried = False
 _memory: dict[str, list[float]] = {}
 _memory_lock = threading.Lock()
-
-
-def _get_redis() -> "redis.Redis | None":
-    global _redis_client, _redis_tried
-    if _redis_tried:
-        return _redis_client
-    _redis_tried = True
-    if redis is None:
-        _redis_client = None
-        return None
-    try:
-        r = redis.Redis.from_url(settings.redis_url, decode_responses=False)
-        r.ping()
-        _redis_client = r
-        return r
-    except Exception:
-        _redis_client = None
-        return None
 
 
 def _check_redis(key: str, limit: int, window_sec: float) -> bool:
     k = _REDIS_KEY_PREFIX + key
     now = time.time()
     cutoff = now - window_sec
-    r = _get_redis()
+    r = get_redis(decode_responses=False)
     if r is None:
         return True  # no Redis: allow (in-memory will be used by caller)
     try:
@@ -96,6 +72,6 @@ def check_rate_limit(key: str, limit: int | None = None) -> bool:
         return True
     limit = max(1, limit)
     window_sec = 60.0
-    if _get_redis() is not None:
+    if get_redis(decode_responses=False) is not None:
         return _check_redis(key, limit, window_sec)
     return _check_memory(key, limit, window_sec)
