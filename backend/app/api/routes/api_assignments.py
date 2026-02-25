@@ -5,6 +5,7 @@ Endpoints: list, create, update, delete, get detail, publish, debug.
 Phase 3: debug calls ApiExecutor.execute (SQL or SCRIPT).
 """
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -29,6 +30,7 @@ from app.core.permission_resources import (
 )
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.engines import ApiExecutor
+from app.engines.sql import check_sql_template_safety
 from app.models import Message
 from app.models import User
 from app.models_dbapi import (
@@ -58,6 +60,8 @@ from app.schemas_dbapi import (
 from app.core.result_transform import ResultTransformError, run_result_transform
 from app.core.gateway.config_cache import invalidate_gateway_config, load_macros_for_api
 from app.core.gateway.request_response import normalize_api_result
+
+_log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api-assignments", tags=["api-assignments"])
 
@@ -1102,3 +1106,35 @@ def delete_version(
     session.delete(version)
     session.commit()
     return Message(message="Version deleted successfully")
+
+
+# ---------------------------------------------------------------------------
+# SQL safety check
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/check-sql-safety",
+    dependencies=[
+        Depends(
+            require_permission(
+                ResourceTypeEnum.API_ASSIGNMENT,
+                PermissionActionEnum.READ,
+            )
+        )
+    ],
+)
+def check_sql_safety(
+    body: dict[str, Any],
+) -> Any:
+    """Analyse SQL template content for variables without explicit SQL filters.
+
+    Body: ``{"content": "SELECT ... {{ name }} ..."}``
+
+    Returns ``{"warnings": [...]}`` where each warning has ``variable``,
+    ``line``, and ``message`` keys.  Empty list = no issues found.
+    """
+    content = body.get("content", "")
+    if not content:
+        return {"warnings": []}
+    return {"warnings": check_sql_template_safety(content)}
