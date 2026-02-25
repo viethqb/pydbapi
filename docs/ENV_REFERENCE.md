@@ -32,7 +32,7 @@ TAG=latest
 | `ENVIRONMENT` | `local` \| `staging` \| `production` | `local` | No | Controls security warnings and error verbosity. In `local`, default secrets trigger a warning; in staging/production they raise an error. |
 | `API_V1_STR` | string | `/api/v1` | No | URL prefix for the management API (not the gateway). |
 | `FRONTEND_HOST` | string | `http://localhost:5173` | No | Full URL of the frontend; used in password-reset emails and CORS. |
-| `BACKEND_CORS_ORIGINS` | string | `""` | No | Comma-separated allowed origins for CORS (e.g. `http://localhost,http://localhost:5173`). `FRONTEND_HOST` is always added automatically. |
+| `BACKEND_CORS_ORIGINS` | string | `""` | No | Comma-separated allowed origins for CORS (e.g. `http://localhost,http://localhost:5173`). `FRONTEND_HOST` is always added automatically. **Production:** use explicit origins only; do not use `*` (invalid when credentials are sent). |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | int | `11520` (8 days) | No | Lifetime of dashboard JWT access tokens (minutes). |
 
 ---

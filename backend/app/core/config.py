@@ -44,9 +44,17 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
+        origins = [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
             self.FRONTEND_HOST
         ]
+        # With allow_credentials=True, browser forbids Access-Control-Allow-Origin: *
+        if self.ENVIRONMENT != "local" and "*" in origins:
+            raise ValueError(
+                "CORS origin '*' is not allowed in staging/production when using "
+                "credentials. Set BACKEND_CORS_ORIGINS to explicit origins (e.g. "
+                "https://dashboard.example.com)."
+            )
+        return origins
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None

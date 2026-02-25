@@ -276,6 +276,8 @@ BACKEND_CORS_ORIGINS="https://dashboard.example.com,http://localhost:5173"
 ```
 `FRONTEND_HOST` is automatically added to the CORS allowed list.
 
+**Production CORS:** The app sends `Access-Control-Allow-Credentials: true` (cookies/JWT). In that case the browser **does not allow** `Access-Control-Allow-Origin: *` — you must list explicit origins. Set `FRONTEND_HOST` to your real frontend URL and `BACKEND_CORS_ORIGINS` to a comma-separated list of every origin that may call the API (e.g. your dashboard URL and optional staging URL). Never use `*` in production.
+
 ---
 
 ### "Network Error" or requests hang
