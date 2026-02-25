@@ -131,6 +131,12 @@ spec:
                 configMapKeyRef:
                   name: pydbapi-config
                   key: GATEWAY_ACCESS_LOG_BODY
+            # Gateway JWT token expire (seconds)
+            - name: GATEWAY_JWT_EXPIRE_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-config
+                  key: GATEWAY_JWT_EXPIRE_SECONDS
 
           resources:
             requests:

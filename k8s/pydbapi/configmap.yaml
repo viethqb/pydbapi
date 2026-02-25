@@ -19,3 +19,5 @@ data:
   FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: "10"
   CONCURRENT_DEBUG: "0"
   GATEWAY_ACCESS_LOG_BODY: "true"
+  # Gateway JWT token TTL in seconds (default 3600 = 1 hour). Used by POST/GET /api/token/generate.
+  GATEWAY_JWT_EXPIRE_SECONDS: "3600"
