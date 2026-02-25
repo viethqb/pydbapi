@@ -5,8 +5,8 @@ Renders SQL from template + params; parses parameter names from template.
 
 Security: ``sql_finalize`` auto-escapes every ``{{ }}`` output that was
 not already processed by an explicit SQL filter.  This means ``{{ name }}``
-is safe by default (escaped as a quoted string); use ``| sql_raw`` or
-``| safe`` only for trusted identifiers.
+is safe by default (escaped as a quoted string).  Use type-specific
+filters (``| sql_int``, ``| sql_string``, etc.) for explicit control.
 
 Performance: Compiled Jinja2 ``Template`` objects are cached in an LRU
 dict keyed by template source hash so repeated calls with the same SQL

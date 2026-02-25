@@ -129,7 +129,7 @@ def execute(
                 cur_set.execute("SET SESSION max_execution_time = %s", (timeout_ms,))
             elif product_type == ProductTypeEnum.TRINO:
                 cur_set.execute(
-                    "SET SESSION query_max_execution_time = '%ss'" % timeout_sec
+                    "SET SESSION query_max_execution_time = '%ss'" % int(timeout_sec)
                 )
         finally:
             try:
@@ -152,7 +152,7 @@ def execute(
                 elif product_type == ProductTypeEnum.MYSQL:
                     cur_reset.execute("SET SESSION max_execution_time = 0")
                 elif product_type == ProductTypeEnum.TRINO:
-                    cur_reset.execute("SET SESSION query_max_execution_time = '0s'")
+                    cur_reset.execute("SET SESSION query_max_execution_time = '0s'")  # noqa: S608
                 cur_reset.close()
             except Exception:
                 pass

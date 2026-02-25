@@ -26,7 +26,7 @@ class SqlSafe(str):
     """String subclass marking a value as already SQL-escaped.
 
     When Jinja2's ``finalize`` sees a ``SqlSafe`` instance it passes it
-    through unchanged.  Use ``| safe`` in templates as an alias.
+    through unchanged.
     """
 
 
@@ -109,8 +109,8 @@ def sql_datetime(value: Any) -> SqlSafe:
         return _safe("NULL")
     dt = value
     if isinstance(dt, str):
-        # accept ISO-like string; wrap in quotes
-        return _safe(f"'{dt}'")
+        s = dt.translate(_SQL_QUOTE_ESCAPE)
+        return _safe(f"'{s}'")
     if isinstance(dt, (datetime, date)):
         if isinstance(dt, date) and not isinstance(dt, datetime):
             dt = datetime.combine(dt, datetime.min.time())
@@ -193,19 +193,6 @@ def _json_filter(value: Any) -> SqlSafe:
     return _safe(f"'{s}'")
 
 
-def sql_raw(value: Any) -> SqlSafe:
-    """Mark a value as raw SQL — bypass auto-escape entirely.
-
-    Use for trusted identifiers like table/column names that the API
-    developer controls.  NEVER use on untrusted user input.
-
-    Template usage: ``{{ table_name | sql_raw }}``
-    """
-    if value is None:
-        return _safe("NULL")
-    return _safe(str(value))
-
-
 # ---------------------------------------------------------------------------
 # Finalize callback – auto-escape for {{ }} without explicit filter
 # ---------------------------------------------------------------------------
@@ -256,6 +243,4 @@ SQL_FILTERS: dict[str, Any] = {
     "sql_like_start": sql_like_start,
     "sql_like_end": sql_like_end,
     "json": _json_filter,
-    "sql_raw": sql_raw,
-    "safe": sql_raw,
 }

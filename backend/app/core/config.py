@@ -87,6 +87,9 @@ class Settings(BaseSettings):
     )
     # Comma-separated extra modules to expose in script globals (e.g. "pandas,numpy"). Whitelist only; no import in script.
     SCRIPT_EXTRA_MODULES: str = ""
+    # Comma-separated allowed domains/IPs for script http module (SSRF protection).
+    # Empty = block all outbound HTTP from scripts; "*" = allow all (NOT recommended in production).
+    SCRIPT_HTTP_ALLOWED_HOSTS: str = ""
 
     # -------------------------------------------------------------------------
     # DBAPI Phase 1: Cache (Redis)

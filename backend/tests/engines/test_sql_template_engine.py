@@ -72,15 +72,14 @@ class TestSQLTemplateEngineAutoEscape:
         result = e.render("WHERE name = {{ name | sql_string }}", {"name": "hello"})
         assert result == "WHERE name = 'hello'"
 
-    def test_sql_raw_bypasses_escape(self):
+    def test_sql_datetime_string_escaped(self):
         e = SQLTemplateEngine()
-        result = e.render("SELECT * FROM {{ tbl | sql_raw }}", {"tbl": "users"})
-        assert result == "SELECT * FROM users"
-
-    def test_safe_alias_bypasses_escape(self):
-        e = SQLTemplateEngine()
-        result = e.render("SELECT * FROM {{ tbl | safe }}", {"tbl": "users"})
-        assert result == "SELECT * FROM users"
+        result = e.render(
+            "WHERE ts = {{ dt | sql_datetime }}",
+            {"dt": "2024-01-01'; DROP TABLE x; --"},
+        )
+        assert "''" in result
+        assert "DROP TABLE" in result
 
 
 class TestSQLTemplateEngineParseParameters:

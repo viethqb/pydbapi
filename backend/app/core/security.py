@@ -74,11 +74,11 @@ def encrypt_value(plain: str) -> str:
 
 
 def decrypt_value(encrypted: str) -> str:
-    """Decrypt a Fernet-encrypted value. If decryption fails (e.g. legacy
-    plain-text password), returns the original value unchanged."""
+    """Decrypt a Fernet-encrypted value.
+
+    Raises ``InvalidToken`` if the value cannot be decrypted (no plain-text
+    fallback — all stored passwords must be Fernet-encrypted).
+    """
     if not encrypted:
         return encrypted
-    try:
-        return _get_fernet().decrypt(encrypted.encode()).decode()
-    except (InvalidToken, Exception):
-        return encrypted
+    return _get_fernet().decrypt(encrypted.encode()).decode()

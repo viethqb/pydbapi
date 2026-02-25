@@ -13,7 +13,6 @@ from app.engines.sql.filters import (
     sql_int,
     sql_like,
     sql_like_start,
-    sql_raw,
     sql_string,
 )
 
@@ -27,8 +26,8 @@ class TestSqlSafe:
     def test_sql_int_returns_safe(self):
         assert isinstance(sql_int(42), SqlSafe)
 
-    def test_sql_raw_returns_safe(self):
-        assert isinstance(sql_raw("my_table"), SqlSafe)
+    def test_sql_int_returns_safe_instance(self):
+        assert isinstance(sql_int(1), SqlSafe)
 
 
 class TestSqlString:
@@ -134,15 +133,13 @@ class TestSqlLikeStart:
         assert "\\%" in sql_like_start("a%") and sql_like_start("a%").endswith("%'")
 
 
-class TestSqlRaw:
-    def test_none(self):
-        assert sql_raw(None) == "NULL"
+class TestSqlDatetimeEscape:
+    """sql_datetime must escape single quotes in string input."""
 
-    def test_passthrough(self):
-        assert sql_raw("my_table") == "my_table"
-
-    def test_returns_safe(self):
-        assert isinstance(sql_raw("x"), SqlSafe)
+    def test_injection_escaped(self):
+        result = sql_datetime("2024-01-01'; DROP TABLE users; --")
+        assert "''" in result
+        assert "DROP TABLE" in result
 
 
 class TestSqlFinalize:

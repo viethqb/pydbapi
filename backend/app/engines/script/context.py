@@ -36,6 +36,7 @@ class ScriptContext:
         logger: logging.Logger | None = None,
         env_whitelist: set[str] | frozenset[str] | None = None,
         http_timeout: float = 30.0,
+        http_allowed_hosts: frozenset[str] | None = None,
         log_extra: dict[str, Any] | None = None,
         close_connection_after_execute: bool = False,
     ) -> None:
@@ -65,7 +66,7 @@ class ScriptContext:
             commit_after_dml=self._commit_after_dml,
         )
 
-        self.http = make_http_module(timeout=http_timeout)
+        self.http = make_http_module(timeout=http_timeout, allowed_hosts=http_allowed_hosts)
         self.cache = make_cache_module(cache_client=cache_client)
         self.env = make_env_module(settings=settings, env_whitelist=env_whitelist)
         self.log = make_log_module(logger_instance=logger, extra=log_extra)

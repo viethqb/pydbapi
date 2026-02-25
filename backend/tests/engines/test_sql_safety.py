@@ -27,8 +27,9 @@ class TestCheckSqlTemplateSafety:
     def test_in_list_filter_no_warning(self):
         assert check_sql_template_safety("WHERE id IN {{ ids | in_list }}") == []
 
-    def test_safe_filter_no_warning(self):
-        assert check_sql_template_safety("FROM {{ tbl | safe }}") == []
+    def test_safe_filter_warns_after_removal(self):
+        warnings = check_sql_template_safety("FROM {{ tbl | safe }}")
+        assert len(warnings) == 1
 
     def test_multiline_template(self):
         sql = "SELECT *\nFROM t\nWHERE name = {{ name }}"

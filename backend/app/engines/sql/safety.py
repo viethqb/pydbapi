@@ -20,7 +20,7 @@ from typing import Any
 
 from app.engines.sql.filters import SQL_FILTERS
 
-_KNOWN_FILTERS = set(SQL_FILTERS.keys()) | {"safe", "int", "float", "string"}
+_KNOWN_FILTERS = set(SQL_FILTERS.keys()) | {"int", "float", "string"}
 
 _VAR_PATTERN = re.compile(
     r"\{\{(?P<expr>.*?)\}\}",
@@ -72,7 +72,7 @@ def check_sql_template_safety(template: str) -> list[dict[str, Any]]:
                         f"'{{{{ {var_name} }}}}' has no explicit SQL filter. "
                         f"It will be auto-escaped as a quoted string. "
                         f"Consider using a type-specific filter: "
-                        f"| sql_string, | sql_int, | sql_float, | sql_raw, etc."
+                        f"| sql_string, | sql_int, | sql_float, | sql_datetime, etc."
                     ),
                 }
             )

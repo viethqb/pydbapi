@@ -110,6 +110,10 @@ class ApiExecutor:
                     "datasource or datasource_id is required for SCRIPT engine"
                 )
             pm = get_pool_manager()
+            raw_hosts = (settings.SCRIPT_HTTP_ALLOWED_HOSTS or "").strip()
+            http_allowed = frozenset(
+                h.strip().lower() for h in raw_hosts.split(",") if h.strip()
+            )
             ctx = ScriptContext(
                 datasource=ds,
                 req=_params,
@@ -117,6 +121,7 @@ class ApiExecutor:
                 cache_client=get_redis(),
                 settings=settings,
                 logger=_log,
+                http_allowed_hosts=http_allowed,
                 close_connection_after_execute=close_connection_after_execute,
             )
             result = ScriptExecutor().execute(content, ctx)
