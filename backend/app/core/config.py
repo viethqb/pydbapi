@@ -144,6 +144,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # DBAPI Phase 4: Gateway & auth (JWT only, from POST /api/token/generate)
     # -------------------------------------------------------------------------
+    GATEWAY_TOKEN_GET_ENABLED: bool = False  # Legacy GET /token/generate (credentials in URL); disabled by default for security
     GATEWAY_JWT_EXPIRE_SECONDS: int = 3600
     GATEWAY_MAX_RESPONSE_ROWS: int = 10_000  # 0 = no limit; truncates data[] in gateway responses
     GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True  # When no rule matches

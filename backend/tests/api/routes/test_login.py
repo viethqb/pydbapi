@@ -58,18 +58,24 @@ def test_recovery_password(
             headers=normal_user_token_headers,
         )
         assert r.status_code == 200
-        assert r.json() == {"message": "Password recovery email sent"}
+        assert r.json() == {
+            "message": "If that email is registered, a recovery link has been sent"
+        }
 
 
-def test_recovery_password_user_not_exits(
+def test_recovery_password_user_not_exists(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
+    """Non-existent email returns the same 200 response (no user enumeration)."""
     email = "jVgQr@example.com"
     r = client.post(
         f"{settings.API_V1_STR}/password-recovery/{email}",
         headers=normal_user_token_headers,
     )
-    assert r.status_code == 404
+    assert r.status_code == 200
+    assert r.json() == {
+        "message": "If that email is registered, a recovery link has been sent"
+    }
 
 
 def test_reset_password(client: TestClient, db: Session) -> None:

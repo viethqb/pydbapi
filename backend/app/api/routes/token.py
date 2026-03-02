@@ -13,7 +13,12 @@ from sqlmodel import Session, select
 
 from app.api.deps import SessionDep, require_rate_limit
 from app.core.config import settings
-from app.core.security import TOKEN_TYPE_GATEWAY, create_access_token, verify_password
+from app.core.security import (
+    _DUMMY_HASH,
+    TOKEN_TYPE_GATEWAY,
+    create_access_token,
+    verify_password,
+)
 from app.models_dbapi import AppClient
 from app.schemas_dbapi import (
     GatewayTokenGenerateGetResponse,
@@ -71,12 +76,9 @@ async def token_generate(
         raise HTTPException(status_code=400, detail="Unsupported grant_type")
 
     client = _get_client_by_client_id(session, body.client_id)
-    if not client:
-        raise HTTPException(
-            status_code=401, detail="Invalid client_id or client_secret"
-        )
-
-    if not verify_password(body.client_secret, client.client_secret):
+    # Always run bcrypt verification to prevent timing-based client_id enumeration.
+    hashed = client.client_secret if client else _DUMMY_HASH
+    if not verify_password(body.client_secret, hashed) or not client:
         raise HTTPException(
             status_code=401, detail="Invalid client_id or client_secret"
         )
@@ -108,14 +110,24 @@ def token_generate_get(
     """
     Legacy migration: GET /token/generate?clientId=XXXX&secret=YYYY (also /api/token/generate).
     Returns { expireAt: unixtime, token } (no Bearer prefix required in Authorization).
-    """
-    client = _get_client_by_client_id(session, clientId)
-    if not client:
-        raise HTTPException(
-            status_code=401, detail="Invalid client_id or client_secret"
-        )
 
-    if not verify_password(secret, client.client_secret):
+    Disabled by default (GATEWAY_TOKEN_GET_ENABLED=false). Passing credentials in
+    query parameters is insecure — they leak into access logs, browser history,
+    and Referer headers. Use POST /token/generate instead.
+    """
+    if not settings.GATEWAY_TOKEN_GET_ENABLED:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "GET /token/generate is disabled. "
+                "Use POST /token/generate with credentials in the request body. "
+                "Set GATEWAY_TOKEN_GET_ENABLED=true to re-enable this legacy endpoint."
+            ),
+        )
+    client = _get_client_by_client_id(session, clientId)
+    # Always run bcrypt verification to prevent timing-based client_id enumeration.
+    hashed = client.client_secret if client else _DUMMY_HASH
+    if not verify_password(secret, hashed) or not client:
         raise HTTPException(
             status_code=401, detail="Invalid client_id or client_secret"
         )

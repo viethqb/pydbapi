@@ -22,6 +22,12 @@ TOKEN_TYPE_DASHBOARD = "dashboard"
 TOKEN_TYPE_GATEWAY = "gateway"
 TOKEN_TYPE_PASSWORD_RESET = "password_reset"
 
+# Pre-computed bcrypt hash of a random string. Used as a dummy target for
+# verify_password when the looked-up user/client does not exist, so that the
+# endpoint always spends bcrypt time regardless — preventing timing-based
+# enumeration of valid usernames or client IDs.
+_DUMMY_HASH: str = pwd_context.hash("__constant_time_dummy__")
+
 # ---------------------------------------------------------------------------
 # JWT helpers
 # ---------------------------------------------------------------------------

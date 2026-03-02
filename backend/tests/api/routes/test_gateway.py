@@ -99,10 +99,22 @@ def test_gateway_token_success_form(
     assert "access_token" in data
 
 
+def test_gateway_token_generate_get_disabled_by_default(
+    client: TestClient,
+) -> None:
+    """GET /token/generate is disabled by default (GATEWAY_TOKEN_GET_ENABLED=false)."""
+    r = client.get(
+        f"{_base()}/generate",
+        params={"clientId": "any", "secret": "any"},
+    )
+    assert r.status_code == 403
+    assert "disabled" in r.json()["detail"].lower()
+
+
 def test_gateway_token_generate_get(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    """GET /token/generate?clientId=&secret= returns expireAt (unix) and token (legacy migration)."""
+    """GET /token/generate?clientId=&secret= returns expireAt (unix) and token when enabled."""
     cr = client.post(
         f"{settings.API_V1_STR}/clients/create",
         headers=superuser_token_headers,
@@ -115,10 +127,11 @@ def test_gateway_token_generate_get(
     assert cr.status_code == 200
     client_id = cr.json()["client_id"]
 
-    r = client.get(
-        f"{_base()}/generate",
-        params={"clientId": client_id, "secret": "GetTokenSecret999"},
-    )
+    with patch.object(settings, "GATEWAY_TOKEN_GET_ENABLED", True):
+        r = client.get(
+            f"{_base()}/generate",
+            params={"clientId": client_id, "secret": "GetTokenSecret999"},
+        )
     assert r.status_code == 200
     data = r.json()
     assert "expireAt" in data

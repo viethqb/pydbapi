@@ -29,7 +29,7 @@ TAG=latest
 |----------|------|---------|----------|-------------|
 | `SECRET_KEY` | string | *(random)* | **Yes** | Signing key for JWT tokens and password reset links. Must be changed from `"changethis"` in staging/production. |
 | `PROJECT_NAME` | string | — | **Yes** | Project name displayed in API docs, emails, and the dashboard. |
-| `ENVIRONMENT` | `local` \| `staging` \| `production` | `local` | No | Controls security warnings and error verbosity. In `local`, default secrets trigger a warning; in staging/production they raise an error. |
+| `ENVIRONMENT` | `local` \| `staging` \| `production` | `local` | No | Controls security warnings and error verbosity. In `local`, default secrets trigger a warning; in staging/production they raise an error. OpenAPI docs (`/api/docs`, `/api/redoc`) are automatically disabled when set to `production`. |
 | `API_V1_STR` | string | `/api/v1` | No | URL prefix for the management API (not the gateway). |
 | `FRONTEND_HOST` | string | `http://localhost:5173` | No | Full URL of the frontend; used in password-reset emails and CORS. |
 | `BACKEND_CORS_ORIGINS` | string | `""` | No | Comma-separated allowed origins for CORS (e.g. `http://localhost,http://localhost:5173`). `FRONTEND_HOST` is always added automatically. Use explicit origins only; `*` is rejected in all environments (invalid with `allow_credentials=True`). |
@@ -72,6 +72,7 @@ Redis is used for caching (gateway config), rate limiting, and concurrent-reques
 | Variable | Type | Default | Required | Description |
 |----------|------|---------|----------|-------------|
 | `TRUSTED_PROXY_COUNT` | int | `0` | No | Number of trusted reverse proxies. `0` = ignore `X-Forwarded-For` (use socket IP). `1` = single proxy (e.g. Nginx), use rightmost XFF entry. Set to match your proxy stack. |
+| `GATEWAY_TOKEN_GET_ENABLED` | bool | `False` | No | Enable the legacy `GET /token/generate?clientId=&secret=` endpoint. **Disabled by default** because credentials in query parameters leak into access logs, browser history, and Referer headers. Use `POST /token/generate` instead. |
 | `GATEWAY_JWT_EXPIRE_SECONDS` | int | `3600` | No | Lifetime of gateway client JWTs issued by `POST /token/generate`. |
 | `GATEWAY_FIREWALL_DEFAULT_ALLOW` | bool | `True` | No | Default action when no firewall rule matches. (Firewall is currently always-allow.) |
 | `GATEWAY_ACCESS_LOG_BODY` | bool | `False` | No | When `True`, store `request_body`, `request_headers`, and `request_params` in `AccessRecord`. Increases storage usage. |

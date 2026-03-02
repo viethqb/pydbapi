@@ -3,7 +3,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.core.security import get_password_hash, verify_password
+from app.core.security import _DUMMY_HASH, get_password_hash, verify_password
 from app.models import User, UserCreate, UserUpdate
 
 
@@ -39,9 +39,9 @@ def get_user_by_email(*, session: Session, email: str) -> User | None:
 
 def authenticate(*, session: Session, email: str, password: str) -> User | None:
     db_user = get_user_by_email(session=session, email=email)
-    if not db_user:
-        return None
-    if not verify_password(password, db_user.hashed_password):
+    # Always run bcrypt verification to prevent timing-based user enumeration.
+    hashed = db_user.hashed_password if db_user else _DUMMY_HASH
+    if not verify_password(password, hashed):
         return None
     return db_user
 

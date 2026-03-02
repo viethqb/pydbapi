@@ -13,7 +13,7 @@ Consolidated audit across the gateway pipeline, SQL/script engines, authenticati
 | 1 | FIXED | SQL Injection in `sql_like*` filters -- missing single-quote escaping | `backend/app/engines/sql/filters.py:153-179` |
 | 2 | FIXED | SSRF bypass via HTTP redirects in script engine | `backend/app/engines/script/modules/http.py` |
 | 3 | FIXED | SSRF via DNS rebinding (TOCTOU) | `backend/app/engines/script/modules/http.py` |
-| 4 | OPEN | Client secret transmitted in GET query string | `backend/app/api/routes/token.py:94-127` |
+| 4 | FIXED | Client secret transmitted in GET query string | `backend/app/api/routes/token.py:94-127` |
 | 5 | FIXED | Encryption key derived from JWT signing key | `backend/app/core/security.py:60-66` |
 
 ### Details
@@ -30,8 +30,9 @@ Consolidated audit across the gateway pipeline, SQL/script engines, authenticati
 `_check_url_allowed()` resolves the hostname and checks the IP, then `httpx` does a separate DNS resolution for the actual request. An attacker controlling DNS can return a public IP for the check and `127.0.0.1` for the request.
 *Fix: Created `_SSRFSafeBackend(SyncBackend)` that resolves DNS, validates ALL IPs, and connects atomically.*
 
-**4. Client secret transmitted in GET query string** (OPEN)
+**4. Client secret transmitted in GET query string** (FIXED)
 `GET /token/generate?clientId=X&secret=Y` puts the secret in the URL, which appears in server logs, proxy logs, browser history, and `Referer` headers.
+*Fix: Added `GATEWAY_TOKEN_GET_ENABLED` config (default `false`). The GET endpoint now returns 403 when disabled, directing callers to use POST. Both POST and GET endpoints also use constant-time bcrypt verification via `_DUMMY_HASH` to prevent client_id enumeration.*
 
 **5. Encryption key derived from JWT signing key** (FIXED)
 Fernet encryption key for DataSource passwords is `sha256(SECRET_KEY)`. A single compromised `SECRET_KEY` allows both JWT forgery and decrypting all stored database credentials.
@@ -45,10 +46,10 @@ Fernet encryption key for DataSource passwords is `sha256(SECRET_KEY)`. A single
 |---|--------|---------|----------|
 | 6 | FIXED | Sync DB/Redis I/O blocking the async event loop | `backend/app/api/routes/gateway.py` |
 | 7 | FIXED | No rate limiting on authentication endpoints | `backend/app/api/routes/login.py`, `token.py` |
-| 8 | OPEN | User enumeration via password recovery | `backend/app/api/routes/login.py:57-77` |
-| 9 | OPEN | Timing attack on `authenticate()` | `backend/app/crud.py:40-46` |
+| 8 | FIXED | User enumeration via password recovery | `backend/app/api/routes/login.py:57-77` |
+| 9 | FIXED | Timing attack on `authenticate()` | `backend/app/crud.py:40-46` |
 | 10 | FIXED | Script timeout only works on Unix main thread | `backend/app/engines/script/executor.py:101-111` |
-| 11 | OPEN | OpenAPI docs exposed in all environments | `backend/app/main.py:25-31` |
+| 11 | FIXED | OpenAPI docs exposed in all environments | `backend/app/main.py:25-31` |
 | 12 | FIXED | Unrestricted `**kwargs` passthrough to httpx | `backend/app/engines/script/modules/http.py` |
 | 13 | FIXED | Access log storage uses encrypted password without decrypting | `backend/app/core/access_log_storage.py:33` |
 
@@ -62,18 +63,21 @@ All pre-execution steps (resolve, auth, rate limit, config cache) were synchrono
 `POST /login/access-token`, `POST /token/generate`, and `POST /password-recovery/{email}` have no rate limiting, enabling brute-force attacks and email enumeration.
 *Fix: Added `require_rate_limit()` dependency to all auth endpoints (`login`, `password-recovery`, `reset-password`, `token/generate`) using configurable `AUTH_RATE_LIMIT_*` settings.*
 
-**8. User enumeration via password recovery** (OPEN)
+**8. User enumeration via password recovery** (FIXED)
 Returns 404 with "user does not exist" vs 200 on success, allowing email address enumeration.
+*Fix: `POST /password-recovery/{email}` now always returns 200 with generic message `"If that email is registered, a recovery link has been sent"` regardless of whether the user exists. `POST /reset-password/` returns generic `400 "Invalid token"` instead of `404` for non-existent or inactive users.*
 
-**9. Timing attack on `authenticate()`** (OPEN)
+**9. Timing attack on `authenticate()`** (FIXED)
 Non-existent user returns immediately (no bcrypt), existing user runs bcrypt (~100ms). Response time difference reveals whether an email exists.
+*Fix: Added pre-computed `_DUMMY_HASH` in `security.py`. `crud.authenticate()` always calls `verify_password()` against the real hash or `_DUMMY_HASH`, ensuring constant bcrypt time regardless of whether the user exists. Same pattern applied to `POST /token/generate` and `GET /token/generate` for client_id enumeration prevention.*
 
 **10. Script timeout only works on Unix main thread** (FIXED)
 `signal.alarm` is process-global and only works in the main thread. In threaded ASGI workers, scripts can run indefinitely.
 *Fix: Replaced `signal.SIGALRM` with thread-based timeout using `threading.Thread` + `ctypes.pythonapi.PyThreadState_SetAsyncExc` to inject `ScriptTimeoutError`. Works on all platforms and from any thread.*
 
-**11. OpenAPI docs exposed in all environments** (OPEN)
+**11. OpenAPI docs exposed in all environments** (FIXED)
 `/api/docs`, `/api/redoc`, `/api/v1/openapi.json` are always available, giving attackers a full API map.
+*Fix: Docs are disabled when `ENVIRONMENT=production` (`_enable_docs = settings.ENVIRONMENT != "production"`).*
 
 **12. Unrestricted `**kwargs` passthrough to httpx** (FIXED)
 Scripts can pass arbitrary kwargs to `httpx.Client.request()`, including `follow_redirects=True`, `auth=`, `extensions=` to override security controls.
@@ -259,16 +263,13 @@ No limit on `data[]` array size — a query returning millions of rows would be 
 
 | Severity | Total | Fixed | Open |
 |----------|-------|-------|------|
-| CRITICAL | 5 | 4 | 1 |
-| HIGH | 8 | 5 | 3 |
+| CRITICAL | 5 | 5 | 0 |
+| HIGH | 8 | 8 | 0 |
 | MEDIUM | 20 | 20 | 0 |
 | LOW | 12 | 10 | 2 |
-| **Total** | **45** | **39** | **6** |
+| **Total** | **45** | **43** | **2** |
 
 ## Top Priority Recommendations (remaining)
 
-1. **Remove GET `/token/generate`** or move credentials to POST body (#4 — CRITICAL)
-2. **Constant-time auth + generic recovery response** (#8, #9 — HIGH)
-3. **Disable OpenAPI docs in production** or require auth (#11 — HIGH)
-4. **Implement IP firewall** to replace stub (#43 — LOW)
-5. **Add password complexity requirements** (#45 — LOW)
+1. **Implement IP firewall** to replace stub (#43 — LOW)
+2. **Add password complexity requirements** (#45 — LOW)

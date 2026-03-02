@@ -62,25 +62,24 @@ def test_token(current_user: CurrentUser) -> Any:
 )
 def recover_password(email: str, session: SessionDep) -> Message:
     """
-    Password Recovery
+    Password Recovery.
+
+    Always returns the same 200 response regardless of whether the email
+    exists, to prevent user enumeration.
     """
     user = crud.get_user_by_email(session=session, email=email)
 
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this email does not exist in the system.",
+    if user:
+        password_reset_token = generate_password_reset_token(email=email)
+        email_data = generate_reset_password_email(
+            email_to=user.email, email=email, token=password_reset_token
         )
-    password_reset_token = generate_password_reset_token(email=email)
-    email_data = generate_reset_password_email(
-        email_to=user.email, email=email, token=password_reset_token
-    )
-    send_email(
-        email_to=user.email,
-        subject=email_data.subject,
-        html_content=email_data.html_content,
-    )
-    return Message(message="Password recovery email sent")
+        send_email(
+            email_to=user.email,
+            subject=email_data.subject,
+            html_content=email_data.html_content,
+        )
+    return Message(message="If that email is registered, a recovery link has been sent")
 
 
 @router.post(
@@ -95,13 +94,8 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     if not email:
         raise HTTPException(status_code=400, detail="Invalid token")
     user = crud.get_user_by_email(session=session, email=email)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this email does not exist in the system.",
-        )
-    elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+    if not user or not user.is_active:
+        raise HTTPException(status_code=400, detail="Invalid token")
     hashed_password = get_password_hash(password=body.new_password)
     user.hashed_password = hashed_password
     session.add(user)
