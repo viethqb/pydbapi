@@ -88,6 +88,17 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
     },
   },
   {
+    accessorKey: "token_expire_seconds",
+    header: "Token Expiration",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-sm">
+        {row.original.token_expire_seconds
+          ? `${row.original.token_expire_seconds}s`
+          : "Default"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "updated_at",
     header: "Updated",
     cell: ({ row }) => {

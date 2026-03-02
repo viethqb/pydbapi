@@ -69,6 +69,7 @@ def _to_public(c: AppClient) -> AppClientPublic:
         description=c.description,
         rate_limit_per_minute=getattr(c, "rate_limit_per_minute", None),
         max_concurrent=getattr(c, "max_concurrent", None),
+        token_expire_seconds=getattr(c, "token_expire_seconds", None),
         is_active=c.is_active,
         created_at=c.created_at,
         updated_at=c.updated_at,
@@ -141,6 +142,7 @@ def create_client(
         description=body.description,
         rate_limit_per_minute=getattr(body, "rate_limit_per_minute", None),
         max_concurrent=getattr(body, "max_concurrent", None),
+        token_expire_seconds=getattr(body, "token_expire_seconds", None),
         is_active=body.is_active,
     )
     session.add(c)
@@ -286,6 +288,7 @@ def _to_detail(c: AppClient, session: SessionDep) -> AppClientDetail:
         description=c.description,
         rate_limit_per_minute=getattr(c, "rate_limit_per_minute", None),
         max_concurrent=getattr(c, "max_concurrent", None),
+        token_expire_seconds=getattr(c, "token_expire_seconds", None),
         is_active=c.is_active,
         created_at=c.created_at,
         updated_at=c.updated_at,

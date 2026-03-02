@@ -646,6 +646,12 @@ class AppClientCreate(SQLModel):
         default=None,
         description="Max concurrent requests in flight for this client. None = use global default.",
     )
+    token_expire_seconds: int | None = Field(
+        default=None,
+        ge=60,
+        le=86400,
+        description="JWT token lifetime in seconds. None = use global default (3600s).",
+    )
     is_active: bool = Field(default=True)
     group_ids: list[uuid.UUID] | None = Field(
         default=None,
@@ -670,6 +676,12 @@ class AppClientUpdate(SQLModel):
         default=None,
         description="Max concurrent requests in flight for this client. None = use global default.",
     )
+    token_expire_seconds: int | None = Field(
+        default=None,
+        ge=60,
+        le=86400,
+        description="JWT token lifetime in seconds. None = use global default (3600s).",
+    )
     is_active: bool | None = None
     group_ids: list[uuid.UUID] | None = None
     api_assignment_ids: list[uuid.UUID] | None = None
@@ -684,6 +696,7 @@ class AppClientPublic(SQLModel):
     description: str | None
     rate_limit_per_minute: int | None = None
     max_concurrent: int | None = None
+    token_expire_seconds: int | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -698,6 +711,7 @@ class AppClientDetail(SQLModel):
     description: str | None
     rate_limit_per_minute: int | None = None
     max_concurrent: int | None = None
+    token_expire_seconds: int | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

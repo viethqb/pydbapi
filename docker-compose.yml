@@ -1,5 +1,4 @@
 services:
-
   db:
     image: postgres:17
     restart: always
@@ -40,7 +39,11 @@ services:
     environment:
       - TZ=UTC
     healthcheck:
-      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -P 9030 -u root -e 'SELECT 1' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "mysql -h 127.0.0.1 -P 9030 -u root -e 'SELECT 1' || exit 1",
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -60,7 +63,7 @@ services:
       start_period: 30s
 
   prestart:
-    image: '${DOCKER_IMAGE_BACKEND:-pydbapi}:${TAG-latest}'
+    image: "${DOCKER_IMAGE_BACKEND:-pydbapi}:${TAG-latest}"
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -86,7 +89,7 @@ services:
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-}
 
   app:
-    image: '${DOCKER_IMAGE_BACKEND:-pydbapi}:${TAG-latest}'
+    image: "${DOCKER_IMAGE_BACKEND:-pydbapi}:${TAG-latest}"
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -125,6 +128,7 @@ services:
       - FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT=${FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT:-10}
       - CONCURRENT_DEBUG=${CONCURRENT_DEBUG:-0}
       - GATEWAY_ACCESS_LOG_BODY=${GATEWAY_ACCESS_LOG_BODY:-true}
+      - GATEWAY_TOKEN_GET_ENABLED=true
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost/health"]
       interval: 15s

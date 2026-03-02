@@ -83,6 +83,11 @@ const formSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v === "" ? null : v)),
+  token_expire_seconds: z
+    .union([z.number().int().min(60).max(86400), z.null(), z.literal("")])
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   is_active: z.boolean().default(true),
   group_ids: z.array(z.string()).default([]),
   api_assignment_ids: z.array(z.string()).default([]),
@@ -149,6 +154,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
       description: null,
       rate_limit_per_minute: null,
       max_concurrent: null,
+      token_expire_seconds: null,
       is_active: true,
       group_ids: [],
       api_assignment_ids: [],
@@ -164,6 +170,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
         description: client.description,
         rate_limit_per_minute: (client as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
         max_concurrent: (client as { max_concurrent?: number | null }).max_concurrent ?? null,
+        token_expire_seconds: (client as { token_expire_seconds?: number | null }).token_expire_seconds ?? null,
         is_active: client.is_active,
         group_ids: client.group_ids ?? [],
         api_assignment_ids: client.api_assignment_ids ?? [],
@@ -176,6 +183,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
         description: null,
         rate_limit_per_minute: null,
         max_concurrent: null,
+        token_expire_seconds: null,
         is_active: true,
         group_ids: [],
         api_assignment_ids: [],
@@ -222,6 +230,10 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
           data.max_concurrent === "" || data.max_concurrent == null
             ? null
             : Number(data.max_concurrent),
+        token_expire_seconds:
+          data.token_expire_seconds === "" || data.token_expire_seconds == null
+            ? null
+            : Number(data.token_expire_seconds),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : [],
         api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : [],
@@ -274,6 +286,10 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
           data.max_concurrent === "" || data.max_concurrent == null
             ? null
             : Number(data.max_concurrent),
+        token_expire_seconds:
+          data.token_expire_seconds === "" || data.token_expire_seconds == null
+            ? null
+            : Number(data.token_expire_seconds),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : undefined,
         api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : undefined,
@@ -418,6 +434,34 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                 </FormControl>
                 <p className="text-xs text-muted-foreground mt-1">
                   Max requests in flight for this client. Empty = use global default.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="token_expire_seconds"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Token expiration (seconds)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={60}
+                    max={86400}
+                    placeholder="Use global default (3600s)"
+                    {...field}
+                    value={field.value === null || field.value === undefined ? "" : field.value}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      field.onChange(v === "" ? null : Number(v))
+                    }}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground mt-1">
+                  JWT token lifetime in seconds (60–86400). Empty = use global default.
                 </p>
                 <FormMessage />
               </FormItem>

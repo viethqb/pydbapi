@@ -287,6 +287,14 @@ function ClientDetailPage() {
                 </TableCell>
               </TableRow>
               <TableRow>
+                <TableHead className="w-[180px]">Token Expiration</TableHead>
+                <TableCell>
+                  {client.token_expire_seconds
+                    ? `${client.token_expire_seconds}s`
+                    : "Use global default (3600s)"}
+                </TableCell>
+              </TableRow>
+              <TableRow>
                 <TableHead className="w-[180px]">Created</TableHead>
                 <TableCell className="text-sm">
                   {new Date(client.created_at).toLocaleString()}

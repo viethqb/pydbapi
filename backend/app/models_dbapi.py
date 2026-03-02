@@ -477,6 +477,10 @@ class AppClient(SQLModel, table=True):
         default=None,
         description="Max concurrent requests in flight for this client. None = use global FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT.",
     )
+    token_expire_seconds: int | None = Field(
+        default=None,
+        description="JWT token lifetime in seconds for this client. None = use global GATEWAY_JWT_EXPIRE_SECONDS.",
+    )
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)

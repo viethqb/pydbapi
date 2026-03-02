@@ -141,6 +141,65 @@ def test_gateway_token_generate_get(
     assert len(data["token"]) > 0
 
 
+def test_gateway_token_custom_expiration(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """Client with token_expire_seconds=1800 gets expires_in=1800."""
+    cr = client.post(
+        f"{settings.API_V1_STR}/clients/create",
+        headers=superuser_token_headers,
+        json={
+            "name": "gw-custom-expire",
+            "client_secret": "CustomExpireSecret123",
+            "is_active": True,
+            "token_expire_seconds": 1800,
+        },
+    )
+    assert cr.status_code == 200
+    client_id = cr.json()["client_id"]
+
+    r = client.post(
+        f"{_base()}/generate",
+        json={
+            "client_id": client_id,
+            "client_secret": "CustomExpireSecret123",
+            "grant_type": "client_credentials",
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["expires_in"] == 1800
+
+
+def test_gateway_token_default_expiration(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """Client without token_expire_seconds uses global default."""
+    cr = client.post(
+        f"{settings.API_V1_STR}/clients/create",
+        headers=superuser_token_headers,
+        json={
+            "name": "gw-default-expire",
+            "client_secret": "DefaultExpireSecret123",
+            "is_active": True,
+        },
+    )
+    assert cr.status_code == 200
+    client_id = cr.json()["client_id"]
+
+    r = client.post(
+        f"{_base()}/generate",
+        json={
+            "client_id": client_id,
+            "client_secret": "DefaultExpireSecret123",
+            "grant_type": "client_credentials",
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["expires_in"] == settings.GATEWAY_JWT_EXPIRE_SECONDS
+
+
 def test_gateway_token_invalid_client(client: TestClient) -> None:
     """Wrong client_id or client_secret -> 401."""
     r = client.post(

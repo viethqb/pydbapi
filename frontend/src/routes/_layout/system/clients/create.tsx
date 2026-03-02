@@ -86,6 +86,11 @@ const createFormSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v === "" ? null : v)),
+  token_expire_seconds: z
+    .union([z.number().int().min(60).max(86400), z.null(), z.literal("")])
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   is_active: z.boolean().default(true),
   group_ids: z.array(z.string()).default([]),
   api_assignment_ids: z.array(z.string()).default([]),
@@ -158,6 +163,7 @@ function CreateClientPage() {
       description: null,
       rate_limit_per_minute: null,
       max_concurrent: null,
+      token_expire_seconds: null,
       is_active: true,
       group_ids: [],
       api_assignment_ids: [],
@@ -209,6 +215,10 @@ function CreateClientPage() {
         data.max_concurrent === "" || data.max_concurrent == null
           ? null
           : Number(data.max_concurrent),
+      token_expire_seconds:
+        data.token_expire_seconds === "" || data.token_expire_seconds == null
+          ? null
+          : Number(data.token_expire_seconds),
       is_active: data.is_active,
       group_ids: data.group_ids.length > 0 ? data.group_ids : undefined,
       api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : undefined,
@@ -384,6 +394,37 @@ function CreateClientPage() {
                             </FormControl>
                             <FormDescription>
                               Max concurrent requests. Empty = use global default.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Token Expiration</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="token_expire_seconds"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={60}
+                                max={86400}
+                                placeholder="Use global default (3600s)"
+                                {...field}
+                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                onChange={(e) => {
+                                  const v = e.target.value
+                                  field.onChange(v === "" ? null : Number(v))
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              JWT token lifetime in seconds (60–86400). Empty = use global default.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>

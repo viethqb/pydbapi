@@ -59,6 +59,11 @@ const formSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v === "" ? null : v)),
+  token_expire_seconds: z
+    .union([z.number().int().min(60).max(86400), z.null(), z.literal("")])
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   is_active: z.boolean().default(true),
   group_ids: z.array(z.string()).default([]),
   api_assignment_ids: z.array(z.string()).default([]),
@@ -134,6 +139,7 @@ function EditClientPage() {
       description: null,
       rate_limit_per_minute: null,
       max_concurrent: null,
+      token_expire_seconds: null,
       is_active: true,
       group_ids: [],
       api_assignment_ids: [],
@@ -147,6 +153,7 @@ function EditClientPage() {
         description: client.description,
         rate_limit_per_minute: (client as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
         max_concurrent: (client as { max_concurrent?: number | null }).max_concurrent ?? null,
+        token_expire_seconds: (client as { token_expire_seconds?: number | null }).token_expire_seconds ?? null,
         is_active: client.is_active,
         group_ids: client.group_ids ?? [],
         api_assignment_ids: client.api_assignment_ids ?? [],
@@ -180,6 +187,10 @@ function EditClientPage() {
         values.max_concurrent === "" || values.max_concurrent == null
           ? null
           : Number(values.max_concurrent),
+      token_expire_seconds:
+        values.token_expire_seconds === "" || values.token_expire_seconds == null
+          ? null
+          : Number(values.token_expire_seconds),
       is_active: values.is_active,
       group_ids: values.group_ids.length > 0 ? values.group_ids : [],
       api_assignment_ids: values.api_assignment_ids.length > 0 ? values.api_assignment_ids : [],
@@ -332,6 +343,37 @@ function EditClientPage() {
                             </FormControl>
                             <FormDescription>
                               Max concurrent requests. Empty = use global default.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Token Expiration</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="token_expire_seconds"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={60}
+                                max={86400}
+                                placeholder="Use global default (3600s)"
+                                {...field}
+                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                onChange={(e) => {
+                                  const v = e.target.value
+                                  field.onChange(v === "" ? null : Number(v))
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              JWT token lifetime in seconds (60–86400). Empty = use global default.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>

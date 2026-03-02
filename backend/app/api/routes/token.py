@@ -29,6 +29,13 @@ from app.schemas_dbapi import (
 router = APIRouter(prefix="/token", tags=["token"])
 
 
+def _effective_expire_seconds(client: AppClient) -> int:
+    """Return per-client token lifetime, falling back to global default."""
+    if client.token_expire_seconds is not None:
+        return client.token_expire_seconds
+    return settings.GATEWAY_JWT_EXPIRE_SECONDS
+
+
 def _get_client_by_client_id(session: Session, client_id: str) -> AppClient | None:
     stmt = select(AppClient).where(
         AppClient.client_id == client_id,
@@ -83,7 +90,8 @@ async def token_generate(
             status_code=401, detail="Invalid client_id or client_secret"
         )
 
-    expires_delta = timedelta(seconds=settings.GATEWAY_JWT_EXPIRE_SECONDS)
+    expire_secs = _effective_expire_seconds(client)
+    expires_delta = timedelta(seconds=expire_secs)
     access_token = create_access_token(
         subject=client.client_id,
         expires_delta=expires_delta,
@@ -93,7 +101,7 @@ async def token_generate(
     return GatewayTokenResponse(
         access_token=access_token,
         token_type="bearer",
-        expires_in=settings.GATEWAY_JWT_EXPIRE_SECONDS,
+        expires_in=expire_secs,
     )
 
 
@@ -132,7 +140,8 @@ def token_generate_get(
             status_code=401, detail="Invalid client_id or client_secret"
         )
 
-    expires_delta = timedelta(seconds=settings.GATEWAY_JWT_EXPIRE_SECONDS)
+    expire_secs = _effective_expire_seconds(client)
+    expires_delta = timedelta(seconds=expire_secs)
     expire_dt = datetime.now(timezone.utc) + expires_delta
     expire_at = int(expire_dt.timestamp())
     access_token = create_access_token(
