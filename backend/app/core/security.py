@@ -17,9 +17,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
 
-# JWT token type claims to prevent cross-use between dashboard and gateway
+# JWT token type claims to prevent cross-use between dashboard, gateway, and password reset
 TOKEN_TYPE_DASHBOARD = "dashboard"
 TOKEN_TYPE_GATEWAY = "gateway"
+TOKEN_TYPE_PASSWORD_RESET = "password_reset"
 
 # ---------------------------------------------------------------------------
 # JWT helpers
@@ -58,10 +59,15 @@ _fernet: Fernet | None = None
 
 
 def _get_fernet() -> Fernet:
-    """Derive a Fernet key from SECRET_KEY (SHA-256 → 32 bytes → base64)."""
+    """Derive a Fernet key from ENCRYPTION_KEY (preferred) or SECRET_KEY.
+
+    Using a dedicated ENCRYPTION_KEY is strongly recommended so that a
+    compromised JWT signing key does not also expose encrypted credentials.
+    """
     global _fernet
     if _fernet is None:
-        key_bytes = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
+        source_key = settings.ENCRYPTION_KEY or settings.SECRET_KEY
+        key_bytes = hashlib.sha256(source_key.encode()).digest()
         _fernet = Fernet(base64.urlsafe_b64encode(key_bytes))
     return _fernet
 

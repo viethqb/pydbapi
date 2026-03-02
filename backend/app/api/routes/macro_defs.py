@@ -396,13 +396,17 @@ def create_macro_def_version(
     body: MacroDefVersionCommitCreate,
 ) -> Any:
     """Create a new version snapshot for the macro_def."""
-    m = session.get(ApiMacroDef, id)
+    # Lock the parent row to serialize concurrent version creation
+    m = session.exec(
+        select(ApiMacroDef).where(ApiMacroDef.id == id).with_for_update()
+    ).first()
     if not m:
         raise HTTPException(status_code=404, detail="ApiMacroDef not found")
     if not m.content:
         raise HTTPException(
             status_code=400, detail="Macro_def has no content to version"
         )
+    # Get the next version number (safe: parent row is locked)
     max_version = (
         session.exec(
             select(func.max(MacroDefVersionCommit.version)).where(

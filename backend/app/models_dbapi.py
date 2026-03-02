@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from sqlalchemy import Column, Enum as SQLEnum, ForeignKey, Text
+from sqlalchemy import Column, Enum as SQLEnum, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -147,6 +147,9 @@ class MacroDefVersionCommit(SQLModel, table=True):
     """Version snapshot for macro_def content."""
 
     __tablename__ = "macro_def_version_commit"
+    __table_args__ = (
+        UniqueConstraint("api_macro_def_id", "version", name="uq_macro_version"),
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     api_macro_def_id: uuid.UUID = Field(
@@ -494,6 +497,9 @@ class AppClient(SQLModel, table=True):
 
 class VersionCommit(SQLModel, table=True):
     __tablename__ = "version_commit"
+    __table_args__ = (
+        UniqueConstraint("api_assignment_id", "version", name="uq_api_version"),
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     api_assignment_id: uuid.UUID = Field(

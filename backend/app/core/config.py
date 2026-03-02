@@ -32,8 +32,13 @@ class Settings(BaseSettings):
     )
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
-    # 60 minutes * 24 hours * 8 days = 8 days
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    # Separate key for Fernet encryption of sensitive fields (e.g. DataSource
+    # passwords).  When not set, falls back to SECRET_KEY for backward
+    # compatibility — but a dedicated key is strongly recommended so that a
+    # compromised JWT signing key does not also expose encrypted credentials.
+    ENCRYPTION_KEY: str | None = None
+    # 60 minutes * 24 hours = 1 day
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
@@ -47,12 +52,14 @@ class Settings(BaseSettings):
         origins = [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
             self.FRONTEND_HOST
         ]
-        # With allow_credentials=True, browser forbids Access-Control-Allow-Origin: *
-        if self.ENVIRONMENT != "local" and "*" in origins:
+        # With allow_credentials=True, Access-Control-Allow-Origin: * is invalid.
+        # Starlette CORSMiddleware reflects the request Origin for "*", which
+        # silently allows ANY origin with credentials — block in all environments.
+        if "*" in origins:
             raise ValueError(
-                "CORS origin '*' is not allowed in staging/production when using "
-                "credentials. Set BACKEND_CORS_ORIGINS to explicit origins (e.g. "
-                "https://dashboard.example.com)."
+                "CORS origin '*' is not allowed with allow_credentials=True. "
+                "Set BACKEND_CORS_ORIGINS to explicit origins (e.g. "
+                "http://localhost:5173, https://dashboard.example.com)."
             )
         return origins
 
@@ -82,8 +89,10 @@ class Settings(BaseSettings):
     EXTERNAL_DB_POOL_SIZE: int = 5
     EXTERNAL_DB_CONNECT_TIMEOUT: int = 10
     EXTERNAL_DB_STATEMENT_TIMEOUT: int | None = None
+    SQL_TEMPLATE_MAX_SIZE: int = 1_000_000  # max template source size (bytes)
+    SQL_RENDERED_MAX_SIZE: int = 10_000_000  # max rendered SQL output (bytes)
     SCRIPT_EXEC_TIMEOUT: int | None = (
-        None  # seconds; uses signal.SIGALRM on Unix when set
+        None  # seconds; thread-based timeout (all platforms)
     )
     # Comma-separated extra modules to expose in script globals (e.g. "pandas,numpy"). Whitelist only; no import in script.
     SCRIPT_EXTRA_MODULES: str = ""
@@ -100,6 +109,8 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
     REDIS_SSL: bool = False
+    REDIS_CONNECT_TIMEOUT: float = 2.0  # TCP connect timeout (seconds)
+    REDIS_SOCKET_TIMEOUT: float = 2.0  # Per-command socket timeout (seconds)
     CACHE_ENABLED: bool = True
 
     @computed_field  # type: ignore[prop-decorator]
@@ -122,14 +133,34 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Reverse-proxy / X-Forwarded-For trust
+    # -------------------------------------------------------------------------
+    # Number of trusted reverse proxies in front of the app.
+    # 0 (default) = ignore X-Forwarded-For, always use socket IP.
+    # 1 = single proxy (e.g. Nginx in Docker), use rightmost XFF entry.
+    # N = N proxies, use the Nth entry from the right.
+    TRUSTED_PROXY_COUNT: int = 0
+
+    # -------------------------------------------------------------------------
     # DBAPI Phase 4: Gateway & auth (JWT only, from POST /api/token/generate)
     # -------------------------------------------------------------------------
     GATEWAY_JWT_EXPIRE_SECONDS: int = 3600
+    GATEWAY_MAX_RESPONSE_ROWS: int = 10_000  # 0 = no limit; truncates data[] in gateway responses
     GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True  # When no rule matches
     GATEWAY_ACCESS_LOG_BODY: bool = False  # Log request_body to AccessRecord
     GATEWAY_CONFIG_CACHE_TTL_SECONDS: int = (
         300  # TTL for cached API config (content, params, validate, transform)
     )
+
+    # -------------------------------------------------------------------------
+    # Auth endpoint rate limiting (per IP, per minute, sliding window)
+    # Uses the same Redis-backed rate limiter as the gateway pipeline.
+    # Set to 0 to disable a specific limit. Respects FLOW_CONTROL_RATE_LIMIT_ENABLED.
+    # -------------------------------------------------------------------------
+    AUTH_RATE_LIMIT_LOGIN: int = 5  # POST /login/access-token
+    AUTH_RATE_LIMIT_PASSWORD_RECOVERY: int = 3  # POST /password-recovery/{email}
+    AUTH_RATE_LIMIT_RESET_PASSWORD: int = 5  # POST /reset-password/
+    AUTH_RATE_LIMIT_TOKEN_GENERATE: int = 10  # POST|GET /token/generate
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
@@ -146,7 +177,7 @@ class Settings(BaseSettings):
             self.EMAILS_FROM_NAME = self.PROJECT_NAME
         return self
 
-    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
+    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 1
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -175,6 +206,14 @@ class Settings(BaseSettings):
         self._check_default_secret(
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
         )
+
+        if not self.ENCRYPTION_KEY and self.ENVIRONMENT != "local":
+            warnings.warn(
+                "ENCRYPTION_KEY is not set; falling back to SECRET_KEY for "
+                "field encryption.  Set a dedicated ENCRYPTION_KEY so that a "
+                "compromised JWT key cannot decrypt stored credentials.",
+                stacklevel=1,
+            )
 
         return self
 

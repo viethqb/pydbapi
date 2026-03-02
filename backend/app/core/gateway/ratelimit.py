@@ -22,23 +22,40 @@ _memory_last_gc: float = 0.0
 _MEMORY_GC_INTERVAL = 60.0
 
 
+_RATE_LIMIT_SCRIPT = """\
+local key     = KEYS[1]
+local cutoff  = tonumber(ARGV[1])
+local now     = ARGV[2]
+local limit   = tonumber(ARGV[3])
+local ttl     = tonumber(ARGV[4])
+
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+if redis.call('ZCARD', key) >= limit then
+    return 0
+end
+redis.call('ZADD', key, now, now)
+redis.call('EXPIRE', key, ttl)
+return 1
+"""
+_rate_limit_sha: str | None = None
+
+
 def _check_redis(key: str, limit: int, window_sec: float, r: "redis.Redis") -> bool:  # type: ignore[name-defined]
+    global _rate_limit_sha
     k = _REDIS_KEY_PREFIX + key
     now = time.time()
     cutoff = now - window_sec
+    ttl = int(window_sec) + 1
     try:
-        pipe = r.pipeline(transaction=False)
-        pipe.zremrangebyscore(k, "-inf", cutoff)
-        pipe.zcard(k)
-        results = pipe.execute()
-        n = results[1]
-        if n >= limit:
-            return False
-        pipe2 = r.pipeline(transaction=False)
-        pipe2.zadd(k, {f"{now}": now})
-        pipe2.expire(k, int(window_sec) + 1)
-        pipe2.execute()
-        return True
+        if _rate_limit_sha is None:
+            _rate_limit_sha = r.script_load(_RATE_LIMIT_SCRIPT)
+        try:
+            result = r.evalsha(_rate_limit_sha, 1, k, cutoff, now, limit, ttl)
+        except Exception:
+            # Script evicted from cache; reload once
+            _rate_limit_sha = r.script_load(_RATE_LIMIT_SCRIPT)
+            result = r.evalsha(_rate_limit_sha, 1, k, cutoff, now, limit, ttl)
+        return result == 1
     except Exception:
         return True  # fail-open
 
@@ -78,7 +95,7 @@ def check_rate_limit(key: str, limit: int | None = None) -> bool:
     - If limit is None or <= 0: always True (no limit).
     - If FLOW_CONTROL_RATE_LIMIT_ENABLED is False: always True (kill switch).
     - Sliding window: limit requests per 60 seconds.
-    - Redis: pipelined sliding-window via sorted set (2 round-trips).
+    - Redis: atomic sliding-window via sorted set (single Lua script).
     - Falls back to in-memory on Redis error/unavailable.
     - In-memory: dict of timestamps; not shared across processes.
     """

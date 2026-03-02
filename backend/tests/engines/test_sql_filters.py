@@ -12,6 +12,7 @@ from app.engines.sql.filters import (
     sql_float,
     sql_int,
     sql_like,
+    sql_like_end,
     sql_like_start,
     sql_string,
 )
@@ -124,6 +125,13 @@ class TestSqlLike:
         assert "\\%" in sql_like("a%b")
         assert "\\_" in sql_like("a_b")
 
+    def test_single_quote_escaped(self):
+        assert sql_like("O'Brien") == "'O''Brien'"
+
+    def test_injection_escaped(self):
+        result = sql_like("'; DROP TABLE users; --")
+        assert result == "'''; DROP TABLE users; --'"
+
 
 class TestSqlLikeStart:
     def test_suffix_percent(self):
@@ -131,6 +139,25 @@ class TestSqlLikeStart:
 
     def test_escape(self):
         assert "\\%" in sql_like_start("a%") and sql_like_start("a%").endswith("%'")
+
+    def test_single_quote_escaped(self):
+        assert sql_like_start("O'Brien") == "'O''Brien%'"
+
+    def test_injection_escaped(self):
+        result = sql_like_start("'; DROP TABLE users; --")
+        assert result == "'''; DROP TABLE users; --%'"
+
+
+class TestSqlLikeEnd:
+    def test_prefix_percent(self):
+        assert sql_like_end("ab") == "'%ab'"
+
+    def test_single_quote_escaped(self):
+        assert sql_like_end("O'Brien") == "'%O''Brien'"
+
+    def test_injection_escaped(self):
+        result = sql_like_end("'; DROP TABLE users; --")
+        assert result == "'%''; DROP TABLE users; --'"
 
 
 class TestSqlDatetimeEscape:

@@ -34,9 +34,10 @@ def make_cache_module(
         if cache_client is None:
             return
         k = _key(key)
-        cache_client.set(k, value)
         if ttl_seconds is not None:
-            cache_client.expire(k, ttl_seconds)
+            cache_client.set(k, value, ex=ttl_seconds)
+        else:
+            cache_client.set(k, value)
 
     def delete(key: str) -> None:
         if cache_client is None:

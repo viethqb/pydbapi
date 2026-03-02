@@ -8,8 +8,10 @@ from app.core.gateway.firewall import check_firewall
 from app.core.gateway.ratelimit import check_rate_limit
 from app.core.gateway.request_response import (
     format_response,
+    get_response_naming,
     keys_to_camel,
     keys_to_snake,
+    merge_params,
     normalize_api_result,
     parse_params,
 )
@@ -28,9 +30,11 @@ __all__ = [
     "check_rate_limit",
     "client_can_access_api",
     "format_response",
+    "get_response_naming",
     "invalidate_route_cache",
     "keys_to_camel",
     "keys_to_snake",
+    "merge_params",
     "normalize_api_result",
     "parse_params",
     "path_to_regex",

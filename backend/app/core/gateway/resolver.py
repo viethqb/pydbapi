@@ -17,6 +17,7 @@ import time
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.models_dbapi import ApiAssignment, ApiModule, HttpMethodEnum
@@ -25,7 +26,16 @@ _log = logging.getLogger(__name__)
 
 _ROUTE_CACHE_TTL = 30.0  # seconds
 
-_route_cache: list[tuple[re.Pattern[str], UUID, UUID]] | None = None
+_RouteEntry = tuple[re.Pattern[str], str, ApiAssignment, ApiModule]
+
+# Two-tier route index: static routes (O(1) dict lookup) and dynamic routes
+# (per-method lists, reduced linear scan).
+_StaticRoutes = dict[tuple[str, str], tuple[ApiAssignment, ApiModule]]  # (method, path) → (api, mod)
+_DynamicEntry = tuple[re.Pattern[str], ApiAssignment, ApiModule]
+_DynamicRoutes = dict[str, list[_DynamicEntry]]  # method → [(regex, api, mod), ...]
+_RouteIndex = tuple[_StaticRoutes, _DynamicRoutes]
+
+_route_cache: _RouteIndex | None = None
 _route_cache_ts: float = 0.0
 _route_cache_lock = threading.Lock()
 
@@ -50,12 +60,21 @@ def path_to_regex(pattern: str) -> re.Pattern[str]:
 
 def _build_route_table(
     session: Session,
-) -> list[tuple[re.Pattern[str], str, UUID, UUID]]:
-    """Build route table with a single JOIN query, sorted by priority."""
+) -> _RouteIndex:
+    """Build two-tier route index with a single JOIN query, sorted by priority.
+
+    Static routes (no ``{param}``) go into a dict for O(1) lookup.
+    Dynamic routes (with path params) go into per-method lists.
+
+    Eagerly loads the ``datasource`` relationship on each ApiAssignment so
+    the cached objects can be used directly without a session, avoiding two
+    per-request ``session.get()`` calls on resolve.
+    """
     stmt = (
         select(ApiAssignment, ApiModule)
         .join(ApiModule, ApiAssignment.module_id == ApiModule.id)
         .where(ApiModule.is_active.is_(True), ApiAssignment.is_published.is_(True))
+        .options(selectinload(ApiAssignment.datasource))
         .order_by(
             ApiModule.sort_order.asc(),
             ApiModule.id.asc(),
@@ -64,41 +83,84 @@ def _build_route_table(
         )
     )
     rows = session.exec(stmt).all()
-    table: list[tuple[re.Pattern[str], str, UUID, UUID]] = []
+    static: _StaticRoutes = {}
+    dynamic: _DynamicRoutes = {}
     for api, mod in rows:
         api_path = (api.path or "").strip("/")
         method_val = api.http_method.value if hasattr(api.http_method, "value") else str(api.http_method)
-        try:
-            rx = path_to_regex(api_path)
-            table.append((rx, method_val, api.id, mod.id))
-        except re.error:
-            continue
-    return table
+        # Detach from session so cached objects survive beyond the
+        # building session's lifetime.  Eagerly-loaded attributes
+        # (scalars + datasource) remain accessible.
+        session.expunge(api)
+        session.expunge(mod)
+        if "{" not in api_path:
+            # Static route — first match wins (priority order from ORDER BY)
+            key = (method_val, api_path)
+            if key not in static:
+                static[key] = (api, mod)
+        else:
+            try:
+                rx = path_to_regex(api_path)
+            except re.error:
+                continue
+            dynamic.setdefault(method_val, []).append((rx, api, mod))
+    return static, dynamic
+
+
+_route_cache_rebuilding = False
 
 
 def _get_route_table(
     session: Session,
-) -> list[tuple[re.Pattern[str], str, UUID, UUID]]:
-    """Return cached route table, rebuilding if expired."""
-    global _route_cache, _route_cache_ts
+) -> _RouteIndex:
+    """Return cached route index, rebuilding if expired.
+
+    When the cache is stale, exactly one thread rebuilds it while all other
+    threads continue serving from the old (stale but valid) index.  This
+    avoids blocking every concurrent request behind a DB query.
+    """
+    global _route_cache, _route_cache_ts, _route_cache_rebuilding
     now = time.monotonic()
     if _route_cache is not None and (now - _route_cache_ts) < _ROUTE_CACHE_TTL:
         return _route_cache
+
+    # Try to become the rebuilder; losers return stale cache immediately.
     with _route_cache_lock:
+        # Re-check after acquiring lock — another thread may have rebuilt.
         if _route_cache is not None and (now - _route_cache_ts) < _ROUTE_CACHE_TTL:
             return _route_cache
+        if _route_cache_rebuilding:
+            # Another thread is already rebuilding; serve stale.
+            if _route_cache is not None:
+                return _route_cache
+            # No stale cache at all (first request); must wait below.
+        else:
+            _route_cache_rebuilding = True
+
+    # Only the rebuilder reaches here (or the very first request).
+    try:
         table = _build_route_table(session)
-        _route_cache = table
-        _route_cache_ts = time.monotonic()
+        with _route_cache_lock:
+            _route_cache = table
+            _route_cache_ts = time.monotonic()
+            _route_cache_rebuilding = False
         return table
+    except Exception:
+        with _route_cache_lock:
+            _route_cache_rebuilding = False
+        # On failure, return stale cache if available.
+        if _route_cache is not None:
+            return _route_cache
+        raise
 
 
 def invalidate_route_cache() -> None:
     """Call when modules or API assignments are created/updated/deleted."""
-    global _route_cache, _route_cache_ts
+    global _route_cache, _route_cache_ts, _route_cache_rebuilding
     with _route_cache_lock:
         _route_cache = None
         _route_cache_ts = 0.0
+        _route_cache_rebuilding = False
 
 
 def resolve_gateway_api(
@@ -107,7 +169,9 @@ def resolve_gateway_api(
     """
     Resolve /api/{path} to (ApiAssignment, path_params, ApiModule).
 
-    Uses cached route table (single JOIN query, compiled regexes).
+    Uses a two-tier cached index: O(1) dict lookup for static routes,
+    then per-method linear scan for dynamic routes with path params.
+    Returns detached objects from cache — no per-request DB queries.
     """
     path = (path or "").strip().strip("/")
     if not path:
@@ -118,16 +182,18 @@ def resolve_gateway_api(
     except ValueError:
         return None
 
-    table = _get_route_table(session)
-    for rx, route_method, api_id, mod_id in table:
-        if route_method != method_upper:
-            continue
+    static, dynamic = _get_route_table(session)
+
+    # 1. O(1) static route lookup
+    hit = static.get((method_upper, path))
+    if hit is not None:
+        return (hit[0], {}, hit[1])
+
+    # 2. Per-method dynamic route scan (only routes with path params)
+    for rx, api, mod in dynamic.get(method_upper, ()):
         m = rx.match(path)
         if m:
-            api = session.get(ApiAssignment, api_id)
-            mod = session.get(ApiModule, mod_id)
-            if api and mod:
-                return (api, m.groupdict(), mod)
+            return (api, m.groupdict(), mod)
     return None
 
 

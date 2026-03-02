@@ -6,6 +6,7 @@ Gateway request/response (Phase 4, Task 4.3): parse_params, keys_to_snake, keys_
 - format_response: optional snake→camel for result; always JSON-serializable structure.
 """
 
+import functools
 import json
 import re
 import uuid
@@ -15,17 +16,21 @@ from typing import Any
 
 from starlette.requests import Request
 
+from app.core.config import settings
 
+_CAMEL_TO_SNAKE_RE = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+@functools.lru_cache(maxsize=1024)
 def _to_snake_str(s: str) -> str:
     """camelCase → snake_case. E.g. userId → user_id, firstName → first_name."""
-    s = str(s)
-    return re.sub(r"(?<!^)(?=[A-Z])", "_", s).lower()
+    return _CAMEL_TO_SNAKE_RE.sub("_", str(s)).lower()
 
 
+@functools.lru_cache(maxsize=1024)
 def _to_camel_str(s: str) -> str:
     """snake_case → camelCase. E.g. user_id → userId, first_name → firstName."""
-    s = str(s)
-    parts = s.split("_")
+    parts = str(s).split("_")
     if not parts:
         return ""
     return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
@@ -73,9 +78,11 @@ async def _read_body(request: Request) -> dict[str, Any]:
     return {}
 
 
-async def parse_params(
-    request: Request,
+def merge_params(
+    query: dict[str, Any],
+    body: dict[str, Any],
     path_params: dict[str, Any],
+    headers: dict[str, str],
     http_method: str,  # noqa: ARG001 reserved for future (e.g. skip body for GET)
     params_definition: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], str | None]:
@@ -83,25 +90,23 @@ async def parse_params(
     Merge path, query, body, and header into a single params dict for ApiExecutor.
     Conflict order: path > query > body > header (path wins).
 
+    This is the synchronous core of param merging.  All data is pre-read
+    (no I/O) so it is safe to call from a worker thread.
+
     - Path: from resolver path_params.
-    - Query: request.query_params (any method).
-    - Body: application/json → request.json(); application/x-www-form-urlencoded or
-      multipart/form-data → request.form() (fields only).
-    - Header: extract from request.headers based on params_definition with location="header".
+    - Query: pre-parsed query dict.
+    - Body: pre-parsed body dict (JSON or form).
+    - Headers: pre-parsed headers dict.
 
-    Request naming: ?naming=snake (default) or ?naming=camel. If camel, convert
-    body and query keys from camelCase to snake_case before merge. Path params are
-    not converted.
+    Naming: determined by the ``naming`` key in *query* (``"snake"`` by
+    default, ``"camel"`` converts body/query keys to snake_case).
 
-    Returns: (params for ApiExecutor.execute(..., params=...), body_for_log for
-      AccessRecord when GATEWAY_ACCESS_LOG_BODY; body_for_log is JSON string or None).
+    Returns: (params for ApiExecutor, body_for_log JSON string or None).
     """
-    query = dict(request.query_params)
     naming_req = (query.get("naming") or "snake").strip().lower()
     if naming_req not in ("snake", "camel"):
         naming_req = "snake"
 
-    body = await _read_body(request)
     if naming_req == "camel":
         body = keys_to_snake(body)
         query = keys_to_snake(query)
@@ -115,12 +120,12 @@ async def parse_params(
 
     if params_definition:
         # Case-insensitive header lookup map
-        headers_ci: dict[str, str] = {k.lower(): v for k, v in request.headers.items()}
+        headers_ci: dict[str, str] = {k.lower(): v for k, v in headers.items()}
 
         def _get_header_value(name: str) -> str | None:
             if not name:
                 return None
-            v = request.headers.get(name)
+            v = headers.get(name)
             if v is not None:
                 return v
             return headers_ci.get(name.lower())
@@ -169,6 +174,36 @@ async def parse_params(
     return (out, body_for_log)
 
 
+async def parse_params(
+    request: Request,
+    path_params: dict[str, Any],
+    http_method: str,
+    params_definition: list[dict[str, Any]] | None = None,
+) -> tuple[dict[str, Any], str | None]:
+    """
+    Async wrapper: read body from *request*, then delegate to :func:`merge_params`.
+
+    Kept for backward compatibility with tests and any future callers that
+    have an ASGI Request object.
+    """
+    query = dict(request.query_params)
+    body = await _read_body(request)
+    headers = dict(request.headers)
+    return merge_params(query, body, path_params, headers, http_method, params_definition)
+
+
+def _cap_rows(out: dict[str, Any]) -> dict[str, Any]:
+    """Truncate ``data`` list to ``GATEWAY_MAX_RESPONSE_ROWS`` if configured."""
+    limit = settings.GATEWAY_MAX_RESPONSE_ROWS
+    if limit <= 0:
+        return out
+    data = out.get("data")
+    if isinstance(data, list) and len(data) > limit:
+        out["data"] = data[:limit]
+        out["truncated"] = True
+    return out
+
+
 def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict[str, Any]:
     """
     Format executor result for API response. All responses use envelope:
@@ -191,30 +226,34 @@ def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict
             for k, v in result.items():
                 if k not in ("data", "success", "message"):
                     out[k] = v
-            return out
+            return _cap_rows(out)
         raw = result if isinstance(result, list) else [result] if result is not None else []
-        return {"success": True, "message": None, "data": raw}
+        return _cap_rows({"success": True, "message": None, "data": raw})
 
     # SCRIPT mode: unwrap envelope to top level
     if isinstance(result, dict) and "data" in result:
-        inner = result["data"]
-        if (
-            isinstance(inner, dict)
-            and "success" in inner
-            and "message" in inner
-            and "data" in inner
-        ):
-            data = inner["data"]
+        # If result itself is a complete envelope, fall through to the generic handler below
+        if "success" in result and "message" in result:
+            pass  # handled by generic envelope check
+        else:
+            inner = result["data"]
+            if (
+                isinstance(inner, dict)
+                and "success" in inner
+                and "message" in inner
+                and "data" in inner
+            ):
+                data = inner["data"]
+                if not isinstance(data, list):
+                    data = [data] if data is not None else []
+                out = dict(inner)
+                out["data"] = data
+                return _cap_rows(out)
+            # Script returned something else -> wrap
+            data = result["data"]
             if not isinstance(data, list):
                 data = [data] if data is not None else []
-            out = dict(inner)
-            out["data"] = data
-            return out
-        # Script returned something else -> wrap
-        data = result["data"]
-        if not isinstance(data, list):
-            data = [data] if data is not None else []
-        return {"success": True, "message": None, "data": data}
+            return _cap_rows({"success": True, "message": None, "data": data})
     # Result transform or raw (result already has success, message, data)
     if isinstance(result, dict) and "success" in result and "message" in result and "data" in result:
         data = result["data"]
@@ -228,27 +267,34 @@ def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict
         for k, v in result.items():
             if k not in ("success", "message", "data"):
                 out[k] = v
-        return out
+        return _cap_rows(out)
     if isinstance(result, list):
-        return {"success": True, "message": None, "data": result}
-    return {"success": True, "message": None, "data": [result] if result is not None else []}
+        return _cap_rows({"success": True, "message": None, "data": result})
+    return _cap_rows({"success": True, "message": None, "data": [result] if result is not None else []})
 
 
-def _response_naming(request: Request) -> str:
-    """'camel' if ?naming=camel or X-Response-Naming: camel; else 'snake'."""
-    q = (request.query_params.get("naming") or "").strip().lower()
+def get_response_naming(query: dict[str, Any], headers: dict[str, str]) -> str:
+    """Determine response naming convention from query params and headers.
+
+    Returns ``"camel"`` if ``?naming=camel`` or ``X-Response-Naming: camel``;
+    otherwise ``"snake"``.
+    """
+    q = (query.get("naming") or "").strip().lower()
     if q == "camel":
         return "camel"
-    h = (request.headers.get("x-response-naming") or "").strip().lower()
+    h = (headers.get("x-response-naming") or "").strip().lower()
     return "camel" if h == "camel" else "snake"
 
 
-def _make_json_safe(obj: Any) -> Any:
+def _make_json_safe(obj: Any, camel: bool = False) -> Any:
     """Recursively convert non-JSON-serializable types to safe primitives.
 
     Handles: datetime, date, time, timedelta, Decimal, UUID, bytes, sets.
     This prevents ``TypeError: Object of type datetime is not JSON serializable``
     when DB rows contain native Python date/time or Decimal values.
+
+    When *camel* is ``True``, dict keys are also converted to camelCase in the
+    same pass, avoiding a second recursive traversal.
     """
     if obj is None or isinstance(obj, (bool, int, float, str)):
         return obj
@@ -270,26 +316,29 @@ def _make_json_safe(obj: Any) -> Any:
     if isinstance(obj, bytes):
         return obj.decode("utf-8", errors="replace")
     if isinstance(obj, dict):
-        return {k: _make_json_safe(v) for k, v in obj.items()}
+        return {
+            (_to_camel_str(k) if camel else k): _make_json_safe(v, camel)
+            for k, v in obj.items()
+        }
     if isinstance(obj, (list, tuple)):
-        return [_make_json_safe(item) for item in obj]
+        return [_make_json_safe(item, camel) for item in obj]
     if isinstance(obj, set):
-        return [_make_json_safe(item) for item in sorted(obj, key=str)]
+        return [_make_json_safe(item, camel) for item in sorted(obj, key=str)]
     # Fallback: use str() for unknown types
     return str(obj)
 
 
-def format_response(result: dict[str, Any] | Any, request: Request) -> dict[str, Any] | list[Any] | Any:
+def format_response(
+    result: dict[str, Any] | Any, naming: str = "snake"
+) -> dict[str, Any] | list[Any] | Any:
     """
     Apply response naming and return JSON-serializable structure.
 
     Expects result to be normalized to { success, message, data } (see normalize_api_result).
-    If ?naming=camel or X-Response-Naming: camel: recursively convert keys to camelCase.
+    *naming*: ``"camel"`` converts keys to camelCase; ``"snake"`` (default) leaves as-is.
 
     Always ensures the output is JSON-safe (datetime, Decimal, UUID etc. are converted).
     """
     if not isinstance(result, dict):
         return _make_json_safe(result)
-    if _response_naming(request) == "camel":
-        return _make_json_safe(keys_to_camel(result))
-    return _make_json_safe(result)
+    return _make_json_safe(result, camel=(naming == "camel"))

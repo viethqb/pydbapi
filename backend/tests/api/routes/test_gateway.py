@@ -1,23 +1,33 @@
 """Tests for Gateway (Phase 4): token endpoint (4.2a) and gateway proxy (4.1)."""
 
 from collections.abc import Generator
+from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.api.deps import get_db
 from app.core.config import settings
+from app.core.gateway.auth import _PERM_CACHE
+from app.core.gateway.resolver import invalidate_route_cache
 from app.core.security import get_password_hash
 from app.main import app
 from app.models_dbapi import (
     AppClient,
-    FirewallRuleTypeEnum,
-    FirewallRules,
+    AppClientApiLink,
     HttpMethodEnum,
 )
 from tests.utils.api_assignment import create_random_assignment
 from tests.utils.datasource import create_random_datasource
 from tests.utils.module import create_random_module
+
+
+@pytest.fixture(autouse=True)
+def _trust_proxy():
+    """Gateway tests send X-Forwarded-For; trust 1 proxy hop so XFF is read."""
+    with patch.object(settings, "TRUSTED_PROXY_COUNT", 1):
+        yield
 
 
 def _base() -> str:
@@ -185,19 +195,16 @@ _GW_SECRET = "GatewayProxySecret123"
 
 
 def _allow_localhost(db: Session) -> None:
-    """Ensure 127.0.0.x is allowed (TestClient). Evaluated before any DENY 0.0.0.0/0."""
-    r = FirewallRules(
-        rule_type=FirewallRuleTypeEnum.ALLOW,
-        ip_range="127.0.0.0/8",
-        is_active=True,
-        sort_order=-9999,
-    )
-    db.add(r)
-    db.commit()
+    """No-op: firewall feature removed (stub always allows)."""
+    pass
 
 
 def _gw_headers(token: str | None = None) -> dict[str, str]:
-    """Headers for gateway: X-Forwarded-For so firewall allows (TestClient uses 'testclient')."""
+    """Headers for gateway: X-Forwarded-For so firewall allows (TestClient uses 'testclient').
+
+    Requires ``settings.TRUSTED_PROXY_COUNT >= 1`` to take effect; gateway
+    tests should patch it (see ``_trust_proxy`` fixture).
+    """
     h: dict[str, str] = {"X-Forwarded-For": "127.0.0.1"}
     if token:
         h["Authorization"] = f"Bearer {token}"
@@ -231,21 +238,28 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
         is_active=True,
     )
     db.add(c)
-    db.commit()
+    db.flush()
 
-    # Module /public (for permissions); api.path="ping" -> URL: /api/ping
+    # Module /public (for permissions); api.path="gw-proxy-ping" -> URL: /api/gw-proxy-ping
     mod = create_random_module(db, path_prefix="/public", is_active=True)
     ds = create_random_datasource(db)
-    create_random_assignment(
+    api = create_random_assignment(
         db,
         module_id=mod.id,
-        path="ping",
+        path="gw-proxy-ping",
         http_method=HttpMethodEnum.GET,
         datasource_id=ds.id,
         is_published=True,
         content="SELECT 1 as x",
     )
+
+    # Grant client direct access to this API
+    db.add(AppClientApiLink(app_client_id=c.id, api_assignment_id=api.id))
     db.commit()
+
+    # Invalidate caches so gateway picks up new data
+    invalidate_route_cache()
+    _PERM_CACHE.clear()
 
     # Token
     tr = client.post(
@@ -257,7 +271,7 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
 
     # Gateway: /api/{api.path} — module prefix NOT in URL
     r = client.get(
-        "/api/ping",
+        "/api/gw-proxy-ping",
         headers=_gw_headers(token),
     )
     assert r.status_code == 200
@@ -283,15 +297,16 @@ def test_gateway_proxy_401_without_auth(client: TestClient, db: Session) -> None
         create_random_assignment(
             db,
             module_id=mod.id,
-            path="r",
+            path="gw-noauth-r",
             http_method=HttpMethodEnum.GET,
             datasource_id=ds.id,
             is_published=True,
             content="SELECT 1",
         )
         db.commit()
+        invalidate_route_cache()
 
-        r = client.get("/api/r", headers=_gw_headers())
+        r = client.get("/api/gw-noauth-r", headers=_gw_headers())
         assert r.status_code == 401
     finally:
         app.dependency_overrides.pop(get_db, None)

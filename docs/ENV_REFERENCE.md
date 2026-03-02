@@ -32,8 +32,8 @@ TAG=latest
 | `ENVIRONMENT` | `local` \| `staging` \| `production` | `local` | No | Controls security warnings and error verbosity. In `local`, default secrets trigger a warning; in staging/production they raise an error. |
 | `API_V1_STR` | string | `/api/v1` | No | URL prefix for the management API (not the gateway). |
 | `FRONTEND_HOST` | string | `http://localhost:5173` | No | Full URL of the frontend; used in password-reset emails and CORS. |
-| `BACKEND_CORS_ORIGINS` | string | `""` | No | Comma-separated allowed origins for CORS (e.g. `http://localhost,http://localhost:5173`). `FRONTEND_HOST` is always added automatically. **Production:** use explicit origins only; do not use `*` (invalid when credentials are sent). |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | int | `11520` (8 days) | No | Lifetime of dashboard JWT access tokens (minutes). |
+| `BACKEND_CORS_ORIGINS` | string | `""` | No | Comma-separated allowed origins for CORS (e.g. `http://localhost,http://localhost:5173`). `FRONTEND_HOST` is always added automatically. Use explicit origins only; `*` is rejected in all environments (invalid with `allow_credentials=True`). |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | int | `1440` (1 day) | No | Lifetime of dashboard JWT access tokens (minutes). |
 
 ---
 
@@ -71,6 +71,7 @@ Redis is used for caching (gateway config), rate limiting, and concurrent-reques
 
 | Variable | Type | Default | Required | Description |
 |----------|------|---------|----------|-------------|
+| `TRUSTED_PROXY_COUNT` | int | `0` | No | Number of trusted reverse proxies. `0` = ignore `X-Forwarded-For` (use socket IP). `1` = single proxy (e.g. Nginx), use rightmost XFF entry. Set to match your proxy stack. |
 | `GATEWAY_JWT_EXPIRE_SECONDS` | int | `3600` | No | Lifetime of gateway client JWTs issued by `POST /token/generate`. |
 | `GATEWAY_FIREWALL_DEFAULT_ALLOW` | bool | `True` | No | Default action when no firewall rule matches. (Firewall is currently always-allow.) |
 | `GATEWAY_ACCESS_LOG_BODY` | bool | `False` | No | When `True`, store `request_body`, `request_headers`, and `request_params` in `AccessRecord`. Increases storage usage. |
@@ -98,7 +99,7 @@ These control the connection pool for **external data sources** (not the app DB)
 
 | Variable | Type | Default | Required | Description |
 |----------|------|---------|----------|-------------|
-| `SCRIPT_EXEC_TIMEOUT` | int \| None | `None` | No | Maximum execution time (seconds) for Python script APIs. Uses `SIGALRM` — **Unix only** (no effect on Windows). |
+| `SCRIPT_EXEC_TIMEOUT` | int \| None | `None` | No | Maximum execution time (seconds) for Python script APIs. Thread-based timeout; works on all platforms. |
 | `SCRIPT_EXTRA_MODULES` | string | `""` | No | Comma-separated list of Python module names whitelisted for use in script APIs (e.g. `"pandas,numpy"`). Only top-level modules; submodules are not added. |
 
 ---

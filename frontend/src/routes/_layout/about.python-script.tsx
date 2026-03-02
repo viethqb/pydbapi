@@ -465,7 +465,7 @@ except Exception as e:
                 <li>No unrestricted imports (only whitelisted modules via SCRIPT_EXTRA_MODULES)</li>
                 <li>No dangerous operations (exec, eval, compile, etc.)</li>
                 <li>Safe built-ins: dict, list, str, int, float, bool, range, enumerate, zip, sorted, len, round, min, max, sum, abs, json.loads, json.dumps, datetime, date, time, timedelta</li>
-                <li>Optional timeout: SCRIPT_EXEC_TIMEOUT (seconds) uses SIGALRM on Unix to abort long-running scripts</li>
+                <li>Optional timeout: SCRIPT_EXEC_TIMEOUT (seconds) aborts long-running scripts on all platforms</li>
                 <li>Macro support: Python macros from Macro Defs (same module) are auto-prepended before your script</li>
               </ul>
             </div>

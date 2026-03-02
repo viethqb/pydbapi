@@ -7,11 +7,11 @@ Legacy migration: GET /api/token/generate?clientId=&secret= → { expireAt, toke
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, require_rate_limit
 from app.core.config import settings
 from app.core.security import TOKEN_TYPE_GATEWAY, create_access_token, verify_password
 from app.models_dbapi import AppClient
@@ -32,7 +32,11 @@ def _get_client_by_client_id(session: Session, client_id: str) -> AppClient | No
     return session.exec(stmt).first()
 
 
-@router.post("/generate", response_model=GatewayTokenResponse)
+@router.post(
+    "/generate",
+    response_model=GatewayTokenResponse,
+    dependencies=[Depends(require_rate_limit("token", settings.AUTH_RATE_LIMIT_TOKEN_GENERATE))],
+)
 async def token_generate(
     request: Request,
     session: SessionDep,
@@ -91,7 +95,11 @@ async def token_generate(
     )
 
 
-@router.get("/generate", response_model=GatewayTokenGenerateGetResponse)
+@router.get(
+    "/generate",
+    response_model=GatewayTokenGenerateGetResponse,
+    dependencies=[Depends(require_rate_limit("token", settings.AUTH_RATE_LIMIT_TOKEN_GENERATE))],
+)
 def token_generate_get(
     clientId: str,
     secret: str,

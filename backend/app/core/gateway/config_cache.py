@@ -59,7 +59,14 @@ def _local_set(api_assignment_id: UUID, config: dict[str, Any]) -> None:
             for k in expired:
                 _LOCAL_CACHE.pop(k, None)
             if len(_LOCAL_CACHE) >= _LOCAL_MAX_SIZE:
-                _LOCAL_CACHE.clear()
+                # Evict the 25% of entries closest to expiry instead of
+                # clearing everything (avoids thundering herd on Redis/DB).
+                evict_count = _LOCAL_MAX_SIZE // 4
+                by_expiry = sorted(
+                    _LOCAL_CACHE, key=lambda k: _LOCAL_CACHE[k][1]
+                )
+                for k in by_expiry[:evict_count]:
+                    _LOCAL_CACHE.pop(k, None)
         _LOCAL_CACHE[api_assignment_id] = (config, time.monotonic() + _LOCAL_TTL)
 
 
@@ -119,20 +126,6 @@ def invalidate_gateway_config(api_assignment_id: UUID) -> None:
         _LOG.debug("Cache invalidate failed for %s: %s", api_assignment_id, e)
 
 
-def _get_macro_content(m: ApiMacroDef, session: Session) -> str:
-    """Get macro content: published version snapshot. Macro must be published."""
-    if not m.published_version_id:
-        return ""
-    vc = session.exec(
-        select(MacroDefVersionCommit).where(
-            MacroDefVersionCommit.id == m.published_version_id
-        )
-    ).first()
-    if vc:
-        return vc.content_snapshot
-    return ""
-
-
 def _macro_referenced_in_content(macro_name: str, content: str) -> bool:
     """True if macro_name appears in content as a whole word (e.g. call or reference)."""
     if not content or not macro_name:
@@ -172,12 +165,23 @@ def load_macros_for_api(
             detail=f"Macro(s) must be published before use: {names}. Publish in API Dev > Macros.",
         )
 
+    published = [m for m in macros if getattr(m, "is_published", False)]
+
+    # Batch-fetch all macro version commits in a single query (avoids N+1).
+    version_ids = [m.published_version_id for m in published if m.published_version_id]
+    vc_map: dict[str, str] = {}
+    if version_ids:
+        vcs = session.exec(
+            select(MacroDefVersionCommit).where(
+                MacroDefVersionCommit.id.in_(version_ids)
+            )
+        ).all()
+        vc_map = {vc.id: vc.content_snapshot for vc in vcs if vc.content_snapshot}
+
     jinja_contents: list[str] = []
     python_contents: list[str] = []
-    for m in macros:
-        if not getattr(m, "is_published", False):
-            continue
-        content = _get_macro_content(m, session)
+    for m in published:
+        content = vc_map.get(m.published_version_id, "") if m.published_version_id else ""
         if not content:
             continue
         if m.macro_type == MacroTypeEnum.JINJA:

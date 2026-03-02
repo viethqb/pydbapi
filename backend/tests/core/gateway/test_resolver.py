@@ -1,8 +1,10 @@
 """Unit tests for gateway resolver: path_to_regex, resolve_gateway_api (Phase 4, Task 4.1)."""
 
+import pytest
 from sqlmodel import Session
 
 from app.core.gateway.resolver import (
+    invalidate_route_cache,
     path_to_regex,
     resolve_api_assignment,
     resolve_gateway_api,
@@ -13,6 +15,14 @@ from tests.utils.api_assignment import create_random_assignment
 from tests.utils.datasource import create_random_datasource
 from tests.utils.module import create_random_module
 from tests.utils.utils import random_lower_string
+
+
+@pytest.fixture(autouse=True)
+def _clear_route_cache() -> None:
+    """Invalidate route cache before each test so newly created APIs are resolved."""
+    invalidate_route_cache()
+    yield  # type: ignore[misc]
+    invalidate_route_cache()
 
 
 def test_path_to_regex_static() -> None:
@@ -138,19 +148,20 @@ def test_resolve_api_assignment_wrong_method(db: Session) -> None:
 
 
 def test_resolve_gateway_api_simple(db: Session) -> None:
-    """api.path='ping' -> resolve 'ping'. Module prefix is irrelevant to URL."""
+    """api.path='<unique>' -> resolve '<unique>'. Module prefix is irrelevant to URL."""
+    unique_path = f"ping-{random_lower_string()}"
     mod = create_random_module(db, path_prefix="/whatever", is_active=True)
     ds = create_random_datasource(db)
     a = create_random_assignment(
         db,
         module_id=mod.id,
-        path="ping",
+        path=unique_path,
         http_method=HttpMethodEnum.GET,
         datasource_id=ds.id,
         is_published=True,
         content="SELECT 1 as x",
     )
-    resolved = resolve_gateway_api("ping", "GET", db)
+    resolved = resolve_gateway_api(unique_path, "GET", db)
     assert resolved is not None
     api, params, m = resolved
     assert api.id == a.id
@@ -159,19 +170,21 @@ def test_resolve_gateway_api_simple(db: Session) -> None:
 
 
 def test_resolve_gateway_api_nested_path(db: Session) -> None:
-    """api.path='users/list' -> resolve 'users/list'. Module prefix NOT in URL."""
+    """api.path='<unique>/list' -> resolve correctly. Module prefix NOT in URL."""
+    seg = random_lower_string()
+    nested_path = f"{seg}/list"
     mod = create_random_module(db, path_prefix="/admin", is_active=True)
     ds = create_random_datasource(db)
     a = create_random_assignment(
         db,
         module_id=mod.id,
-        path="users/list",
+        path=nested_path,
         http_method=HttpMethodEnum.GET,
         datasource_id=ds.id,
         is_published=True,
         content="SELECT 1",
     )
-    resolved = resolve_gateway_api("users/list", "GET", db)
+    resolved = resolve_gateway_api(nested_path, "GET", db)
     assert resolved is not None
     api, params, m = resolved
     assert api.id == a.id
@@ -180,19 +193,21 @@ def test_resolve_gateway_api_nested_path(db: Session) -> None:
 
 
 def test_resolve_gateway_api_with_path_params(db: Session) -> None:
-    """api.path='users/{id}' -> resolve 'users/abc'."""
+    """api.path='<unique>/{id}' -> resolve '<unique>/abc'."""
+    seg = random_lower_string()
+    param_path = f"{seg}/{{id}}"
     mod = create_random_module(db, path_prefix="/some-group", is_active=True)
     ds = create_random_datasource(db)
     a = create_random_assignment(
         db,
         module_id=mod.id,
-        path="users/{id}",
+        path=param_path,
         http_method=HttpMethodEnum.GET,
         datasource_id=ds.id,
         is_published=True,
         content="SELECT 1",
     )
-    resolved = resolve_gateway_api("users/abc", "GET", db)
+    resolved = resolve_gateway_api(f"{seg}/abc", "GET", db)
     assert resolved is not None
     api, params, _ = resolved
     assert api.id == a.id
@@ -201,20 +216,21 @@ def test_resolve_gateway_api_with_path_params(db: Session) -> None:
 
 def test_resolve_gateway_api_not_found(db: Session) -> None:
     """No matching api.path -> None."""
-    assert resolve_gateway_api("nonexistent", "GET", db) is None
+    assert resolve_gateway_api(f"nonexistent-{random_lower_string()}", "GET", db) is None
 
 
 def test_resolve_gateway_api_inactive_module(db: Session) -> None:
     """Inactive module -> not resolved even if api.path matches."""
+    unique_path = f"hidden-ping-{random_lower_string()}"
     mod = create_random_module(db, path_prefix="/hidden", is_active=False)
     ds = create_random_datasource(db)
     create_random_assignment(
         db,
         module_id=mod.id,
-        path="ping",
+        path=unique_path,
         http_method=HttpMethodEnum.GET,
         datasource_id=ds.id,
         is_published=True,
         content="SELECT 1",
     )
-    assert resolve_gateway_api("ping", "GET", db) is None
+    assert resolve_gateway_api(unique_path, "GET", db) is None

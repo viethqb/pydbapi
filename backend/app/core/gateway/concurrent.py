@@ -25,18 +25,35 @@ _memory: dict[str, int] = {}
 _memory_lock = threading.Lock()
 
 
+_ACQUIRE_SCRIPT = """\
+local key = KEYS[1]
+local max = tonumber(ARGV[1])
+local ttl = tonumber(ARGV[2])
+
+local n = tonumber(redis.call('GET', key) or '0')
+if n >= max then
+    return 0
+end
+redis.call('INCR', key)
+redis.call('EXPIRE', key, ttl)
+return 1
+"""
+_acquire_sha: str | None = None
+
+
 def _acquire_redis(key: str, max_concurrent: int, r: "redis.Redis") -> bool:  # type: ignore[name-defined]
+    global _acquire_sha
     k = _CONCURRENT_KEY_PREFIX + key
     try:
-        pipe = r.pipeline(transaction=True)
-        pipe.incr(k)
-        pipe.expire(k, _KEY_TTL_SECONDS)
-        results = pipe.execute()
-        n = results[0]
-        if n > max_concurrent:
-            r.decr(k)
-            return False
-        return True
+        if _acquire_sha is None:
+            _acquire_sha = r.script_load(_ACQUIRE_SCRIPT)
+        try:
+            result = r.evalsha(_acquire_sha, 1, k, max_concurrent, _KEY_TTL_SECONDS)
+        except Exception:
+            # Script evicted from cache; reload once
+            _acquire_sha = r.script_load(_ACQUIRE_SCRIPT)
+            result = r.evalsha(_acquire_sha, 1, k, max_concurrent, _KEY_TTL_SECONDS)
+        return result == 1
     except Exception:
         return True  # on Redis error: allow (fail-open)
 
@@ -76,7 +93,7 @@ def acquire_concurrent_slot(
     - max_concurrent_override: per-client limit (e.g. from AppClient.max_concurrent). If set and > 0, use it; else use global FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT.
     - If effective limit <= 0: no limit (always True).
     - Empty/invalid client_key: allow (True).
-    - Redis: pipelined INCR+EXPIRE; if over limit, DECR and return False.
+    - Redis: atomic check-and-increment via Lua script (single round-trip).
     - On Redis error: allow (fail-open).
     - In-memory fallback when Redis unavailable; not shared across processes.
     """
@@ -97,7 +114,7 @@ def acquire_concurrent_slot(
             f"[concurrent] no limit max_c={max_c} override={max_concurrent_override} "
             f"global={global_max} client_key={ck_short}"
         )
-        _LOG.info(msg)
+        _LOG.debug(msg)
         if _CONCURRENT_DEBUG:
             print(msg, flush=True)
         return True

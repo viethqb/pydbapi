@@ -1,25 +1,12 @@
 """Unit tests for gateway auth: verify_gateway_client (Phase 4, Task 4.2a)."""
 
 from datetime import timedelta
-from unittest.mock import Mock
 
 from sqlmodel import Session
 
 from app.core.security import TOKEN_TYPE_DASHBOARD, TOKEN_TYPE_GATEWAY, create_access_token
 from app.core.gateway.auth import verify_gateway_client
 from tests.utils.client import create_random_client
-
-
-def _mock_request(
-    authorization: str | None = None, x_api_key: str | None = None
-) -> Mock:
-    m = Mock()
-    m.headers = {}
-    if authorization is not None:
-        m.headers["Authorization"] = authorization
-    if x_api_key is not None:
-        m.headers["X-API-Key"] = x_api_key
-    return m
 
 
 def test_verify_gateway_client_bearer(db: Session) -> None:
@@ -30,9 +17,7 @@ def test_verify_gateway_client_bearer(db: Session) -> None:
         expires_delta=timedelta(seconds=3600),
         token_type=TOKEN_TYPE_GATEWAY,
     )
-    request = _mock_request(authorization=f"Bearer {token}")
-
-    out = verify_gateway_client(request, db)
+    out = verify_gateway_client(f"Bearer {token}", db)
     assert out is not None
     assert out.client_id == c.client_id
     assert out.id == c.id
@@ -46,9 +31,7 @@ def test_verify_gateway_client_raw_token(db: Session) -> None:
         expires_delta=timedelta(seconds=3600),
         token_type=TOKEN_TYPE_GATEWAY,
     )
-    request = _mock_request(authorization=token)
-
-    out = verify_gateway_client(request, db)
+    out = verify_gateway_client(token, db)
     assert out is not None
     assert out.client_id == c.client_id
     assert out.id == c.id
@@ -62,7 +45,17 @@ def test_verify_gateway_client_rejects_dashboard_token(db: Session) -> None:
         expires_delta=timedelta(seconds=3600),
         token_type=TOKEN_TYPE_DASHBOARD,
     )
-    request = _mock_request(authorization=f"Bearer {token}")
+    out = verify_gateway_client(f"Bearer {token}", db)
+    assert out is None
 
-    out = verify_gateway_client(request, db)
+
+def test_verify_gateway_client_empty_header(db: Session) -> None:
+    """Empty auth header returns None."""
+    out = verify_gateway_client("", db)
+    assert out is None
+
+
+def test_verify_gateway_client_none_header(db: Session) -> None:
+    """None auth header returns None."""
+    out = verify_gateway_client("", db)
     assert out is None

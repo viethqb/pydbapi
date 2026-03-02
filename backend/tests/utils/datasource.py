@@ -3,6 +3,7 @@
 from sqlmodel import Session
 
 from app.core.config import settings
+from app.core.security import encrypt_value
 from app.models_dbapi import DataSource, ProductTypeEnum
 from tests.utils.utils import random_lower_string
 
@@ -19,7 +20,12 @@ def create_random_datasource(
     password: str | None = None,
     is_active: bool = True,
 ) -> DataSource:
-    """Create a DataSource in the DB. Uses app Postgres settings by default so test/test and preTest can connect."""
+    """Create a DataSource in the DB. Uses app Postgres settings by default so test/test and preTest can connect.
+
+    Passwords are encrypted with Fernet (same as the management API) so that
+    ``connect()`` / ``decrypt_value()`` works correctly in integration tests.
+    """
+    raw_pw = password or settings.POSTGRES_PASSWORD
     ds = DataSource(
         name=name or f"ds-{random_lower_string()}",
         product_type=product_type,
@@ -27,7 +33,7 @@ def create_random_datasource(
         port=port or settings.POSTGRES_PORT,
         database=database or settings.POSTGRES_DB,
         username=username or settings.POSTGRES_USER,
-        password=password or settings.POSTGRES_PASSWORD,
+        password=encrypt_value(raw_pw),
         is_active=is_active,
     )
     db.add(ds)

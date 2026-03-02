@@ -13,7 +13,7 @@ Order of steps (and status codes when a step fails):
 
 | Step | Action | On failure |
 |------|--------|------------|
-| 1 | **Client IP** from `X-Forwarded-For` (rightmost) or `request.client.host` | — |
+| 1 | **Client IP** from `X-Forwarded-For` (if `TRUSTED_PROXY_COUNT > 0`) or `request.client.host` | — |
 | 2 | **Firewall** `check_firewall(ip, session)` | 403 Forbidden |
 | 3 | **Resolve** `resolve_gateway_api(path, method, session)` → (ApiAssignment, path_params, ApiModule); path + HTTP method are unique globally | 404 Not Found |
 | 4 | **Access type** If API is **private**, require auth | — |
@@ -184,7 +184,7 @@ After `parse_params`, the runner:
 - **Sandbox:** RestrictedPython. Script cannot arbitrarily `import`; only names injected into globals are available.
 - **Context (injected):** `db` (query, query_one, execute), `req` (merged params), `ds` (datasource metadata: id, name, product_type, host, port, database), `http`, `cache`, `env`, `log`, `tx` (transaction: begin, commit, rollback). Script must set `result`; that value is returned.
 - **Extra modules:** `SCRIPT_EXTRA_MODULES` (comma-separated) whitelist. Only top-level names matching `^[a-zA-Z_][a-zA-Z0-9_]*$` are imported and injected (e.g. `pandas`, `numpy`). Submodules are not added via this setting.
-- **Timeout:** `SCRIPT_EXEC_TIMEOUT` (seconds). On Unix, `signal.SIGALRM` raises `ScriptTimeoutError` after N seconds. On Windows (no SIGALRM), timeout is not applied.
+- **Timeout:** `SCRIPT_EXEC_TIMEOUT` (seconds). Raises `ScriptTimeoutError` after N seconds using a thread-based mechanism (works on all platforms).
 - **Connection:** One connection per script run (or shared with `tx` if in transaction). `release_script_connection()` called in finally. Optional `close_connection_after_execute` for drivers that need a fresh connection per request.
 
 ---

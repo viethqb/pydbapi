@@ -12,8 +12,9 @@ from sqlmodel import Session
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
+from app.core.gateway.ratelimit import check_rate_limit
 from app.core.permission import has_permission
-from app.core.security import TOKEN_TYPE_GATEWAY
+from app.core.security import TOKEN_TYPE_DASHBOARD, TOKEN_TYPE_GATEWAY
 from app.models import TokenPayload, User
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 
@@ -42,10 +43,11 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    if payload.get("type") == TOKEN_TYPE_GATEWAY:
+    token_type = payload.get("type")
+    if token_type != TOKEN_TYPE_DASHBOARD:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Gateway tokens cannot access management API",
+            detail="Only dashboard tokens can access management API",
         )
     user = session.get(User, token_data.sub)
     if not user:
@@ -132,6 +134,42 @@ def require_permission_for_resource(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Permission required: {resource_type}.{action}",
         )
+
+    return _dependency
+
+
+def _get_request_ip(request: Request) -> str:
+    """Extract client IP respecting ``TRUSTED_PROXY_COUNT``.
+
+    When ``TRUSTED_PROXY_COUNT`` is 0 (default) X-Forwarded-For is ignored
+    to prevent IP spoofing.  When set to N, the Nth entry from the right
+    of the XFF header is used (each trusted proxy appends one entry).
+    """
+    n = settings.TRUSTED_PROXY_COUNT
+    if n > 0:
+        xff = request.headers.get("x-forwarded-for")
+        if xff:
+            parts = [p.strip() for p in xff.split(",") if p.strip()]
+            if parts:
+                idx = max(len(parts) - n, 0)
+                return parts[idx]
+    return getattr(getattr(request, "client", None), "host", None) or "0.0.0.0"
+
+
+def require_rate_limit(key_prefix: str, limit: int) -> Callable[..., None]:
+    """
+    Dependency factory: rate-limit by client IP using the gateway sliding-window limiter.
+
+    Usage: ``dependencies=[Depends(require_rate_limit("login", settings.AUTH_RATE_LIMIT_LOGIN))]``
+    """
+
+    def _dependency(request: Request) -> None:
+        ip = _get_request_ip(request)
+        if not check_rate_limit(f"auth:{key_prefix}:{ip}", limit):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests. Please try again later.",
+            )
 
     return _dependency
 

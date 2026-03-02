@@ -23,7 +23,7 @@ def test_get_types(
     response = client.get(f"{_base()}/types", headers=superuser_token_headers)
     assert response.status_code == 200
     data = response.json()
-    assert data == ["postgres", "mysql"]
+    assert data == ["postgres", "mysql", "trino"]
 
 
 def test_get_types_unauthorized(client: TestClient) -> None:

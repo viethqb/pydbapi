@@ -62,9 +62,15 @@ class PoolManager:
             except Exception:
                 self._close_quiet(entry.conn)
                 continue
-            return entry.conn
+            # Stamp the original created_at on the connection so release()
+            # can preserve it when returning to the pool.
+            conn = entry.conn
+            conn._pool_created_at = entry.created_at  # type: ignore[attr-defined]
+            return conn
 
-        return connect(datasource)
+        conn = connect(datasource)
+        conn._pool_created_at = time.monotonic()  # type: ignore[attr-defined]
+        return conn
 
     def release(self, conn: Any, datasource_id: uuid.UUID) -> None:
         """Return a connection to the pool (or close it if pool is full)."""
@@ -74,11 +80,14 @@ class PoolManager:
             self._close_quiet(conn)
             return
 
+        now = time.monotonic()
+        # Preserve original created_at so max-age eviction works correctly.
+        created_at = getattr(conn, "_pool_created_at", now)
+
         with self._lock:
             pool = self._pools.setdefault(datasource_id, [])
             if len(pool) < self._pool_size:
-                now = time.monotonic()
-                pool.append(_PoolEntry(conn=conn, created_at=now, last_used=now))
+                pool.append(_PoolEntry(conn=conn, created_at=created_at, last_used=now))
                 return
 
         self._close_quiet(conn)

@@ -7,6 +7,7 @@ When use_starrocks_audit is True and datasource is MySQL, writes go to
 starrocks_audit_db__.pydbapi_access_log_tbl__ via starrocks_audit module.
 """
 
+import threading
 from typing import Any
 from urllib.parse import quote_plus
 from uuid import UUID
@@ -15,6 +16,7 @@ from sqlalchemy import create_engine
 from sqlmodel import Session, select
 
 from app.core.db import engine as main_engine
+from app.core.security import decrypt_value
 from app.models_dbapi import (
     ACCESS_LOG_CONFIG_ROW_ID,
     AccessLogConfig,
@@ -30,7 +32,8 @@ def _build_database_url(datasource: DataSource) -> str:
     if isinstance(pt, str):
         pt = ProductTypeEnum(pt)
     user = quote_plus(datasource.username)
-    password = quote_plus(datasource.password or "")
+    raw_password = datasource.password or ""
+    password = quote_plus(decrypt_value(raw_password) if raw_password else "")
     host = datasource.host
     port = datasource.port or (5432 if pt == ProductTypeEnum.POSTGRES else 3306)
     database = datasource.database or ""
@@ -43,28 +46,41 @@ def _build_database_url(datasource: DataSource) -> str:
 
 # Cache engine by datasource_id so we don't create a new engine per request.
 _log_engine_cache: dict[str, Any] = {}
+_log_engine_lock = threading.Lock()
 
 
 def get_log_engine(datasource: DataSource):
     """Get or create SQLAlchemy engine for the given DataSource (cached)."""
     key = str(datasource.id)
-    if key not in _log_engine_cache:
-        url = _build_database_url(datasource)
-        _log_engine_cache[key] = create_engine(
-            url,
-            pool_pre_ping=True,
-            pool_size=2,
-            max_overflow=2,
-        )
-    return _log_engine_cache[key]
+    with _log_engine_lock:
+        eng = _log_engine_cache.get(key)
+        if eng is not None:
+            return eng
+    # Build engine outside the lock (expensive I/O)
+    url = _build_database_url(datasource)
+    new_eng = create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=2,
+        max_overflow=2,
+    )
+    with _log_engine_lock:
+        # Another thread may have created one while we were building
+        eng = _log_engine_cache.get(key)
+        if eng is not None:
+            new_eng.dispose()
+            return eng
+        _log_engine_cache[key] = new_eng
+        return new_eng
 
 
 def clear_log_engine_cache(datasource_id: str | None = None) -> None:
     """Clear cached log engine(s). Call when access log config changes."""
-    if datasource_id is None:
-        _log_engine_cache.clear()
-    else:
-        _log_engine_cache.pop(datasource_id, None)
+    with _log_engine_lock:
+        if datasource_id is None:
+            _log_engine_cache.clear()
+        else:
+            _log_engine_cache.pop(datasource_id, None)
 
 
 def get_log_session_context(main_session: Session) -> Session:

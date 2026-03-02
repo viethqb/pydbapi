@@ -74,7 +74,7 @@ This document describes the **end-to-end flow** and **features** of the tool.
 - **Script engine (Python)**:
   - **RestrictedPython** sandbox: no arbitrary `import`; only whitelisted modules (e.g. `pandas`, `numpy`) via `SCRIPT_EXTRA_MODULES`.
   - **Context**: `db`, `http`, `cache`, `env`, `log`, `req`, `tx`, `ds` (request params, transaction, datasource info).
-  - **Timeout**: `SCRIPT_EXEC_TIMEOUT` (SIGALRM on Unix; not on Windows).
+  - **Timeout**: `SCRIPT_EXEC_TIMEOUT` (thread-based; works on all platforms).
 - **Parameters**: name, location (query / header / body), data type, required, validation (regex or Python). Merged and passed to SQL as template variables or to script as `req`.
 - **Result transform**: optional post-processing of the result (e.g. rename keys, shape) before returning.
 - **Macro definitions**: reusable SQL/text snippets referenced in SQL templates.
@@ -121,7 +121,7 @@ This document describes the **end-to-end flow** and **features** of the tool.
 | `REDIS_URL` / `REDIS_HOST`, `REDIS_PORT`, etc. | Redis for cache, rate limit, concurrent limit (optional; in-memory fallback). |
 | `FLOW_CONTROL_RATE_LIMIT_ENABLED`, `FLOW_CONTROL_RATE_LIMIT_PER_MINUTE` | Gateway rate limiting. |
 | `FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT` | Default max concurrent requests per client (0 = no limit). |
-| `SCRIPT_EXEC_TIMEOUT` | Script engine timeout in seconds (Unix only; SIGALRM). |
+| `SCRIPT_EXEC_TIMEOUT` | Script engine timeout in seconds (all platforms). |
 | `SCRIPT_EXTRA_MODULES` | Comma-separated whitelist of modules for scripts (e.g. `pandas,numpy`). |
 | `GATEWAY_ACCESS_LOG_BODY` | Whether to store request body in access records. |
 | `EXTERNAL_DB_POOL_SIZE`, `EXTERNAL_DB_STATEMENT_TIMEOUT` | Data source connection pool. |

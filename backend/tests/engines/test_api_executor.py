@@ -45,7 +45,7 @@ def test_api_executor_sql_returns_data(
 
     assert out == {"data": [[{"n": 1}, {"n": 2}]]}
     mock_engine_cls.return_value.render.assert_called_once_with("SELECT 1 AS n", {"x": 1})
-    mock_execute_sql.assert_called_once_with(ds, "SELECT 1 AS n")
+    mock_execute_sql.assert_called_once_with(ds, "SELECT 1 AS n", use_pool=True)
 
 
 @patch("app.engines.executor.execute_sql")
@@ -93,7 +93,7 @@ def test_api_executor_sql_loads_datasource_from_session(
     assert out == {"data": [[]]}
     mock_session.get.assert_called_once()
     assert mock_session.get.call_args[0][1] == ds.id
-    mock_execute_sql.assert_called_once_with(ds, "SELECT 1")
+    mock_execute_sql.assert_called_once_with(ds, "SELECT 1", use_pool=True)
 
 
 # --- SCRIPT engine ---

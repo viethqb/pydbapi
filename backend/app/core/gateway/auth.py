@@ -13,7 +13,6 @@ import time
 from uuid import UUID
 
 import jwt
-from fastapi import Request
 from jwt.exceptions import InvalidTokenError
 from sqlmodel import Session, select
 
@@ -60,17 +59,19 @@ def _get_client_by_client_id(session: Session, client_id: str) -> AppClient | No
     return client
 
 
-def verify_gateway_client(request: Request, session: Session) -> AppClient | None:
+def verify_gateway_client(auth_header: str, session: Session) -> AppClient | None:
     """
     Authenticate Gateway request. Supports:
     - Authorization: Bearer <token> (JWT)
     - Authorization: <token> (raw token, legacy migration)
 
+    *auth_header*: the raw ``Authorization`` header value.
+
     JWT is obtained from POST /api/token/generate or GET /api/token/generate?clientId=&secret=.
 
     Returns AppClient or None.
     """
-    auth = (request.headers.get("Authorization") or "").strip()
+    auth = (auth_header or "").strip()
     if not auth:
         return None
 

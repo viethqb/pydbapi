@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.api.main import api_router
 from app.api.routes.gateway import router as gateway_router
@@ -22,11 +23,13 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
 
+_enable_docs = settings.ENVIRONMENT != "production"
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json" if _enable_docs else None,
+    docs_url="/api/docs" if _enable_docs else None,
+    redoc_url="/api/redoc" if _enable_docs else None,
     generate_unique_id_function=custom_generate_unique_id,
 )
 
@@ -67,6 +70,42 @@ async def unhandled_exception_handler(
         content={"detail": detail},
     )
 
+
+# ---------------------------------------------------------------------------
+# Security headers middleware
+# ---------------------------------------------------------------------------
+
+_SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
+    (b"x-content-type-options", b"nosniff"),
+    (b"x-frame-options", b"DENY"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    (b"permissions-policy", b"geolocation=(), camera=(), microphone=()"),
+    (b"x-permitted-cross-domain-policies", b"none"),
+]
+
+
+class SecurityHeadersMiddleware:
+    """Inject standard security headers into every response."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def _send(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.extend(_SECURITY_HEADERS)
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, _send)
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:

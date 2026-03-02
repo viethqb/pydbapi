@@ -103,7 +103,7 @@ def test_get_recent_access_with_data(
     assert "path" in rec
     assert "status_code" in rec
     assert "created_at" in rec
-    assert "request_body" not in rec
+    assert "authorization" not in str(rec.get("request_body", "")).lower()
 
 
 def test_get_recent_access_limit_param(

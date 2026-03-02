@@ -824,7 +824,10 @@ def create_version(
     body: VersionCommitCreate,
 ) -> Any:
     """Create a new version snapshot for the API (content + params + validations + transform)."""
-    a = session.get(ApiAssignment, id)
+    # Lock the parent row to serialize concurrent version creation
+    a = session.exec(
+        select(ApiAssignment).where(ApiAssignment.id == id).with_for_update()
+    ).first()
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
 
@@ -839,7 +842,7 @@ def create_version(
             detail="API has no content to version. Please add content first.",
         )
 
-    # Get the next version number
+    # Get the next version number (safe: parent row is locked)
     max_version = (
         session.exec(
             select(func.max(VersionCommit.version)).where(
@@ -894,16 +897,23 @@ def list_versions(
     session: SessionDep,
     current_user: CurrentUser,  # noqa: ARG001
     id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
 ) -> Any:
-    """List all versions for an API assignment."""
+    """List versions for an API assignment (paginated)."""
     a = session.get(ApiAssignment, id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
+
+    limit = min(max(limit, 1), 500)
+    skip = max(skip, 0)
 
     versions = session.exec(
         select(VersionCommit)
         .where(VersionCommit.api_assignment_id == id)
         .order_by(VersionCommit.version.desc())
+        .offset(skip)
+        .limit(limit)
     ).all()
 
     # Get user emails for all committed_by_ids

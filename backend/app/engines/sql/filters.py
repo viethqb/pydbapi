@@ -158,7 +158,8 @@ def sql_like(value: Any) -> SqlSafe:
     """
     if value is None:
         return _safe("NULL")
-    return _safe(f"'{_escape_like(str(value))}'")
+    s = str(value).translate(_SQL_QUOTE_ESCAPE)
+    return _safe(f"'{_escape_like(s)}'")
 
 
 def sql_like_start(value: Any) -> SqlSafe:
@@ -167,7 +168,8 @@ def sql_like_start(value: Any) -> SqlSafe:
     """
     if value is None:
         return _safe("NULL")
-    return _safe(f"'{_escape_like(str(value))}%'")
+    s = str(value).translate(_SQL_QUOTE_ESCAPE)
+    return _safe(f"'{_escape_like(s)}%'")
 
 
 def sql_like_end(value: Any) -> SqlSafe:
@@ -176,7 +178,8 @@ def sql_like_end(value: Any) -> SqlSafe:
     """
     if value is None:
         return _safe("NULL")
-    return _safe(f"'%{_escape_like(str(value))}'")
+    s = str(value).translate(_SQL_QUOTE_ESCAPE)
+    return _safe(f"'%{_escape_like(s)}'")
 
 
 def _json_filter(value: Any) -> SqlSafe:

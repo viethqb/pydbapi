@@ -76,7 +76,7 @@ Nevertheless, if it doesn't detect a change but a syntax error, it will just sto
 For the Script Engine (Python), optional environment variables:
 
 - **SCRIPT_EXTRA_MODULES**: Comma-separated whitelist of modules (e.g. `pandas,numpy`) injected into script globals; script cannot `import` arbitrarily.
-- **SCRIPT_EXEC_TIMEOUT**: Max execution time in seconds; uses `signal.SIGALRM` on Unix (not applied on Windows).
+- **SCRIPT_EXEC_TIMEOUT**: Max execution time in seconds; thread-based timeout (works on all platforms).
 
 See [../docs/OVERVIEW.md](../docs/OVERVIEW.md) for configuration and feature overview.
 

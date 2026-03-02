@@ -17,24 +17,26 @@ import hashlib
 import threading
 from collections import OrderedDict
 
-from jinja2 import Environment, Template, TemplateError, TemplateSyntaxError, UndefinedError, meta
+from jinja2 import Template, TemplateError, TemplateSyntaxError, UndefinedError, meta
+from jinja2.sandbox import SandboxedEnvironment
 
+from app.core.config import settings
 from app.engines.sql.extensions import SQL_EXTENSIONS
 from app.engines.sql.filters import SQL_FILTERS, sql_finalize
 
-_SQL_ENV: Environment | None = None
+_SQL_ENV: SandboxedEnvironment | None = None
 
 _CACHE_MAX_SIZE = 512
 _template_cache: OrderedDict[str, Template] = OrderedDict()
 _cache_lock = threading.Lock()
 
 
-def _get_sql_env() -> Environment:
-    """Return the shared Jinja2 Environment for SQL (filters, extensions,
-    sql_finalize auto-escape)."""
+def _get_sql_env() -> SandboxedEnvironment:
+    """Return the shared Jinja2 SandboxedEnvironment for SQL (filters,
+    extensions, sql_finalize auto-escape)."""
     global _SQL_ENV
     if _SQL_ENV is None:
-        _SQL_ENV = Environment(
+        _SQL_ENV = SandboxedEnvironment(
             autoescape=False,
             extensions=SQL_EXTENSIONS,
             finalize=sql_finalize,
@@ -43,7 +45,7 @@ def _get_sql_env() -> Environment:
     return _SQL_ENV
 
 
-def _compile_cached(env: Environment, source: str) -> Template:
+def _compile_cached(env: SandboxedEnvironment, source: str) -> Template:
     """Return a compiled ``Template`` from cache or compile & cache it."""
     key = hashlib.md5(source.encode(), usedforsecurity=False).hexdigest()
     with _cache_lock:
@@ -64,10 +66,25 @@ class SQLTemplateEngine:
 
     def render(self, template: str, params: dict) -> str:
         """Render *template* with *params* to a final SQL string."""
+        max_src = settings.SQL_TEMPLATE_MAX_SIZE
+        if max_src and len(template) > max_src:
+            raise ValueError(
+                f"SQL template too large ({len(template)} bytes, "
+                f"limit {max_src}). Reduce template size or raise "
+                f"SQL_TEMPLATE_MAX_SIZE."
+            )
         env = _get_sql_env()
         try:
             t = _compile_cached(env, template)
-            return t.render(**params)
+            rendered = t.render(**params)
+            max_out = settings.SQL_RENDERED_MAX_SIZE
+            if max_out and len(rendered) > max_out:
+                raise ValueError(
+                    f"Rendered SQL too large ({len(rendered)} bytes, "
+                    f"limit {max_out}). Simplify query or raise "
+                    f"SQL_RENDERED_MAX_SIZE."
+                )
+            return rendered
         except TemplateSyntaxError as e:
             snippet = template[:500] + "..." if len(template) > 500 else template
             hint = (

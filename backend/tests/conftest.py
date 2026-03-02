@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,10 +14,16 @@ from app.models_dbapi import (
     ApiModule,
     AppClient,
     DataSource,
-    UnifyAlarm,
 )
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import get_superuser_token_headers
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _disable_rate_limiting():
+    """Disable rate limiting during tests so login calls don't get 429."""
+    with patch.object(settings, "FLOW_CONTROL_RATE_LIMIT_ENABLED", False):
+        yield
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -33,8 +40,6 @@ def db() -> Generator[Session, None, None]:
         statement = delete(ApiGroup)
         session.execute(statement)
         statement = delete(AppClient)
-        session.execute(statement)
-        statement = delete(UnifyAlarm)
         session.execute(statement)
         session.commit()
 

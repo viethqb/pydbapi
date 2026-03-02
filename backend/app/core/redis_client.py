@@ -69,7 +69,10 @@ def _create_client(*, decode_responses: bool) -> "redis.Redis | None":
         return None
     try:
         r = redis.Redis.from_url(
-            settings.redis_url, decode_responses=decode_responses
+            settings.redis_url,
+            decode_responses=decode_responses,
+            socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+            socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
         )
         r.ping()
         return r

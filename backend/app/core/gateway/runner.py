@@ -138,8 +138,13 @@ def run(
     request_headers: str | None = None,
     request_params: str | None = None,
     gateway_start_time: float | None = None,
+    config: dict | None = None,
 ) -> dict:
-    """Load ApiContext (from cache or DB), run ApiExecutor, write AccessRecord.
+    """Run ApiExecutor with cached config, write AccessRecord.
+
+    *config* is the gateway config dict (content, params, macros, etc.).
+    When supplied (by the gateway pipeline), the cache lookup is skipped.
+    When ``None``, falls back to ``get_or_load_gateway_config``.
 
     Returns result dict from executor.
     When gateway_start_time is set, duration_ms is from that time (gateway entry) to log write.
@@ -156,7 +161,8 @@ def run(
         request_params=request_params,
     )
 
-    config = get_or_load_gateway_config(api, session)
+    if config is None:
+        config = get_or_load_gateway_config(api, session)
     if not config:
         log_ctx.write(500, duration_ms=int((time.perf_counter() - start) * 1000))
         raise RuntimeError("ApiContext not found for ApiAssignment")

@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.models_dbapi import ExecuteEngineEnum, HttpMethodEnum
 from tests.utils.api_assignment import create_random_assignment
+from tests.utils.datasource import create_random_datasource
 from tests.utils.module import create_random_module
+from tests.utils.utils import random_lower_string
 
 
 def _base() -> str:
@@ -80,10 +82,13 @@ def test_create_api_assignment(
     client: TestClient, superuser_token_headers: dict[str, str], db
 ) -> None:
     m = create_random_module(db, name="mod-for-api")
+    ds = create_random_datasource(db)
+    unique_path = f"users-{random_lower_string()}"
     payload = {
         "module_id": str(m.id),
+        "datasource_id": str(ds.id),
         "name": "new-api",
-        "path": "users",
+        "path": unique_path,
         "http_method": HttpMethodEnum.GET.value,
         "execute_engine": ExecuteEngineEnum.SQL.value,
         "description": "Fetch users",
@@ -99,7 +104,7 @@ def test_create_api_assignment(
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "new-api"
-    assert data["path"] == "users"
+    assert data["path"] == unique_path
     assert data["is_published"] is False
     assert "id" in data
 
@@ -108,10 +113,13 @@ def test_create_api_assignment_with_content(
     client: TestClient, superuser_token_headers: dict[str, str], db
 ) -> None:
     m = create_random_module(db, name="mod-ctx")
+    ds = create_random_datasource(db)
+    unique_path = f"test-{random_lower_string()}"
     payload = {
         "module_id": str(m.id),
+        "datasource_id": str(ds.id),
         "name": "api-with-ctx",
-        "path": "test",
+        "path": unique_path,
         "http_method": HttpMethodEnum.POST.value,
         "execute_engine": ExecuteEngineEnum.SQL.value,
         "content": "SELECT * FROM t",
@@ -156,16 +164,19 @@ def test_create_api_assignment_unauthorized(client: TestClient, db) -> None:
 def test_update_api_assignment(
     client: TestClient, superuser_token_headers: dict[str, str], db
 ) -> None:
-    a = create_random_assignment(db, name="before", path="old")
+    old_path = f"old-{random_lower_string()}"
+    new_path = f"new-{random_lower_string()}"
+    ds = create_random_datasource(db)
+    a = create_random_assignment(db, name="before", path=old_path, datasource_id=ds.id)
     response = client.post(
         f"{_base()}/update",
         headers=superuser_token_headers,
-        json={"id": str(a.id), "name": "after", "path": "new", "description": "updated"},
+        json={"id": str(a.id), "name": "after", "path": new_path, "description": "updated"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "after"
-    assert data["path"] == "new"
+    assert data["path"] == new_path
     assert data["description"] == "updated"
 
 
@@ -246,11 +257,25 @@ def test_get_api_assignment_not_found(
 def test_publish_api_assignment(
     client: TestClient, superuser_token_headers: dict[str, str], db
 ) -> None:
-    a = create_random_assignment(db, name="to-publish", is_published=False)
+    from app.models_dbapi import VersionCommit
+
+    a = create_random_assignment(
+        db, name="to-publish", is_published=False, content="SELECT 1"
+    )
+    # Create a version commit (required for publish)
+    v = VersionCommit(
+        api_assignment_id=a.id,
+        version=1,
+        content_snapshot="SELECT 1",
+    )
+    db.add(v)
+    db.commit()
+    db.refresh(v)
+
     response = client.post(
         f"{_base()}/publish",
         headers=superuser_token_headers,
-        json={"id": str(a.id)},
+        json={"id": str(a.id), "version_id": str(v.id)},
     )
     assert response.status_code == 200
     data = response.json()
@@ -282,7 +307,7 @@ def test_debug_api_assignment_missing_datasource_id_returns_400(
         json={"content": "SELECT 1", "execute_engine": "SQL"},
     )
     assert response.status_code == 400
-    assert "datasource_id" in response.json()["detail"]
+    assert "datasource_id" in response.json()["message"]
 
 
 def test_debug_api_assignment_missing_content_or_id_returns_400(
@@ -295,7 +320,7 @@ def test_debug_api_assignment_missing_content_or_id_returns_400(
         json={"execute_engine": "SQL", "datasource_id": "00000000-0000-0000-0000-000000000001"},
     )
     assert response.status_code == 400
-    assert "id or content" in response.json()["detail"]
+    assert "id or content" in response.json()["message"]
 
 
 def test_debug_api_assignment_by_id_not_found_returns_404(
@@ -307,4 +332,4 @@ def test_debug_api_assignment_by_id_not_found_returns_404(
         json={"id": str(uuid.uuid4())},
     )
     assert response.status_code == 404
-    assert "ApiAssignment not found" in response.json()["detail"]
+    assert "ApiAssignment not found" in response.json()["message"]

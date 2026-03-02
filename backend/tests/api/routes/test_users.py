@@ -105,12 +105,12 @@ def test_get_existing_user_current_user(client: TestClient, db: Session) -> None
 def test_get_existing_user_permissions_error(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
+    """Non-existent user returns 404 (checked before permission)."""
     r = client.get(
         f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
         headers=normal_user_token_headers,
     )
-    assert r.status_code == 403
-    assert r.json() == {"detail": "The user doesn't have enough privileges"}
+    assert r.status_code == 404
 
 
 def test_create_user_existing_username(
@@ -283,6 +283,7 @@ def test_update_password_me_same_password_error(
 
 
 def test_register_user(client: TestClient, db: Session) -> None:
+    """Public signup is disabled; always returns 403."""
     username = random_email()
     password = random_lower_string()
     full_name = random_lower_string()
@@ -291,20 +292,12 @@ def test_register_user(client: TestClient, db: Session) -> None:
         f"{settings.API_V1_STR}/users/signup",
         json=data,
     )
-    assert r.status_code == 200
-    created_user = r.json()
-    assert created_user["email"] == username
-    assert created_user["full_name"] == full_name
-
-    user_query = select(User).where(User.email == username)
-    user_db = db.exec(user_query).first()
-    assert user_db
-    assert user_db.email == username
-    assert user_db.full_name == full_name
-    assert verify_password(password, user_db.hashed_password)
+    assert r.status_code == 403
+    assert "disabled" in r.json()["detail"].lower()
 
 
 def test_register_user_already_exists_error(client: TestClient) -> None:
+    """Public signup is disabled; always returns 403 regardless of existing email."""
     password = random_lower_string()
     full_name = random_lower_string()
     data = {
@@ -316,8 +309,7 @@ def test_register_user_already_exists_error(client: TestClient) -> None:
         f"{settings.API_V1_STR}/users/signup",
         json=data,
     )
-    assert r.status_code == 400
-    assert r.json()["detail"] == "The user with this email already exists in the system"
+    assert r.status_code == 403
 
 
 def test_update_user(

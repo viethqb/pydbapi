@@ -103,13 +103,19 @@ def create_role(
 def list_roles(session: SessionDep, current_user: CurrentUser) -> Any:  # noqa: ARG001
     """List all roles with user_count. Admin only."""
     roles = session.exec(select(Role).order_by(Role.name)).all()
+    # Batch-fetch all user counts in a single query instead of N+1
+    count_rows = session.exec(
+        select(UserRoleLink.role_id, func.count())
+        .group_by(UserRoleLink.role_id)
+    ).all()
+    user_counts: dict[uuid.UUID, int] = {role_id: cnt for role_id, cnt in count_rows}
     return RoleListOut(
         data=[
             RolePublic(
                 id=r.id,
                 name=r.name,
                 description=r.description,
-                user_count=_get_role_user_count(session, r.id),
+                user_count=user_counts.get(r.id, 0),
             )
             for r in roles
         ]

@@ -472,7 +472,7 @@ graph TB
 graph LR
     subgraph "Dashboard Auth"
         Login["Email + Password"]
-        JWT_D["JWT (8 days)"]
+        JWT_D["JWT (1 day)"]
         RBAC["Role-Based Access<br/>User → Roles → Permissions"]
     end
 

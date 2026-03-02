@@ -1,6 +1,6 @@
 """Unit tests for engines.script.executor and context (Phase 3, Task 3.3)."""
 
-import signal
+import threading
 import uuid
 from unittest.mock import MagicMock, patch
 
@@ -68,14 +68,17 @@ class TestScriptExecutorBasic:
         out = ScriptExecutor().execute(script, ctx)
         assert out == [1, 2]
 
-    def test_no_result_returns_none(self) -> None:
+    def test_no_result_returns_default_envelope(self) -> None:
+        """When script doesn't set 'result', the default envelope from ScriptContext is returned."""
         ctx = ScriptContext(
             datasource=_make_datasource(),
             req={},
             pool_manager=MockPool(),
         )
         out = ScriptExecutor().execute("x = 1", ctx)
-        assert out is None
+        assert isinstance(out, dict)
+        assert out["success"] is True
+        assert out["data"] == []
 
     def test_open_blocked(self) -> None:
         ctx = ScriptContext(
@@ -88,10 +91,10 @@ class TestScriptExecutorBasic:
 
 
 @patch("app.engines.script.executor.settings")
-@pytest.mark.skipif(not hasattr(signal, "SIGALRM"), reason="SIGALRM not available (e.g. Windows)")
 def test_script_executor_timeout_raises(mock_settings: MagicMock) -> None:
     """When SCRIPT_EXEC_TIMEOUT is set, a long-running script raises ScriptTimeoutError."""
     mock_settings.SCRIPT_EXEC_TIMEOUT = 1
+    mock_settings.SCRIPT_EXTRA_MODULES = ""
     ctx = ScriptContext(
         datasource=_make_datasource(),
         req={},
@@ -99,6 +102,60 @@ def test_script_executor_timeout_raises(mock_settings: MagicMock) -> None:
     )
     with pytest.raises(ScriptTimeoutError, match="timed out"):
         ScriptExecutor().execute("while True: pass", ctx)
+
+
+@patch("app.engines.script.executor.settings")
+def test_script_executor_timeout_from_worker_thread(mock_settings: MagicMock) -> None:
+    """Timeout works when executor runs inside a worker thread (mimics asyncio.to_thread)."""
+    mock_settings.SCRIPT_EXEC_TIMEOUT = 1
+    mock_settings.SCRIPT_EXTRA_MODULES = ""
+    ctx = ScriptContext(
+        datasource=_make_datasource(),
+        req={},
+        pool_manager=MockPool(),
+    )
+    errors: list[BaseException] = []
+
+    def _run() -> None:
+        try:
+            ScriptExecutor().execute("while True: pass", ctx)
+        except BaseException as e:
+            errors.append(e)
+
+    t = threading.Thread(target=_run)
+    t.start()
+    t.join(timeout=10)
+    assert not t.is_alive(), "Thread should have finished"
+    assert len(errors) == 1
+    assert isinstance(errors[0], ScriptTimeoutError)
+
+
+@patch("app.engines.script.executor.settings")
+def test_script_executor_completes_before_timeout(mock_settings: MagicMock) -> None:
+    """A script that finishes quickly returns its result even with timeout enabled."""
+    mock_settings.SCRIPT_EXEC_TIMEOUT = 5
+    mock_settings.SCRIPT_EXTRA_MODULES = ""
+    ctx = ScriptContext(
+        datasource=_make_datasource(),
+        req={},
+        pool_manager=MockPool(),
+    )
+    out = ScriptExecutor().execute("result = 42", ctx)
+    assert out == 42
+
+
+@patch("app.engines.script.executor.settings")
+def test_script_executor_exception_propagates_with_timeout(mock_settings: MagicMock) -> None:
+    """Script errors propagate correctly through the thread boundary."""
+    mock_settings.SCRIPT_EXEC_TIMEOUT = 5
+    mock_settings.SCRIPT_EXTRA_MODULES = ""
+    ctx = ScriptContext(
+        datasource=_make_datasource(),
+        req={},
+        pool_manager=MockPool(),
+    )
+    with pytest.raises(NameError, match="undefined_var"):
+        ScriptExecutor().execute("result = undefined_var", ctx)
 
 
 class TestScriptContextToDict:

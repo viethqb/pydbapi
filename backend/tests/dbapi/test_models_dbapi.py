@@ -14,11 +14,8 @@ from app.models_dbapi import (
     AppClient,
     DataSource,
     ExecuteEngineEnum,
-    FirewallRuleTypeEnum,
-    FirewallRules,
     HttpMethodEnum,
     ProductTypeEnum,
-    UnifyAlarm,
     VersionCommit,
 )
 
@@ -32,15 +29,12 @@ def test_models_dbapi_import():
     assert ApiAssignmentGroupLink.__tablename__ == "api_assignment_group_link"
     assert ApiContext.__tablename__ == "api_context"
     assert AppClient.__tablename__ == "app_client"
-    assert FirewallRules.__tablename__ == "firewall_rules"
-    assert UnifyAlarm.__tablename__ == "unify_alarm"
     assert VersionCommit.__tablename__ == "version_commit"
     assert AccessRecord.__tablename__ == "access_record"
 
     assert ProductTypeEnum.POSTGRES.value == "postgres"
     assert HttpMethodEnum.GET.value == "GET"
     assert ExecuteEngineEnum.SQL.value == "SQL"
-    assert FirewallRuleTypeEnum.ALLOW.value == "allow"
 
 
 def test_datasource_crud(db: Session):

@@ -10,7 +10,7 @@ from app.core.gateway import concurrent
 @pytest.fixture(autouse=True)
 def _force_memory_backend() -> None:
     """Use in-memory backend so tests don't require Redis."""
-    with patch.object(concurrent, "_get_redis", return_value=None):
+    with patch.object(concurrent, "get_redis", return_value=None):
         yield
 
 

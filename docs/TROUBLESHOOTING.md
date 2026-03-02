@@ -177,7 +177,7 @@ Connection test failed: connection to server at "host" (...), port 5432 failed
 **Fix:**
 - Increase `SCRIPT_EXEC_TIMEOUT` if the script legitimately needs more time.
 - Optimize the script (reduce data volume, add pagination).
-- Note: timeout only works on **Unix** (uses `SIGALRM`). On Windows/macOS without signal support, no timeout is enforced.
+- Timeout uses a thread-based mechanism and works on all platforms (CPython required).
 
 ---
 

@@ -1,4 +1,4 @@
-"""Unit tests for gateway request/response: parse_params, keys_to_snake, keys_to_camel, format_response (Phase 4, Task 4.3)."""
+"""Unit tests for gateway request/response: parse_params, merge_params, keys_to_snake, keys_to_camel, format_response (Phase 4, Task 4.3)."""
 
 import asyncio
 
@@ -8,6 +8,7 @@ from app.core.gateway.request_response import (
     format_response,
     keys_to_camel,
     keys_to_snake,
+    merge_params,
     normalize_api_result,
     parse_params,
 )
@@ -335,28 +336,49 @@ def test_normalize_api_result_raw_list_no_engine() -> None:
 
 
 def test_format_response_snake_default() -> None:
-    req = _make_request(query_string=b"")
     result = {"success": True, "message": None, "data": [{"user_id": 1}]}
-    assert format_response(result, req) == {"success": True, "message": None, "data": [{"user_id": 1}]}
+    assert format_response(result, "snake") == {"success": True, "message": None, "data": [{"user_id": 1}]}
 
 
-def test_format_response_camel_query() -> None:
-    req = _make_request(query_string=b"naming=camel")
+def test_format_response_camel() -> None:
     result = {"success": True, "message": None, "data": [{"user_id": 1, "first_name": "x"}]}
-    out = format_response(result, req)
+    out = format_response(result, "camel")
     assert out == {"success": True, "message": None, "data": [{"userId": 1, "firstName": "x"}]}
 
 
-def test_format_response_camel_header() -> None:
-    req = _make_request(
-        query_string=b"",
-        headers=[(b"x-response-naming", b"camel")],
-    )
+def test_format_response_camel_row_count() -> None:
     result = {"row_count": 5}
-    assert format_response(result, req) == {"rowCount": 5}
+    assert format_response(result, "camel") == {"rowCount": 5}
 
 
 def test_format_response_non_dict_unchanged() -> None:
-    req = _make_request()
-    assert format_response([1, 2], req) == [1, 2]
-    assert format_response("x", req) == "x"
+    assert format_response([1, 2], "snake") == [1, 2]
+    assert format_response("x", "snake") == "x"
+
+
+# --- merge_params (sync) ---
+
+
+def test_merge_params_path_only() -> None:
+    params, _ = merge_params({}, {}, {"id": "123"}, {}, "GET")
+    assert params == {"id": "123"}
+
+
+def test_merge_params_merge_order_path_wins() -> None:
+    body = {"a": "b", "b": "b", "c": "b"}
+    query = {"b": "q", "c": "q"}
+    path = {"c": "p", "d": "p"}
+    params, _ = merge_params(query, body, path, {}, "POST")
+    assert params["a"] == "b"
+    assert params["b"] == "q"
+    assert params["c"] == "p"
+    assert params["d"] == "p"
+
+
+def test_merge_params_header_location() -> None:
+    headers = {"col1": "header", "content-type": "application/json"}
+    params, _ = merge_params(
+        {"col1": "query"}, {"col1": "body"}, {}, headers, "POST",
+        params_definition=[{"name": "col1", "location": "header"}],
+    )
+    assert params == {"col1": "header"}
