@@ -66,7 +66,6 @@ MODULE_RESOURCE_ACTIONS = (
     PermissionActionEnum.CREATE,
     PermissionActionEnum.UPDATE,
     PermissionActionEnum.DELETE,
-    PermissionActionEnum.EXECUTE,
 )
 
 
