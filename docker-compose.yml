@@ -1,5 +1,6 @@
 services:
   db:
+    container_name: db
     image: postgres:17
     restart: always
     healthcheck:
@@ -19,6 +20,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
   redis:
+    container_name: redis
     image: redis:7-alpine
     restart: always
     healthcheck:
@@ -29,6 +31,7 @@ services:
       start_period: 10s
 
   starrocks:
+    container_name: starrocks
     image: starrocks/allin1-ubuntu:latest
     profiles: ["starrocks", "full"]
     restart: always
@@ -50,6 +53,7 @@ services:
       start_period: 60s
 
   trino:
+    container_name: trino
     image: trinodb/trino:latest
     profiles: ["trino", "full"]
     restart: always
@@ -63,6 +67,7 @@ services:
       start_period: 30s
 
   prestart:
+    container_name: prestart
     image: "${DOCKER_IMAGE_BACKEND:-pydbapi}:${TAG-latest}"
     build:
       context: .
@@ -89,6 +94,7 @@ services:
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-}
 
   app:
+    container_name: app
     image: "${DOCKER_IMAGE_BACKEND:-pydbapi}:${TAG-latest}"
     build:
       context: .
