@@ -44,13 +44,13 @@ Fernet encryption key for DataSource passwords is `sha256(SECRET_KEY)`. A single
 | # | Status | Finding | Location |
 |---|--------|---------|----------|
 | 6 | FIXED | Sync DB/Redis I/O blocking the async event loop | `backend/app/api/routes/gateway.py` |
-| 7 | OPEN | No rate limiting on authentication endpoints | `backend/app/api/routes/login.py`, `token.py` |
+| 7 | FIXED | No rate limiting on authentication endpoints | `backend/app/api/routes/login.py`, `token.py` |
 | 8 | OPEN | User enumeration via password recovery | `backend/app/api/routes/login.py:57-77` |
 | 9 | OPEN | Timing attack on `authenticate()` | `backend/app/crud.py:40-46` |
-| 10 | OPEN | Script timeout only works on Unix main thread | `backend/app/engines/script/executor.py:101-111` |
+| 10 | FIXED | Script timeout only works on Unix main thread | `backend/app/engines/script/executor.py:101-111` |
 | 11 | OPEN | OpenAPI docs exposed in all environments | `backend/app/main.py:25-31` |
-| 12 | OPEN | Unrestricted `**kwargs` passthrough to httpx | `backend/app/engines/script/modules/http.py` |
-| 13 | OPEN | Access log storage uses encrypted password without decrypting | `backend/app/core/access_log_storage.py:33` |
+| 12 | FIXED | Unrestricted `**kwargs` passthrough to httpx | `backend/app/engines/script/modules/http.py` |
+| 13 | FIXED | Access log storage uses encrypted password without decrypting | `backend/app/core/access_log_storage.py:33` |
 
 ### Details
 
@@ -58,8 +58,9 @@ Fernet encryption key for DataSource passwords is `sha256(SECRET_KEY)`. A single
 All pre-execution steps (resolve, auth, rate limit, config cache) were synchronous functions calling `session.exec()` and Redis directly from an `async def` handler.
 *Fix: Pre-read body async, bundled all sync I/O into `_gateway_pipeline()`, run via `asyncio.to_thread()`.*
 
-**7. No rate limiting on authentication endpoints** (OPEN)
+**7. No rate limiting on authentication endpoints** (FIXED)
 `POST /login/access-token`, `POST /token/generate`, and `POST /password-recovery/{email}` have no rate limiting, enabling brute-force attacks and email enumeration.
+*Fix: Added `require_rate_limit()` dependency to all auth endpoints (`login`, `password-recovery`, `reset-password`, `token/generate`) using configurable `AUTH_RATE_LIMIT_*` settings.*
 
 **8. User enumeration via password recovery** (OPEN)
 Returns 404 with "user does not exist" vs 200 on success, allowing email address enumeration.
@@ -67,17 +68,20 @@ Returns 404 with "user does not exist" vs 200 on success, allowing email address
 **9. Timing attack on `authenticate()`** (OPEN)
 Non-existent user returns immediately (no bcrypt), existing user runs bcrypt (~100ms). Response time difference reveals whether an email exists.
 
-**10. Script timeout only works on Unix main thread** (OPEN)
+**10. Script timeout only works on Unix main thread** (FIXED)
 `signal.alarm` is process-global and only works in the main thread. In threaded ASGI workers, scripts can run indefinitely.
+*Fix: Replaced `signal.SIGALRM` with thread-based timeout using `threading.Thread` + `ctypes.pythonapi.PyThreadState_SetAsyncExc` to inject `ScriptTimeoutError`. Works on all platforms and from any thread.*
 
 **11. OpenAPI docs exposed in all environments** (OPEN)
 `/api/docs`, `/api/redoc`, `/api/v1/openapi.json` are always available, giving attackers a full API map.
 
-**12. Unrestricted `**kwargs` passthrough to httpx** (OPEN)
+**12. Unrestricted `**kwargs` passthrough to httpx** (FIXED)
 Scripts can pass arbitrary kwargs to `httpx.Client.request()`, including `follow_redirects=True`, `auth=`, `extensions=` to override security controls.
+*Fix: Added `_ALLOWED_REQUEST_KWARGS` frozenset whitelist (`params`, `headers`, `cookies`, `json`, `data`, `content`). `_filter_kwargs()` raises `PermissionError` on any key outside the allowlist.*
 
-**13. Access log storage uses encrypted password without decrypting** (OPEN)
+**13. Access log storage uses encrypted password without decrypting** (FIXED)
 `_build_database_url()` uses `datasource.password` directly (Fernet ciphertext) instead of calling `decrypt_value()`. External access log DB connections will always fail authentication.
+*Fix: Added `decrypt_value(raw_password)` call before building the database URL.*
 
 ---
 
@@ -85,17 +89,17 @@ Scripts can pass arbitrary kwargs to `httpx.Client.request()`, including `follow
 
 | # | Status | Finding | Location |
 |---|--------|---------|----------|
-| 14 | OPEN | Missing Redis timeouts | `backend/app/core/gateway/redis_client.py` |
-| 15 | OPEN | L1 cache thundering herd on eviction | `backend/app/core/gateway/config_cache.py:56-62` |
-| 16 | OPEN | Two Redis round-trips for rate limiting + race condition | `backend/app/core/gateway/ratelimit.py:30-41` |
-| 17 | OPEN | Non-atomic concurrent slot check | `backend/app/core/gateway/concurrent.py:28-41` |
-| 18 | OPEN | N+1 query in macro content loading | `backend/app/core/gateway/config_cache.py:176-186` |
-| 19 | OPEN | Duplicate `get_or_load_gateway_config` call | `gateway.py` + `runner.py` |
-| 20 | OPEN | Re-fetching `ApiAssignment` in the thread | `gateway.py:63-66` |
-| 21 | OPEN | Route cache rebuild blocks all concurrent requests | `backend/app/core/gateway/resolver.py:87-93` |
-| 22 | OPEN | No template/output size limit | `backend/app/engines/sql/template_engine.py:65-70` |
-| 23 | OPEN | No blocklist for `SCRIPT_EXTRA_MODULES` | `backend/app/engines/script/executor.py:56-67` |
-| 24 | OPEN | Gateway leaks exception messages to clients | `gateway.py:189-192` |
+| 14 | FIXED | Missing Redis timeouts | `backend/app/core/gateway/redis_client.py` |
+| 15 | FIXED | L1 cache thundering herd on eviction | `backend/app/core/gateway/config_cache.py:56-62` |
+| 16 | FIXED | Two Redis round-trips for rate limiting + race condition | `backend/app/core/gateway/ratelimit.py:30-41` |
+| 17 | FIXED | Non-atomic concurrent slot check | `backend/app/core/gateway/concurrent.py:28-41` |
+| 18 | FIXED | N+1 query in macro content loading | `backend/app/core/gateway/config_cache.py:176-186` |
+| 19 | FIXED | Duplicate `get_or_load_gateway_config` call | `gateway.py` + `runner.py` |
+| 20 | FIXED | Re-fetching `ApiAssignment` in the thread | `gateway.py:63-66` |
+| 21 | FIXED | Route cache rebuild blocks all concurrent requests | `backend/app/core/gateway/resolver.py:87-93` |
+| 22 | FIXED | No template/output size limit | `backend/app/engines/sql/template_engine.py:65-70` |
+| 23 | FIXED | No blocklist for `SCRIPT_EXTRA_MODULES` | `backend/app/engines/script/executor.py:56-67` |
+| 24 | FIXED | Gateway leaks exception messages to clients | `gateway.py:189-192` |
 | 25 | FIXED | 8-day access token lifetime, no revocation | `backend/app/core/config.py:36` |
 | 26 | FIXED | CORS wildcard allowed when ENVIRONMENT=local (the default) | `backend/app/core/config.py:46-57` |
 | 27 | FIXED | X-Forwarded-For spoofing | `gateway.py:82-87` |
@@ -108,27 +112,49 @@ Scripts can pass arbitrary kwargs to `httpx.Client.request()`, including `follow
 
 ### Details
 
-**14. Missing Redis timeouts** -- `Redis.from_url()` is called without `socket_timeout` or `socket_connect_timeout`. A slow Redis can hang the entire gateway for the OS TCP timeout (120+ seconds).
+**14. Missing Redis timeouts** (FIXED)
+`Redis.from_url()` is called without `socket_timeout` or `socket_connect_timeout`. A slow Redis can hang the entire gateway for the OS TCP timeout (120+ seconds).
+*Fix: Added `socket_connect_timeout` and `socket_timeout` parameters from `REDIS_CONNECT_TIMEOUT` / `REDIS_SOCKET_TIMEOUT` settings.*
 
-**15. L1 cache thundering herd on eviction** -- When L1 cache reaches 2048 entries with no expired items, `_LOCAL_CACHE.clear()` nukes everything, causing all concurrent requests to stampede Redis/DB simultaneously. Should use LRU eviction.
+**15. L1 cache thundering herd on eviction** (FIXED)
+When L1 cache reaches 2048 entries with no expired items, `_LOCAL_CACHE.clear()` nukes everything, causing all concurrent requests to stampede Redis/DB simultaneously.
+*Fix: Replaced `clear()` with LRU-style eviction — purges expired entries first, then evicts the 25% soonest-to-expire entries.*
 
-**16. Two Redis round-trips for rate limiting + race condition** -- ZCARD check and ZADD are in separate pipelines. Two concurrent requests can both see `n < limit` and both succeed. Should use a single Lua script.
+**16. Two Redis round-trips for rate limiting + race condition** (FIXED)
+ZCARD check and ZADD are in separate pipelines. Two concurrent requests can both see `n < limit` and both succeed.
+*Fix: Replaced with a single Lua script (`_RATE_LIMIT_SCRIPT`) that atomically performs `ZREMRANGEBYSCORE` + `ZCARD` + `ZADD` in one round-trip.*
 
-**17. Non-atomic concurrent slot check** -- `INCR` is pipelined but the conditional `DECR` is a separate call. Process crash between them permanently inflates the counter (until 300s TTL).
+**17. Non-atomic concurrent slot check** (FIXED)
+`INCR` is pipelined but the conditional `DECR` is a separate call. Process crash between them permanently inflates the counter (until 300s TTL).
+*Fix: Replaced with a Lua script (`_ACQUIRE_SCRIPT`) that atomically performs `GET` → compare → `INCR` → `EXPIRE`.*
 
-**18. N+1 query in macro content loading** -- Each published macro triggers a separate `SELECT` for `MacroDefVersionCommit`. 10 macros = 10 queries. Should batch with `WHERE id IN (...)`.
+**18. N+1 query in macro content loading** (FIXED)
+Each published macro triggers a separate `SELECT` for `MacroDefVersionCommit`. 10 macros = 10 queries.
+*Fix: Single batch query using `WHERE id IN (...)` for all macro version commits.*
 
-**19. Duplicate `get_or_load_gateway_config` call** -- Config is loaded in the handler to extract `params_definition`, then loaded again inside the runner. The config should be passed through.
+**19. Duplicate `get_or_load_gateway_config` call** (FIXED)
+Config is loaded in the handler to extract `params_definition`, then loaded again inside the runner.
+*Fix: Config is loaded once in the gateway handler and passed as `config=` parameter to the runner.*
 
-**20. Re-fetching `ApiAssignment` in the thread** -- The full row is fetched from the gateway handler session, then re-fetched by PK in the worker thread. Could extract needed fields into a plain dict instead.
+**20. Re-fetching `ApiAssignment` in the thread** (FIXED)
+The full row is fetched from the gateway handler session, then re-fetched by PK in the worker thread.
+*Fix: `_build_route_table` calls `session.expunge(api)` to detach objects, which are then served directly from the in-process route cache without per-request DB queries.*
 
-**21. Route cache rebuild blocks all concurrent requests** -- Lock-based cache rebuild causes a latency spike every 30 seconds under high concurrency. Should use stale-while-revalidate.
+**21. Route cache rebuild blocks all concurrent requests** (FIXED)
+Lock-based cache rebuild causes a latency spike every 30 seconds under high concurrency.
+*Fix: Implemented stale-while-revalidate pattern — only one thread rebuilds while all others immediately return the stale cache.*
 
-**22. No template/output size limit** -- No limit on template size or rendered output. A loop like `{% for i in range(999999999) %}` can produce gigabytes of SQL.
+**22. No template/output size limit** (FIXED)
+No limit on template size or rendered output. A loop like `{% for i in range(999999999) %}` can produce gigabytes of SQL.
+*Fix: Added `max_src` and `max_out` size checks — `ValueError` raised if template source or rendered output exceeds configurable limits.*
 
-**23. No blocklist for `SCRIPT_EXTRA_MODULES`** -- If admin sets `SCRIPT_EXTRA_MODULES=os,subprocess`, the sandbox collapses entirely. No hard blocklist for dangerous stdlib modules.
+**23. No blocklist for `SCRIPT_EXTRA_MODULES`** (FIXED)
+If admin sets `SCRIPT_EXTRA_MODULES=os,subprocess`, the sandbox collapses entirely.
+*Fix: Added `_BLOCKED_MODULES` frozenset covering OS/process/network/code-exec/serialization modules. `_inject_extra_modules` silently rejects any blocked module.*
 
-**24. Gateway leaks exception messages to clients** -- `str(e)` from unhandled exceptions is returned in the response, exposing table names, SQL errors, and internal paths.
+**24. Gateway leaks exception messages to clients** (FIXED)
+`str(e)` from unhandled exceptions is returned in the response, exposing table names, SQL errors, and internal paths.
+*Fix: Returns generic `"Internal server error"` for non-local environments; raw `str(e)` only shown when `ENVIRONMENT == "local"`.*
 
 **25. 8-day access token lifetime, no revocation** (FIXED)
 `ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 8` (11,520 minutes). No refresh token flow or blocklist for token revocation.
@@ -234,20 +260,15 @@ No limit on `data[]` array size — a query returning millions of rows would be 
 | Severity | Total | Fixed | Open |
 |----------|-------|-------|------|
 | CRITICAL | 5 | 4 | 1 |
-| HIGH | 8 | 1 | 7 |
-| MEDIUM | 20 | 9 | 11 |
+| HIGH | 8 | 5 | 3 |
+| MEDIUM | 20 | 20 | 0 |
 | LOW | 12 | 10 | 2 |
-| **Total** | **45** | **24** | **21** |
+| **Total** | **45** | **39** | **6** |
 
 ## Top Priority Recommendations (remaining)
 
-1. **Remove GET `/token/generate`** or move credentials to POST body (#4)
-2. **Add rate limiting to auth endpoints** (#7)
-3. **Constant-time auth + generic recovery response** (#8, #9)
-4. **Add `socket_timeout=1`** to Redis client constructor (#14)
-5. **Replace L1 `clear()` with LRU eviction** (#15)
-6. **Use Lua scripts** for atomic rate limiting and concurrent slot operations (#16, #17)
-7. **Restrict httpx kwargs** in script HTTP module (#12)
-8. **Fix access log decryption** (#13)
-9. **Script timeout for worker threads** (#10)
-10. **Block dangerous `SCRIPT_EXTRA_MODULES`** (#23)
+1. **Remove GET `/token/generate`** or move credentials to POST body (#4 — CRITICAL)
+2. **Constant-time auth + generic recovery response** (#8, #9 — HIGH)
+3. **Disable OpenAPI docs in production** or require auth (#11 — HIGH)
+4. **Implement IP firewall** to replace stub (#43 — LOW)
+5. **Add password complexity requirements** (#45 — LOW)
