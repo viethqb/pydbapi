@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import type { Body_login_login_access_token as AccessToken } from "@/client"
-import { passwordSchema } from "@/lib/validations"
+import { passwordSchema, usernameSchema } from "@/lib/validations"
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import {
   Form,
@@ -24,7 +24,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z.object({
-  username: z.email(),
+  username: usernameSchema,
   password: passwordSchema,
 }) satisfies z.ZodType<AccessToken>
 
@@ -82,12 +82,12 @@ function Login() {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input
-                      data-testid="email-input"
-                      placeholder="user@example.com"
-                      type="email"
+                      data-testid="username-input"
+                      placeholder="Username"
+                      type="text"
                       {...field}
                     />
                   </FormControl>

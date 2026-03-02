@@ -17,21 +17,23 @@ import { getInitials } from "@/utils"
 
 function UserInfo({
   fullName,
-  email,
+  username,
 }: {
   fullName?: string
-  email?: string
+  username?: string
 }) {
   return (
     <div className="flex items-center gap-2.5 w-full min-w-0">
       <Avatar className="size-8">
         <AvatarFallback className="bg-zinc-600 text-white">
-          {getInitials(fullName || "User")}
+          {getInitials(fullName || username || "User")}
         </AvatarFallback>
       </Avatar>
       <div className="flex flex-col items-start min-w-0">
-        <p className="text-sm font-medium truncate w-full">{fullName}</p>
-        <p className="text-xs text-muted-foreground truncate w-full">{email}</p>
+        <p className="text-sm font-medium truncate w-full">{fullName || username}</p>
+        {fullName && (
+          <p className="text-xs text-muted-foreground truncate w-full">{username}</p>
+        )}
       </div>
     </div>
   )
@@ -54,7 +56,7 @@ export function UserDropdownContent({
       className="w-full justify-start gap-2 h-auto py-2"
       data-testid="user-menu"
     >
-      <UserInfo fullName={user?.full_name} email={user?.email} />
+      <UserInfo fullName={user?.full_name} username={user?.username} />
       <ChevronsUpDown className="ml-auto size-4 text-muted-foreground shrink-0" />
     </Button>
   ) : (
@@ -64,7 +66,7 @@ export function UserDropdownContent({
       className="gap-2 min-w-0"
       data-testid="user-menu"
     >
-      <UserInfo fullName={user?.full_name} email={user?.email} />
+      <UserInfo fullName={user?.full_name} username={user?.username} />
       <ChevronsUpDown className="size-4 text-muted-foreground shrink-0" />
     </Button>
   )
@@ -79,7 +81,7 @@ export function UserDropdownContent({
         sideOffset={4}
       >
         <DropdownMenuLabel className="p-0 font-normal">
-          <UserInfo fullName={user?.full_name} email={user?.email} />
+          <UserInfo fullName={user?.full_name} username={user?.username} />
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <RouterLink to="/settings">

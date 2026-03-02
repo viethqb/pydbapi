@@ -9,7 +9,7 @@ from app.crud import create_user
 from app.models import UserCreate
 from app.utils import generate_password_reset_token
 from tests.utils.user import user_authentication_headers
-from tests.utils.utils import random_email, random_lower_string
+from tests.utils.utils import random_email, random_lower_string, random_username
 
 
 def test_get_access_token(client: TestClient) -> None:
@@ -42,7 +42,7 @@ def test_use_access_token(
     )
     result = r.json()
     assert r.status_code == 200
-    assert "email" in result
+    assert "username" in result
 
 
 def test_recovery_password(
@@ -79,11 +79,13 @@ def test_recovery_password_user_not_exists(
 
 
 def test_reset_password(client: TestClient, db: Session) -> None:
+    username = random_username()
     email = random_email()
     password = random_lower_string()
     new_password = random_lower_string()
 
     user_create = UserCreate(
+        username=username,
         email=email,
         full_name="Test User",
         password=password,
@@ -92,7 +94,7 @@ def test_reset_password(client: TestClient, db: Session) -> None:
     )
     user = create_user(session=db, user_create=user_create)
     token = generate_password_reset_token(email=email)
-    headers = user_authentication_headers(client=client, email=email, password=password)
+    headers = user_authentication_headers(client=client, username=username, password=password)
     data = {"new_password": new_password, "token": token}
 
     r = client.post(

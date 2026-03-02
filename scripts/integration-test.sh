@@ -28,7 +28,7 @@ export REDIS_HOST=localhost
 export ENVIRONMENT=${ENVIRONMENT:-local}
 export PROJECT_NAME=${PROJECT_NAME:-pyDBAPI}
 export SECRET_KEY=${SECRET_KEY:-secret-key-for-integration-test}
-export FIRST_SUPERUSER=${FIRST_SUPERUSER:-admin@example.com}
+export FIRST_SUPERUSER=${FIRST_SUPERUSER:-admin}
 export FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD:-changethis}
 
 echo "Starting db and redis (docker-compose.yml)..."

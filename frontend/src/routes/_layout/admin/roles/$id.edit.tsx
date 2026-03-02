@@ -564,7 +564,7 @@ function RoleUserRow({
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{user.email}</TableCell>
+      <TableCell className="font-medium">{user.username}</TableCell>
       <TableCell>{user.full_name ?? "—"}</TableCell>
       <TableCell>
         <Button
@@ -650,7 +650,7 @@ function AddUserToRoleDialog({
             <SelectContent>
               {availableUsers.map((u: ClientUserPublic) => (
                 <SelectItem key={u.id} value={u.id}>
-                  {u.email} {u.full_name ? `(${u.full_name})` : ""}
+                  {u.username} {u.full_name ? `(${u.full_name})` : ""}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -15,7 +15,7 @@ from app.models_dbapi import (
     AppClient,
     DataSource,
 )
-from tests.utils.user import authentication_token_from_email
+from tests.utils.user import authentication_token_from_username
 from tests.utils.utils import get_superuser_token_headers
 
 
@@ -57,6 +57,6 @@ def superuser_token_headers(client: TestClient) -> dict[str, str]:
 
 @pytest.fixture(scope="module")
 def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
-    return authentication_token_from_email(
-        client=client, email=settings.EMAIL_TEST_USER, db=db
+    return authentication_token_from_username(
+        client=client, username=settings.EMAIL_TEST_USER, db=db
     )

@@ -346,7 +346,7 @@ function RoleDetailViewPage() {
               <TableBody>
                 {roleUsers.map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.email}</TableCell>
+                    <TableCell className="font-medium">{u.username}</TableCell>
                     <TableCell>{u.full_name ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       <Link to="/admin/roles/$id/edit" params={{ id }}>

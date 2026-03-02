@@ -8,10 +8,11 @@ import { z } from "zod"
 import { type UserCreate, UsersService } from "@/client"
 import {
   confirmPasswordSchema,
-  emailSchema,
+  optionalEmailSchema,
   passwordSchema,
   passwordsMatch,
   passwordsMismatchError,
+  usernameSchema,
 } from "@/lib/validations"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -42,7 +43,8 @@ import { handleError } from "@/utils"
 
 const formSchema = z
   .object({
-    email: emailSchema,
+    username: usernameSchema,
+    email: optionalEmailSchema,
     full_name: z.string().optional(),
     password: passwordSchema,
     confirm_password: confirmPasswordSchema,
@@ -71,6 +73,7 @@ const AddUser = () => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      username: "",
       email: "",
       full_name: "",
       password: "",
@@ -139,18 +142,36 @@ const AddUser = () => {
             <div className="grid gap-4 py-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Email <span className="text-destructive">*</span>
+                      Username <span className="text-destructive">*</span>
                     </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Username"
+                        type="text"
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Email"
                         type="email"
                         {...field}
-                        required
                       />
                     </FormControl>
                     <FormMessage />

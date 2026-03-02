@@ -70,7 +70,7 @@ export function RoleActionsMenu({ role }: RoleActionsMenuProps) {
                 {usersData.data.map((u) => (
                   <li key={u.id}>
                     <span className="font-medium">{u.full_name || "—"}</span>
-                    <span className="text-muted-foreground"> ({u.email})</span>
+                    <span className="text-muted-foreground"> ({u.username})</span>
                   </li>
                 ))}
               </ul>

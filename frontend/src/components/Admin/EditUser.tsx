@@ -7,10 +7,11 @@ import { z } from "zod"
 
 import { type UserPublic, UsersService } from "@/client"
 import {
-  emailSchema,
+  optionalEmailSchema,
   optionalPasswordSchema,
   passwordsMatch,
   passwordsMismatchError,
+  usernameSchema,
 } from "@/lib/validations"
 import { RolesService } from "@/services/roles"
 import { UserPermissionsService } from "@/services/user-permissions"
@@ -41,7 +42,8 @@ import { handleError } from "@/utils"
 
 const formSchema = z
   .object({
-    email: emailSchema,
+    username: usernameSchema,
+    email: optionalEmailSchema,
     full_name: z.string().optional(),
     password: optionalPasswordSchema,
     confirm_password: z.string().optional(),
@@ -86,7 +88,8 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      email: user.email,
+      username: user.username,
+      email: user.email ?? undefined,
       full_name: user.full_name ?? undefined,
       is_superuser: user.is_superuser,
       is_active: user.is_active,
@@ -154,18 +157,36 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
             <div className="grid gap-4 py-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Email <span className="text-destructive">*</span>
+                      Username <span className="text-destructive">*</span>
                     </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Username"
+                        type="text"
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Email"
                         type="email"
                         {...field}
-                        required
                       />
                     </FormControl>
                     <FormMessage />

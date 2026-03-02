@@ -23,7 +23,11 @@ import { handleError } from "@/utils"
 
 const formSchema = z.object({
   full_name: z.string().max(30).optional(),
-  email: z.email({ message: "Invalid email address" }),
+  email: z
+    .string()
+    .email({ message: "Invalid email address" })
+    .optional()
+    .or(z.literal("")),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -40,7 +44,7 @@ const UserInformation = () => {
     criteriaMode: "all",
     defaultValues: {
       full_name: currentUser?.full_name ?? undefined,
-      email: currentUser?.email,
+      email: currentUser?.email ?? "",
     },
   })
 
@@ -88,6 +92,11 @@ const UserInformation = () => {
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col gap-4"
         >
+          <FormItem>
+            <FormLabel>Username</FormLabel>
+            <p className="py-2 truncate max-w-sm">{currentUser?.username}</p>
+          </FormItem>
+
           <FormField
             control={form.control}
             name="full_name"
@@ -131,7 +140,14 @@ const UserInformation = () => {
               ) : (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
-                  <p className="py-2 truncate max-w-sm">{field.value}</p>
+                  <p
+                    className={cn(
+                      "py-2 truncate max-w-sm",
+                      !field.value && "text-muted-foreground",
+                    )}
+                  >
+                    {field.value || "N/A"}
+                  </p>
                 </FormItem>
               )
             }

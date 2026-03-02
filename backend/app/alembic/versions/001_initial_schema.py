@@ -99,7 +99,8 @@ def upgrade():
 
     op.create_table(
         "user",
-        sa.Column("email", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+        sa.Column("username", sqlmodel.sql.sqltypes.AutoString(length=150), nullable=False),
+        sa.Column("email", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("is_superuser", sa.Boolean(), nullable=False),
         sa.Column(
@@ -109,7 +110,8 @@ def upgrade():
         sa.Column("hashed_password", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_user_email"), "user", ["email"], unique=True)
+    op.create_index(op.f("ix_user_username"), "user", ["username"], unique=True)
+    op.create_index(op.f("ix_user_email"), "user", ["email"], unique=False)
 
     op.create_table(
         "app_client",
@@ -126,6 +128,7 @@ def upgrade():
         ),
         sa.Column("rate_limit_per_minute", sa.Integer(), nullable=True),
         sa.Column("max_concurrent", sa.Integer(), nullable=True),
+        sa.Column("token_expire_seconds", sa.Integer(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
@@ -574,6 +577,7 @@ def downgrade():
     op.drop_table("app_client")
 
     op.drop_index(op.f("ix_user_email"), table_name="user")
+    op.drop_index(op.f("ix_user_username"), table_name="user")
     op.drop_table("user")
 
     op.drop_index(op.f("ix_datasource_product_type"), table_name="datasource")

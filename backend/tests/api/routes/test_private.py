@@ -12,6 +12,7 @@ def test_create_user(
         f"{settings.API_V1_STR}/private/users/",
         headers=superuser_token_headers,
         json={
+            "username": "pollo_listo",
             "email": "pollo@listo.com",
             "password": "password123",
             "full_name": "Pollo Listo",
@@ -25,5 +26,5 @@ def test_create_user(
     user = db.exec(select(User).where(User.id == data["id"])).first()
 
     assert user
-    assert user.email == "pollo@listo.com"
+    assert user.username == "pollo_listo"
     assert user.full_name == "Pollo Listo"

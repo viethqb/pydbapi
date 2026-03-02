@@ -14,7 +14,7 @@ POSTGRES_PASSWORD=<strong-password>
 POSTGRES_USER=postgres
 POSTGRES_DB=app
 POSTGRES_SERVER=db            # "db" inside Docker, "localhost" outside
-FIRST_SUPERUSER=admin@example.com
+FIRST_SUPERUSER=admin
 FIRST_SUPERUSER_PASSWORD=<strong-password>
 PROJECT_NAME=pyDBAPI
 DOCKER_IMAGE_BACKEND=pydbapi  # image name for app (unified Nginx+FastAPI)
@@ -129,8 +129,9 @@ Created automatically on first startup (by `initial_data.py`).
 
 | Variable | Type | Default | Required | Description |
 |----------|------|---------|----------|-------------|
-| `FIRST_SUPERUSER` | email | — | **Yes** | Email of the initial superuser account. |
+| `FIRST_SUPERUSER` | string | — | **Yes** | Username of the initial superuser account. |
 | `FIRST_SUPERUSER_PASSWORD` | string | — | **Yes** | Password. Must be changed from `"changethis"` in staging/production. |
+| `FIRST_SUPERUSER_EMAIL` | string | `None` | No | Optional email for the initial superuser (used for password recovery). |
 
 ---
 
@@ -176,7 +177,7 @@ These are configured in GitHub repository settings, not in `.env`.
 | `STACK_NAME_STAGING` | deploy-staging | Staging stack name. |
 | `STACK_NAME_PRODUCTION` | deploy-production | Production stack name. |
 | `SECRET_KEY` | Both deploys | JWT signing key. |
-| `FIRST_SUPERUSER` | Both deploys | Superuser email. |
+| `FIRST_SUPERUSER` | Both deploys | Superuser username. |
 | `FIRST_SUPERUSER_PASSWORD` | Both deploys | Superuser password. |
 | `POSTGRES_PASSWORD` | Both deploys | Database password. |
 | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` | Both deploys | Email config. |

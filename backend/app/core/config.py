@@ -185,9 +185,10 @@ class Settings(BaseSettings):
     def emails_enabled(self) -> bool:
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
 
-    EMAIL_TEST_USER: EmailStr = "test@example.com"
-    FIRST_SUPERUSER: EmailStr
+    EMAIL_TEST_USER: str = "testuser"
+    FIRST_SUPERUSER: str
     FIRST_SUPERUSER_PASSWORD: str
+    FIRST_SUPERUSER_EMAIL: str | None = None
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":

@@ -45,7 +45,8 @@ export type NewPassword = {
 };
 
 export type PrivateUserCreate = {
-    email: string;
+    username: string;
+    email?: (string | null);
     password: string;
     full_name: string;
     is_verified?: boolean;
@@ -62,7 +63,8 @@ export type UpdatePassword = {
 };
 
 export type UserCreate = {
-    email: string;
+    username: string;
+    email?: (string | null);
     is_active?: boolean;
     is_superuser?: boolean;
     full_name?: (string | null);
@@ -70,7 +72,8 @@ export type UserCreate = {
 };
 
 export type UserPublic = {
-    email: string;
+    username: string;
+    email?: (string | null);
     is_active?: boolean;
     is_superuser?: boolean;
     full_name?: (string | null);
@@ -78,7 +81,8 @@ export type UserPublic = {
 };
 
 export type UserRegister = {
-    email: string;
+    username: string;
+    email?: (string | null);
     password: string;
     full_name?: (string | null);
 };
@@ -89,6 +93,7 @@ export type UsersPublic = {
 };
 
 export type UserUpdate = {
+    username?: (string | null);
     email?: (string | null);
     is_active?: boolean;
     is_superuser?: boolean;
@@ -98,6 +103,7 @@ export type UserUpdate = {
 
 export type UserUpdateMe = {
     full_name?: (string | null);
+    username?: (string | null);
     email?: (string | null);
 };
 

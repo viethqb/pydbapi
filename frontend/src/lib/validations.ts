@@ -45,8 +45,25 @@ export const passwordsMismatchError = {
 }
 
 // ---------------------------------------------------------------------------
+// Username
+// ---------------------------------------------------------------------------
+
+/** Required username: non-empty, max 150 characters. */
+export const usernameSchema = z
+  .string()
+  .min(1, { message: "Username is required" })
+  .max(150, { message: "Username must be at most 150 characters" })
+
+// ---------------------------------------------------------------------------
 // Email
 // ---------------------------------------------------------------------------
 
 /** Email with a user-friendly error message. */
 export const emailSchema = z.email({ message: "Invalid email address" })
+
+/** Optional email for forms where email is not required. */
+export const optionalEmailSchema = z
+  .string()
+  .email({ message: "Invalid email address" })
+  .optional()
+  .or(z.literal(""))

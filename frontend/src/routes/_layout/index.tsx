@@ -57,7 +57,7 @@ function Dashboard() {
       <div>
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Hi, {currentUser?.full_name || currentUser?.email}
+          Hi, {currentUser?.full_name || currentUser?.username}
         </p>
       </div>
 

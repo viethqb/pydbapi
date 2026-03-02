@@ -34,10 +34,17 @@ export const columns: ColumnDef<UserTableData>[] = [
     },
   },
   {
+    accessorKey: "username",
+    header: "Username",
+    cell: ({ row }) => (
+      <span className="font-medium">{row.original.username}</span>
+    ),
+  },
+  {
     accessorKey: "email",
     header: "Email",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.email}</span>
+      <span className="text-muted-foreground">{row.original.email || "—"}</span>
     ),
   },
   {

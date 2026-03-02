@@ -93,7 +93,7 @@ export default function AssignRolesDialog({ user, onSuccess }: AssignRolesDialog
           <DialogHeader>
             <DialogTitle>Assign roles</DialogTitle>
             <DialogDescription>
-              Select roles for {user.full_name || user.email}
+              Select roles for {user.full_name || user.username}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-4">
