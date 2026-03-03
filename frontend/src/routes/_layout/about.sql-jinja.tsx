@@ -37,6 +37,11 @@ const IF_CONDITIONS: Array<{ condition: string; meaning: string; example: string
       example: "{% if offset is not defined %}",
     },
     {
+      condition: "{% if name %}",
+      meaning: "Truthy (not None, not empty, not 0)",
+      example: "{% if q %}",
+    },
+    {
       condition: "{% if name | length > 0 %}",
       meaning: "Non-empty sequence/string",
       example: "{% if ids is defined and ids | length > 0 %}",
@@ -73,25 +78,73 @@ const IF_CONDITIONS: Array<{ condition: string; meaning: string; example: string
     },
     {
       condition: "{% if name is iterable %}",
-      meaning: "Value is iterable",
+      meaning: "Value is iterable (list, tuple, etc.)",
       example: "{% if ids is iterable %}",
     },
     {
-      condition: "{% if name is even %}",
-      meaning: "Number is even",
-      example: "{% if page is even %}",
-    },
-    {
-      condition: "{% if name is odd %}",
-      meaning: "Number is odd",
-      example: "{% if page is odd %}",
-    },
-    {
       condition: "{% if a is divisibleby n %}",
-      meaning: "Divisible test",
+      meaning: "Divisible by n",
       example: "{% if limit is divisibleby 10 %}",
     },
   ]
+
+const FILTERS: Array<{ name: string; description: string; example: string }> = [
+  {
+    name: "sql_string",
+    description: "Escapes and single-quotes strings. None \u2192 NULL.",
+    example: "{{ name | sql_string }}",
+  },
+  {
+    name: "sql_int",
+    description: "Validates and formats as integer. None \u2192 NULL.",
+    example: "{{ age | sql_int }}",
+  },
+  {
+    name: "sql_float",
+    description: "Validates and formats as float. None \u2192 NULL.",
+    example: "{{ price | sql_float }}",
+  },
+  {
+    name: "sql_bool",
+    description: "Converts to TRUE / FALSE. None \u2192 NULL.",
+    example: "{{ is_active | sql_bool }}",
+  },
+  {
+    name: "sql_date",
+    description: "Formats as 'YYYY-MM-DD'. None \u2192 NULL.",
+    example: "{{ start_date | sql_date }}",
+  },
+  {
+    name: "sql_datetime",
+    description: "Formats as ISO datetime string. None \u2192 NULL.",
+    example: "{{ created_at | sql_datetime }}",
+  },
+  {
+    name: "in_list",
+    description: "Converts array to (1, 2, 3) for IN clauses. Empty \u2192 (SELECT 1 WHERE 1=0).",
+    example: "{{ ids | in_list }}",
+  },
+  {
+    name: "sql_like",
+    description: "Escapes % and _ for LIKE patterns, wraps with %. None \u2192 NULL.",
+    example: "{{ q | sql_like }}",
+  },
+  {
+    name: "sql_like_start",
+    description: "Prefix match: escapes input, adds trailing %.",
+    example: "{{ q | sql_like_start }}",
+  },
+  {
+    name: "sql_like_end",
+    description: "Suffix match: escapes input, adds leading %.",
+    example: "{{ q | sql_like_end }}",
+  },
+  {
+    name: "json",
+    description: "Serializes to JSON string for JSONB/JSON columns.",
+    example: "{{ payload | json }}",
+  },
+]
 
 export const Route = createFileRoute("/_layout/about/sql-jinja")({
   component: SqlJinjaGuide,
@@ -148,15 +201,18 @@ function SqlJinjaGuide() {
             SQL with Jinja2 Templating
           </CardTitle>
           <CardDescription>
-            Write dynamic SQL queries using Jinja2 syntax for parameters, conditionals, and loops
+            Write dynamic, parameterized SQL queries using Jinja2 syntax with built-in SQL filters for safe value escaping
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold mb-3">Overview</h3>
             <p className="text-muted-foreground">
-              SQL (Jinja2) execution engine allows you to write SQL queries with Jinja2 template syntax. 
-              This enables dynamic queries with parameters, conditional logic, and loops without writing backend code.
+              The SQL engine renders your query as a Jinja2 template before executing it against the configured data source.
+              Request parameters are passed as template variables.
+              Always use SQL filters (<code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">sql_string</code>,{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">sql_int</code>, etc.) to escape values safely
+              — never output raw parameters with <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ param }}"}</code> alone.
             </p>
           </div>
 
@@ -164,38 +220,48 @@ function SqlJinjaGuide() {
             <h3 className="text-lg font-semibold mb-3">Basic Syntax</h3>
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium mb-2">1. Output Variables</h4>
+                <h4 className="font-medium mb-2">Output Variables</h4>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ variable }}"}</code> to output parameter values:
+                  Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ variable | filter }}"}</code> to output
+                  parameter values with safe escaping:
                 </p>
                 <CodeBlock
-                  code={`SELECT * FROM users WHERE id = {{ user_id | sql_int }};`}
+                  code={`SELECT * FROM users WHERE id = {{ user_id | sql_int }};
+
+-- String values
+SELECT * FROM users WHERE name = {{ name | sql_string }};
+
+-- Boolean values
+SELECT * FROM users WHERE is_active = {{ active | sql_bool }};
+
+-- IN clause with array
+SELECT * FROM users WHERE id IN {{ ids | in_list }};`}
                 />
               </div>
 
               <div>
-                <h4 className="font-medium mb-2">2. SQL Filters (Important!)</h4>
+                <h4 className="font-medium mb-2">The {"{% where %}"} Tag</h4>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Always use SQL filters to safely escape values and prevent SQL injection:
+                  The custom <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% where %}"}</code> tag
+                  automatically handles dynamic WHERE clauses:
                 </p>
-                <div className="space-y-2">
-                  <div>
-                    <Badge variant="outline" className="mb-1">sql_string</Badge>
-                    <CodeBlock code={`WHERE name = {{ name | sql_string }}`} />
-                  </div>
-                  <div>
-                    <Badge variant="outline" className="mb-1">sql_int</Badge>
-                    <CodeBlock code={`WHERE age = {{ age | sql_int }}`} />
-                  </div>
-                  <div>
-                    <Badge variant="outline" className="mb-1">sql_bool</Badge>
-                    <CodeBlock code={`WHERE active = {{ is_active | sql_bool }}`} />
-                  </div>
-                  <div>
-                    <Badge variant="outline" className="mb-1">in_list</Badge>
-                    <CodeBlock code={`WHERE id IN {{ ids | in_list }}`} />
-                  </div>
-                </div>
+                <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc mb-3">
+                  <li>Adds <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">WHERE</code> keyword only if at least one condition is present</li>
+                  <li>Strips leading <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">AND</code> / <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">OR</code> from the first condition</li>
+                  <li>Outputs nothing if all conditions are empty</li>
+                </ul>
+                <CodeBlock
+                  code={`SELECT id, name, email, status
+FROM users
+{% where %}
+  {% if ids %}id IN {{ ids | in_list }}{% endif %}
+  {% if name %}AND name ILIKE {{ name | sql_like }}{% endif %}
+  {% if status is defined %}AND status = {{ status | sql_int }}{% endif %}
+  {% if active is defined %}AND is_active = {{ active | sql_bool }}{% endif %}
+{% endwhere %}
+ORDER BY id DESC
+LIMIT {{ limit | sql_int }} OFFSET {{ offset | sql_int }};`}
+                />
               </div>
             </div>
           </div>
@@ -204,64 +270,92 @@ function SqlJinjaGuide() {
             <h3 className="text-lg font-semibold mb-3">Conditional Logic</h3>
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium mb-2">If Statements</h4>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% if %}"}</code> for conditional SQL:
-                </p>
-                <CodeBlock
-                  code={`SELECT id, name, status
-FROM users
-{% where %}
-  {% if ids %}id IN {{ ids | in_list }}{% endif %}
-  {% if name %}AND name ILIKE {{ name | sql_like }}{% endif %}
-  {% if min_age %}AND age >= {{ min_age | sql_int }}{% endif %}
-{% endwhere %}
-ORDER BY id DESC
-LIMIT {{ limit | sql_int }};`}
-                />
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">If / Else (inline)</h4>
-                <p className="text-sm text-muted-foreground mb-2">
-                  You can use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% else %}"}</code> and{" "}
-                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% elif %}"}</code> to branch logic:
-                </p>
+                <h4 className="font-medium mb-2">If / Elif / Else</h4>
                 <CodeBlock
                   code={`SELECT
   id,
   name,
-  {% if status == 1 %}'active'{% else %}'inactive'{% endif %} AS status_label
+  {% if sort_by == 'name' %}
+    name AS sort_key
+  {% elif sort_by == 'date' %}
+    created_at AS sort_key
+  {% else %}
+    id AS sort_key
+  {% endif %}
 FROM users
-WHERE id = {{ user_id | sql_int }};`}
+WHERE is_active = TRUE
+ORDER BY sort_key {{ 'DESC' if sort_desc else 'ASC' }};`}
                 />
               </div>
 
               <div>
-                <h4 className="font-medium mb-2">Custom {"{% where %}"} Tag</h4>
-                <p className="text-sm text-muted-foreground mb-2">
-                  The <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% where %}"}</code> tag automatically:
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-                  <li>Adds <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">WHERE</code> keyword if conditions exist</li>
-                  <li>Strips leading <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">AND</code> or <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">OR</code></li>
-                  <li>Returns empty string if no conditions</li>
-                </ul>
+                <h4 className="font-medium mb-2">Conditional JOINs</h4>
+                <CodeBlock
+                  code={`SELECT u.id, u.name
+  {% if include_profile %}, p.bio, p.avatar{% endif %}
+  {% if include_orders %}, COUNT(o.id) AS order_count{% endif %}
+FROM users u
+{% if include_profile %}
+LEFT JOIN profiles p ON p.user_id = u.id
+{% endif %}
+{% if include_orders %}
+LEFT JOIN orders o ON o.user_id = u.id
+{% endif %}
+WHERE u.is_active = TRUE
+{% if include_orders %}GROUP BY u.id, u.name{% if include_profile %}, p.bio, p.avatar{% endif %}{% endif %};`}
+                />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-3">If conditions cheat sheet (Jinja2)</h3>
+            <h3 className="text-lg font-semibold mb-3">Loops and Variables</h3>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">For Loops</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  For fine-grained control over list output (when <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">in_list</code> is not enough):
+                </p>
+                <CodeBlock
+                  code={`SELECT id, name
+FROM users
+WHERE id IN (
+  {% for id in ids %}
+    {{ id | sql_int }}{% if not loop.last %},{% endif %}
+  {% endfor %}
+);`}
+                />
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-2">Set Variables</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Compute and reuse values with defaults:
+                </p>
+                <CodeBlock
+                  code={`{% set lim = (limit if limit is defined else 50) | sql_int %}
+{% set off = (offset if offset is defined else 0) | sql_int %}
+
+SELECT id, name, created_at
+FROM users
+ORDER BY created_at DESC
+LIMIT {{ lim }} OFFSET {{ off }};`}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Condition Cheat Sheet</h3>
             <p className="text-sm text-muted-foreground mb-2">
-              Common patterns you can use inside <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% if ... %}"}</code>.
+              Common patterns for use inside <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% if ... %}"}</code>:
             </p>
             <div className="rounded-md border overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[320px]">Condition</TableHead>
-                    <TableHead className="w-[280px]">Meaning</TableHead>
+                    <TableHead className="w-[300px]">Condition</TableHead>
+                    <TableHead className="w-[260px]">Meaning</TableHead>
                     <TableHead>Example</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -285,176 +379,146 @@ WHERE id = {{ user_id | sql_int }};`}
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-3">Loops & Variables</h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">For loops</h4>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% for %}"}</code> when you need more control than{" "}
-                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ ids | in_list }}"}</code>:
-                </p>
-                <CodeBlock
-                  code={`SELECT id, name
-FROM users
-WHERE id IN (
-  {% for id in ids %}
-    {{ id | sql_int }}{% if not loop.last %},{% endif %}
-  {% endfor %}
-);`}
-                />
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Set variables</h4>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% set %}"}</code> to reuse computed values (e.g. default limit):
-                </p>
-                <CodeBlock
-                  code={`{% set lim = (limit if limit is defined else 50) | sql_int %}
-{% set off = (offset if offset is defined else 0) | sql_int %}
-
-SELECT id, name
-FROM users
-ORDER BY id DESC
-LIMIT {{ lim }} OFFSET {{ off }};`}
-                />
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Notes</h4>
-                <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-                  <li>
-                    <strong className="text-foreground">Prefer filters</strong> (e.g. <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"sql_string"}</code>,{" "}
-                    <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"sql_int"}</code>) instead of manual quoting.
-                  </li>
-                  <li>
-                    Template is rendered from a <strong className="text-foreground">string</strong>, so file-based features like{" "}
-                    <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% include %}"}</code> are not available. Use macros from Macro Defs instead.
-                  </li>
-                  <li>
-                    <strong className="text-foreground">Macro support:</strong> You can call Jinja macros defined in Macro Defs (same module) using{" "}
-                    <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ macro_name(args) }}"}</code>.
-                  </li>
-                </ul>
-              </div>
+            <h3 className="text-lg font-semibold mb-3">SQL Filters Reference</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Filters escape and format values for safe SQL output. Always apply them to user-provided parameters.
+            </p>
+            <div className="rounded-md border overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[140px]">Filter</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="w-[240px]">Usage</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {FILTERS.map((f) => (
+                    <TableRow key={f.name}>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono">{f.name}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{f.description}</TableCell>
+                      <TableCell className="font-mono text-sm">{f.example}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-3">Available Filters</h3>
-            <div className="space-y-3">
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_string</code>
-                  <p className="text-xs text-muted-foreground mt-1">Escapes strings, None → NULL</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_int</code>
-                  <p className="text-xs text-muted-foreground mt-1">Validates integers, None → NULL</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_float</code>
-                  <p className="text-xs text-muted-foreground mt-1">Validates floats, None → NULL</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_bool</code>
-                  <p className="text-xs text-muted-foreground mt-1">Converts to TRUE/FALSE</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_date</code>
-                  <p className="text-xs text-muted-foreground mt-1">Formats as YYYY-MM-DD</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_datetime</code>
-                  <p className="text-xs text-muted-foreground mt-1">Formats as ISO datetime</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">in_list</code>
-                  <p className="text-xs text-muted-foreground mt-1">Converts array to (1, 2, 3)</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_like</code>
-                  <p className="text-xs text-muted-foreground mt-1">Escapes % and _ for LIKE patterns</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_like_start</code>
-                  <p className="text-xs text-muted-foreground mt-1">Prefix match: escapes input + adds trailing %</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">sql_like_end</code>
-                  <p className="text-xs text-muted-foreground mt-1">Suffix match: escapes input + adds leading %</p>
-                </div>
-                <div className="p-3 border rounded-md">
-                  <code className="text-sm font-mono">json</code>
-                  <p className="text-xs text-muted-foreground mt-1">Serializes to JSON string for JSONB/JSON columns</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Examples</h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Example 1: Simple Query with Parameters</h4>
-                <CodeBlock
-                  code={`SELECT
-  {{ col1 | sql_string }} AS col1,
-  {{ col2 | sql_string }} AS col2,
-  {{ col3 | sql_int }} AS col3;`}
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  <strong>Params:</strong> <code>{`{"col1": "a", "col2": "b", "col3": 10}`}</code>
-                </p>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Example 2: Dynamic WHERE with Multiple Conditions</h4>
-                <CodeBlock
-                  code={`SELECT id, name, email, status
-FROM users
+            <h3 className="text-lg font-semibold mb-3">Multi-Statement SQL</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              Separate multiple statements with <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">;</code>.
+              Each SELECT returns its own result set. Common pattern: data query + count query.
+            </p>
+            <CodeBlock
+              code={`{# Statement 1: fetch page of rows #}
+SELECT id, name, status, price, created_at
+FROM items
 {% where %}
-  {% if user_ids %}id IN {{ user_ids | in_list }}{% endif %}
-  {% if search_name %}AND name ILIKE {{ search_name | sql_like }}{% endif %}
-  {% if status %}AND status = {{ status | sql_int }}{% endif %}
+  {% if q %}AND name ILIKE {{ q | sql_like }}{% endif %}
+  {% if status is defined %}AND status = {{ status | sql_int }}{% endif %}
+{% endwhere %}
+ORDER BY created_at DESC
+LIMIT {{ limit | sql_int }} OFFSET {{ offset | sql_int }};
+
+{# Statement 2: total count (same WHERE) #}
+SELECT COUNT(*) AS total
+FROM items
+{% where %}
+  {% if q %}AND name ILIKE {{ q | sql_like }}{% endif %}
+  {% if status is defined %}AND status = {{ status | sql_int }}{% endif %}
+{% endwhere %};`}
+            />
+            <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                <strong>Result structure:</strong> Multi-statement returns{" "}
+                <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">{"[[rows...], [{total: N}]]"}</code>.
+                Use a <strong>Result Transform</strong> to reshape into{" "}
+                <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">{"{ data, total, offset, limit }"}</code>.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Comments</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              Use Jinja2 comments to document your templates. They are stripped during rendering and never reach the database:
+            </p>
+            <CodeBlock
+              code={`{# This comment is removed during rendering #}
+SELECT id, name FROM users
+{# TODO: add soft-delete filter #}
+WHERE is_active = TRUE;`}
+            />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Full Example</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              A complete API query with search, filtering, object parameters, and pagination:
+            </p>
+            <CodeBlock
+              code={`{# Parameters:
+   q       (query, string)  - search text
+   status  (query, integer) - filter by status
+   active  (query, boolean) - filter by active flag
+   ids     (query, array)   - filter by id list
+   filters (body, object)   - e.g. {"min_price": 10, "max_price": 100}
+   limit   (query, integer, default=20)
+   offset  (query, integer, default=0)
+#}
+SELECT id, name, status, price, created_at
+FROM items
+{% where %}
+  {% if q %}AND name ILIKE {{ q | sql_like }}{% endif %}
+  {% if status is defined %}AND status = {{ status | sql_int }}{% endif %}
+  {% if active is defined %}AND is_active = {{ active | sql_bool }}{% endif %}
+  {% if ids %}AND id IN {{ ids | in_list }}{% endif %}
+  {% if filters and filters.min_price is defined %}AND price >= {{ filters.min_price | sql_float }}{% endif %}
+  {% if filters and filters.max_price is defined %}AND price <= {{ filters.max_price | sql_float }}{% endif %}
 {% endwhere %}
 ORDER BY created_at DESC
 LIMIT {{ limit | sql_int }} OFFSET {{ offset | sql_int }};`}
-                />
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Example 3: Conditional JOIN</h4>
-                <CodeBlock
-                  code={`SELECT u.id, u.name, p.title
-FROM users u
-{% if include_profile %}
-LEFT JOIN profiles p ON p.user_id = u.id
-{% endif %}
-WHERE u.active = TRUE;`}
-                />
-              </div>
-            </div>
+            />
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-3">Best Practices</h3>
+            <h3 className="text-lg font-semibold mb-3">Tips</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">✓</span>
-                <span><strong className="text-foreground">Always use filters:</strong> Never use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ param }}"}</code> directly. Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ param | sql_string }}"}</code> or appropriate filter.</span>
+                <span className="text-primary mt-0.5 shrink-0">1.</span>
+                <span><strong className="text-foreground">Always use filters</strong> — never output raw <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ param }}"}</code> without a filter. Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">sql_string</code>, <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">sql_int</code>, etc.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">✓</span>
-                <span><strong className="text-foreground">Use {"{% where %}"} tag:</strong> Makes dynamic WHERE clauses cleaner and safer.</span>
+                <span className="text-primary mt-0.5 shrink-0">2.</span>
+                <span><strong className="text-foreground">Use {"{% where %}"}</strong> — it handles empty conditions and strips leading AND/OR automatically.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">✓</span>
-                <span><strong className="text-foreground">Test with Debug:</strong> Use the Debug tab to test your queries with different parameter combinations.</span>
+                <span className="text-primary mt-0.5 shrink-0">3.</span>
+                <span><strong className="text-foreground">Define parameters</strong> — set types and defaults in the Parameters tab. The gateway coerces values before they reach the template.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">✓</span>
-                <span><strong className="text-foreground">Define Parameters:</strong> Always define parameters in the Basic Info tab for validation and autocomplete.</span>
+                <span className="text-primary mt-0.5 shrink-0">4.</span>
+                <span><strong className="text-foreground">Test with Debug</strong> — use the Debug tab to run queries with test parameters before publishing.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary mt-0.5 shrink-0">5.</span>
+                <span><strong className="text-foreground">Use macros</strong> — extract reusable SQL snippets into Macro Definitions. They are auto-prepended to your template and callable like <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{{ macro_name(args) }}"}</code>.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary mt-0.5 shrink-0">6.</span>
+                <span><strong className="text-foreground">Multi-statement for data + count</strong> — separate statements with <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">;</code> and use a Result Transform to combine results.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary mt-0.5 shrink-0">7.</span>
+                <span><strong className="text-foreground">Comment with {"{# ... #}"}</strong> — Jinja2 comments are stripped before execution. Use them instead of SQL comments for template-level notes.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary mt-0.5 shrink-0">8.</span>
+                <span><strong className="text-foreground">No file includes</strong> — templates render from strings, so <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">{"{% include %}"}</code> is not available. Use macros instead.</span>
               </li>
             </ul>
           </div>

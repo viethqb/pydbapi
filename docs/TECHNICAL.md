@@ -1,224 +1,351 @@
-# pyDBAPI — Technical Logic
+# Technical Reference
 
-This document describes the **technical logic** of the gateway, parameters, engines, and related components. Code references use the `backend/app` layout.
+Detailed technical logic of the gateway, parameters, engines, and related components. Code references use the `backend/app/` layout.
 
 ---
 
-## 1. Gateway request flow
+## 1. Gateway Request Flow
 
-**Route:** `GET|POST|PUT|PATCH|DELETE /api/{path:path}` (full URL = app base + `/api/{path}`).  
-**Handler:** `backend/app/api/routes/gateway.py` → `gateway_proxy()`
-
-Order of steps (and status codes when a step fails):
+**Route:** `GET|POST|PUT|PATCH|DELETE /api/{path:path}`
+**Handler:** `app/api/routes/gateway.py` -> `gateway_proxy()`
 
 | Step | Action | On failure |
 |------|--------|------------|
-| 1 | **Client IP** from `X-Forwarded-For` (if `TRUSTED_PROXY_COUNT > 0`) or `request.client.host` | — |
-| 2 | **Firewall** `check_firewall(ip, session)` | 403 Forbidden |
-| 3 | **Resolve** `resolve_gateway_api(path, method, session)` → (ApiAssignment, path_params, ApiModule); path + HTTP method are unique globally | 404 Not Found |
-| 4 | **Access type** If API is **private**, require auth | — |
-| 5 | **Auth** `verify_gateway_client(request, session)` (JWT) | 401 Unauthorized |
-| 6 | **Group/API access** `client_can_access_api(session, app_client_id, api_id)` | 403 Forbidden |
-| 7 | **Client key** `client_id` (if client) or `ip:{ip}` (public API) for rate/concurrent | — |
-| 8 | **Concurrent** `acquire_concurrent_slot(client_key, client_max)` | 503 Service Unavailable |
-| 9 | **Rate limit** `check_rate_limit(rate_limit_key, effective_limit)`; if over limit → **release concurrent slot** then return | 429 Too Many Requests |
-| 10 | **Parse params** `parse_params(request, path_params, method, params_definition)` | — |
-| 11 | **Run** `runner_run(api, params, ...)` via `asyncio.to_thread(...)` (blocking run in thread pool) | 400/500, see Runner |
-| 12 | **Finally** `release_concurrent_slot(client_key)` always | — |
-| 13 | **Normalize** `normalize_api_result(result, engine)` → envelope `{ success, message, data }` | — |
-| 14 | **Format** `format_response(normalized, request)` (optional camelCase) → JSONResponse | — |
+| 1 | **Client IP** from `X-Forwarded-For` (if `TRUSTED_PROXY_COUNT > 0`) or `request.client.host` | --- |
+| 2 | **Firewall** `check_firewall(ip, session)` | 403 |
+| 3 | **Resolve** `resolve_gateway_api(path, method, session)` -> ApiAssignment + path_params + ApiModule | 404 |
+| 4 | **Access type** check — if private, require auth | --- |
+| 5 | **Auth** `verify_gateway_client(request, session)` via JWT | 401 |
+| 6 | **API access** `client_can_access_api(session, client_id, api_id)` | 403 |
+| 7 | **Client key** = `client_id` (authenticated) or `ip:{ip}` (public) | --- |
+| 8 | **Concurrent** `acquire_concurrent_slot(client_key, max)` | 503 |
+| 9 | **Rate limit** `check_rate_limit(key, limit)` — releases concurrent slot on failure | 429 |
+| 10 | **Parse params** `parse_params(request, path_params, method, params_definition)` | --- |
+| 11 | **Run** `runner_run(api, params, ...)` via `asyncio.to_thread()` | 400/500 |
+| 12 | **Finally** `release_concurrent_slot(client_key)` — always executes | --- |
+| 13 | **Normalize** `normalize_api_result(result, engine)` -> `{ success, message, data }` | --- |
+| 14 | **Format** `format_response(normalized, request)` — optional camelCase | --- |
 
-**Why thread pool:** `runner_run` is synchronous (DB/script execution). Running it in the async handler would block the event loop and make the concurrent limit ineffective. `asyncio.to_thread` allows multiple requests in flight and correct slot counting.
-
----
-
-## 2. Path and method resolution
-
-**Files:** `backend/app/core/gateway/resolver.py` → `resolve_gateway_api(path, method, session)`
-
-- **URL:** Gateway route is `/api/{path}`. Module is **not** part of the URL; it is used only for grouping and permissions.
-- **Uniqueness:** (path, http_method) must be unique across all API assignments (enforced on create/update).
-- **Resolution:** Over all active modules (by `sort_order`), over all published API assignments for that module and method, the first whose `ApiAssignment.path` (regex pattern) matches the incoming `path` wins. Returns (ApiAssignment, path_params, ApiModule).
-- **Path pattern:** `ApiAssignment.path` supports placeholders `{name}`. Converted to regex: `{name}` → `(?P<name>[^/]+)`. Example: `users/{id}` matches request path `users/123` → `path_params = {"id": "123"}`.
+`runner_run` is synchronous (DB/script execution). `asyncio.to_thread` prevents blocking the event loop and ensures correct concurrent slot counting.
 
 ---
 
-## 3. Parameter handling
+## 2. Path and Method Resolution
 
-### 3.1 Merge order and sources
+**File:** `app/core/gateway/resolver.py`
 
-**File:** `backend/app/core/gateway/request_response.py` → `parse_params()`
+- **URL:** Gateway route is `/api/{path}`. Module is **not** part of the URL.
+- **Uniqueness:** `(path, http_method)` must be globally unique across all API assignments.
+- **Resolution:** Iterates active modules (by `sort_order`), then published assignments for the matching method. First regex match wins.
+- **Path patterns:** `{name}` placeholders are converted to `(?P<name>[^/]+)`. Example: `users/{id}` matches `users/123` -> `path_params = {"id": "123"}`.
+
+---
+
+## 3. Parameter Handling
+
+### 3.1 Merge Order and Sources
+
+**File:** `app/core/gateway/request_response.py` -> `parse_params()`
 
 - **Priority:** path > query > body > header (path always wins).
-- **Path:** From resolver `path_params` (always included).
-- **Query:** `request.query_params`.
-- **Body:** `application/json` → `request.json()`; `application/x-www-form-urlencoded` or `multipart/form-data` → `request.form()` (as dict).
-- **Header:** Only when **params_definition** is provided: for each param with `location="header"`, value is taken from `request.headers` (case-insensitive lookup by param name). If no params_definition, headers are **not** merged.
+- **Sources:**
+  - **Path:** From resolver `path_params`.
+  - **Query:** `request.query_params`.
+  - **Body:** JSON (`application/json`) or form data (`application/x-www-form-urlencoded`, `multipart/form-data`).
+  - **Header:** Only when `params_definition` is provided — each param with `location="header"` reads from `request.headers`.
 
-**When params_definition exists:** Only names defined there are taken from query/body/header; path params are always included. Unknown keys from query/body are **ignored**. Each param is taken only from its configured location.  
-**When params_definition is missing:** Backward-compatible merge: `out = path_params` then `out.update(body)`, `out.update(query)`, `out.update(path_params)` again (path overwrites).
+**With params_definition:** Only defined names are extracted from their configured location. Unknown keys are ignored.
+**Without params_definition:** Backward-compatible merge: `path_params` -> `body` -> `query` -> `path_params` again (path overwrites).
 
-### 3.2 Request naming (camel → snake)
+### 3.2 Request Naming (camel -> snake)
 
-- Query `?naming=snake` (default) or `?naming=camel`. If **camel**, **body** and **query** keys are converted from camelCase to snake_case before merge. **Path** and **header** keys are not converted.
+Query `?naming=camel` converts body and query keys from camelCase to snake_case before merge. Path and header keys are not converted.
 
-### 3.3 Runner: required and type coercion
+### 3.3 Type Coercion
 
-**File:** `backend/app/core/gateway/runner.py`
+**File:** `app/core/param_type.py`
 
-After `parse_params`, the runner:
+After parsing, the runner applies type coercion for each defined parameter:
 
-1. **Required check:** For each param in `params_definition` with `is_required=True`, if value is missing or empty string → 400, "Missing required parameters: ...".
-2. **Type coercion:** `validate_and_coerce_params(params_definition, params)` (`backend/app/core/param_type.py`). Supported **data_type**: `string`, `number`, `integer`/`int`, `boolean`/`bool`, `array`, `object`/`obj`. Coercion rules:
-   - **string:** strip.
-   - **integer:** int or float with integer value; "123" → 123; boolean not allowed.
-   - **number:** float.
-   - **boolean:** true/false, 1/0, yes/no (string or int).
-   - **array:** list, or JSON array string, or comma-separated string → list.
-   - **object:** dict or JSON object string.
-   - If value is None/empty and **default_value** is set, default is coerced and used.
-   - Params not in params_definition are left unchanged.
-3. **Param validates (script):** If `param_validates_definition` is set, `run_param_validates(...)` runs each validation script (RestrictedPython). Script must define `def validate(value, params=None): return True/False`. Raises 400 with `message_when_fail` on first failure.
+| `data_type` | Coercion rules |
+|-------------|---------------|
+| `string` | Strip whitespace |
+| `integer` / `int` | `int()` or float with integer value. Booleans rejected. |
+| `number` | `float()` |
+| `boolean` / `bool` | true/false, 1/0, yes/no (string or int) |
+| `array` | List, JSON array string, or comma-separated string |
+| `object` / `obj` | Dict or JSON object string |
 
-### 3.4 Response naming (snake → camel)
+- If value is None/empty and `default_value` is set, the default is coerced and used.
+- Params not in `params_definition` are left unchanged.
 
-**File:** `backend/app/core/gateway/request_response.py` → `format_response()`, `_response_naming()`
+### 3.4 Parameter Validation (Scripts)
 
-- If query `?naming=camel` or header `X-Response-Naming: camel`, the **entire response** dict is recursively key-converted from snake_case to camelCase before sending.
+**File:** `app/core/param_validate.py`
 
----
+If `param_validates_definition` is set, each validation script (RestrictedPython) runs:
 
-## 4. Concurrent limit
+```python
+def validate(value, params=None):
+    return True  # or False
+```
 
-**File:** `backend/app/core/gateway/concurrent.py`
+Raises 400 with `message_when_fail` on first failure. Macros are prepended so helper functions are available.
 
-- **Purpose:** Limit how many requests a client (or IP) can have **in flight** at once.
-- **Client key:** `app_client.client_id` (authenticated) or `f"ip:{ip}"` (public API).
-- **Effective limit:** If `app_client.max_concurrent` is set and > 0, use it; else use global `FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT`. If effective limit ≤ 0 → no limit (acquire always succeeds).
-- **Acquire:** Before running the request. **Redis:** key `concurrent:gateway:{client_key}`, `INCR`; if value > max → `DECR` and return False (503). On first use, `EXPIRE` key 300s. **In-memory:** dict `client_key → count`; if count >= max return False, else increment. On Redis error: **fail-open** (allow).
-- **Release:** In gateway **finally** block (always). **Redis:** `DECR` key. **In-memory:** decrement; if ≤ 0 remove key. Must always release so slots are freed even when global limit is 0 and client has per-client limit.
-- **Order:** Concurrent is checked **before** rate limit. If 503, rate limit is not consumed. If 429 (rate limit), the slot acquired for concurrent is **released** before returning.
-- **In-memory:** Not shared across processes; with multiple workers the effective limit is roughly max × workers. Use Redis for correct multi-worker behavior.
+### 3.5 Response Naming (snake -> camel)
 
----
+**File:** `app/core/gateway/request_response.py` -> `format_response()`
 
-## 5. Rate limit
-
-**File:** `backend/app/core/gateway/ratelimit.py`
-
-- **Kill switch:** If `FLOW_CONTROL_RATE_LIMIT_ENABLED` is False, always allow.
-- **Key:** Chosen in gateway: `api:{api_id}:{client_key}` when API has `rate_limit_per_minute` > 0; else `client:{client_key}` when client has `rate_limit_per_minute` > 0. If neither is set, rate limit is not applied (no key passed).
-- **Algorithm:** Sliding window, 60 seconds. **Redis:** sorted set `ratelimit:gateway:{key}`; remove entries with score < now - 60; count; if count >= limit return False; else add current timestamp; set EXPIRE. **In-memory:** list of timestamps per key; prune old; if len >= limit return False; else append now. On Redis error: **fail-open** (allow).
-- **In-memory:** Not shared across processes.
+If `?naming=camel` or `X-Response-Naming: camel`, all response keys are recursively converted to camelCase.
 
 ---
 
-## 6. Gateway auth and API access
+## 4. Concurrent Limit
 
-**File:** `backend/app/core/gateway/auth.py`
+**File:** `app/core/gateway/concurrent.py`
 
-- **Token:** JWT from `POST /token/generate` (client_id, client_secret). Stored in payload `sub` = client_id.
-- **Request:** `Authorization: Bearer <token>` or legacy `Authorization: <token>`. Decode with `SECRET_KEY`, verify expiry.
-- **Client:** Lookup `AppClient` by `client_id` from payload, `is_active=True`.
-- **API access (private only):** `client_can_access_api(session, app_client_id, api_id)` is True if:
-  - There is a direct link `AppClientApiLink` for this client and API, or
-  - There exists at least one `ApiGroup` linked to both the client (`AppClientGroupLink`) and the API (`ApiAssignmentGroupLink`).
-
----
-
-## 7. Runner (execute API and access log)
-
-**File:** `backend/app/core/gateway/runner.py` → `run()`
-
-1. **Config:** `get_or_load_gateway_config(api, session)` → content, params_definition, param_validates_definition, result_transform_code, macros_jinja, macros_python. From Redis cache or DB (ApiContext + macro defs + version commit).
-2. **Content:** For SQL: prepend `macros_jinja` to content; for SCRIPT: prepend `macros_python`. Then run single content string.
-3. **Required params:** As in §3.3 → 400 if missing.
-4. **Type coercion:** `validate_and_coerce_params` → 400 on ParamTypeError.
-5. **Param validates:** `run_param_validates` (scripts) → 400 on ParamValidateError.
-6. **Datasource:** If API has datasource and it is inactive → 500, "DataSource is inactive...".
-7. **Execute:** `ApiExecutor().execute(engine, content, params, datasource_id=..., datasource=..., session, close_connection_after_execute)`. SQL → render Jinja2, run SQL, return `{"data": rows}` or `{"data": [], "rowcount": n}`. SCRIPT → ScriptExecutor with context, return `{"data": result}`.
-8. **Result transform:** If `result_transform_code` is set, run Python transform (RestrictedPython) with result and params; macros prepended. On error → 400 (ResultTransformError).
-9. **Access record:** On success write 200; on any exception write 500 then re-raise. Body/headers/params for log truncated or omitted per `GATEWAY_ACCESS_LOG_BODY`.
+- **Purpose:** Limit in-flight requests per client or IP.
+- **Client key:** `app_client.client_id` (authenticated) or `ip:{ip}` (public).
+- **Effective limit:** Per-client `max_concurrent` if set and > 0, else global `FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT`. If <= 0, no limit.
+- **Redis:** Key `concurrent:gateway:{client_key}`, `INCR` + check + `EXPIRE 300s`. Over limit -> `DECR` + return False.
+- **In-memory:** Dict-based counter. Not shared across workers.
+- **Release:** Always in the `finally` block. Slots are freed regardless of success, 429, or 5xx.
+- **Order:** Checked **before** rate limit. If 503, rate limit is not consumed.
+- **Fail-open:** On Redis error, requests are allowed through.
+- **Debug:** Set `CONCURRENT_DEBUG=1` to log acquire/release events.
 
 ---
 
-## 8. Response envelope and normalization
+## 5. Rate Limit
 
-**File:** `backend/app/core/gateway/request_response.py` → `normalize_api_result()`
+**File:** `app/core/gateway/ratelimit.py`
 
-- **Envelope:** All gateway (and debug) responses use `{ "success": true|false, "message": str|null, "data": list }`. Extra keys (e.g. from result_transform: offset, limit, total) are preserved.
-- **SQL:** If result is `{"data": ...}` and `data` is a single list (one result set), unwrap to `data = that list`. Otherwise wrap raw list in envelope.
-- **SCRIPT:** If result has inner `{ success, message, data }`, normalize to top-level envelope; ensure `data` is a list. Otherwise wrap in envelope.
-- **format_response:** After normalization, if `?naming=camel` or `X-Response-Naming: camel`, convert all keys recursively to camelCase.
-
----
-
-## 9. Config cache (gateway)
-
-**File:** `backend/app/core/gateway/config_cache.py`
-
-- **Key:** `gateway:config:{api_assignment_id}`.
-- **TTL:** `GATEWAY_CONFIG_CACHE_TTL_SECONDS` (default 60).
-- **Stored:** content, params_definition, param_validates_definition, result_transform_code, macros_jinja, macros_python (and related IDs). Built from ApiContext + linked macro defs (with version commit snapshot when present). On Redis miss or error, load from DB and optionally set cache.
-- **Used by:** `runner.run()` so each request does not hit DB for content/params/validates/transform.
+- **Kill switch:** `FLOW_CONTROL_RATE_LIMIT_ENABLED=False` disables all rate limiting.
+- **Key selection:** `api:{api_id}:{client_key}` if the API has `rate_limit_per_minute > 0`, else `client:{client_key}` if the client has a limit. If neither is set, rate limiting is skipped.
+- **Algorithm:** Sliding window, 60-second window.
+  - **Redis:** Sorted set with timestamp scores. Remove expired entries, count, reject if >= limit.
+  - **In-memory:** List of timestamps per key. Not shared across workers.
+- **Fail-open:** On Redis error, requests are allowed.
 
 ---
 
-## 10. SQL engine (Jinja2)
+## 6. Gateway Auth and API Access
 
-**Files:** `backend/app/engines/sql/template_engine.py`, `filters.py`, `extensions.py`
+**File:** `app/core/gateway/auth.py`
 
-- **Render:** Jinja2 `Environment` with `autoescape=False`, custom filters and extensions. `SQLTemplateEngine.render(template, params)` → final SQL string. Params are passed as template variables; use `{{ name }}` or filters for safe quoting.
-- **Filters (examples):** `sql_string`, `sql_int`, `sql_float`, `sql_bool`, `sql_date`, `sql_datetime`, `sql_in_list` (for IN clauses), `sql_like`, `sql_like_start`, `sql_like_end`, etc. They escape quotes and format for SQL.
-- **Extensions:** Custom tags e.g. `{% where %}...{% endwhere %}`, `{% set %}...{% endset %}` for conditional fragments.
-- **Parse parameters:** `parse_parameters(template)` uses Jinja2 `meta.find_undeclared_variables(ast)` to list variable names (for UI/debug).
-- **Data sources:** PostgreSQL (psycopg), MySQL (pymysql), Trino (trino). Databases that use a PostgreSQL or MySQL-compatible protocol (e.g. StarRocks, RisingWave) are supported via the corresponding `product_type`.
-- **Execution:** Rendered SQL is executed via pool (`execute_sql` in pool manager); result rows or rowcount returned.
-
----
-
-## 11. Script engine (Python sandbox)
-
-**Files:** `backend/app/engines/script/executor.py`, `context.py`, `sandbox.py`
-
-- **Sandbox:** RestrictedPython. Script cannot arbitrarily `import`; only names injected into globals are available.
-- **Context (injected):** `db` (query, query_one, execute), `req` (merged params), `ds` (datasource metadata: id, name, product_type, host, port, database), `http`, `cache`, `env`, `log`, `tx` (transaction: begin, commit, rollback). Script must set `result`; that value is returned.
-- **Extra modules:** `SCRIPT_EXTRA_MODULES` (comma-separated) whitelist. Only top-level names matching `^[a-zA-Z_][a-zA-Z0-9_]*$` are imported and injected (e.g. `pandas`, `numpy`). Submodules are not added via this setting.
-- **Timeout:** `SCRIPT_EXEC_TIMEOUT` (seconds). Raises `ScriptTimeoutError` after N seconds using a thread-based mechanism (works on all platforms).
-- **Connection:** One connection per script run (or shared with `tx` if in transaction). `release_script_connection()` called in finally. Optional `close_connection_after_execute` for drivers that need a fresh connection per request.
+- **Token:** JWT from `POST /token/generate` with `client_id` and `client_secret`. Payload `sub` = `client_id`.
+- **Expiry:** Per-client `token_expire_seconds` if set, otherwise global `GATEWAY_JWT_EXPIRE_SECONDS` (default 3600s).
+- **Request header:** `Authorization: Bearer <token>`.
+- **Client lookup:** Find `AppClient` by `client_id` from JWT payload, must be `is_active=True`.
+- **API access (private only):** `client_can_access_api()` returns True if:
+  - Direct link exists (`AppClientApiLink`), or
+  - Client is in a group (`AppClientGroupLink`) that includes the API (`ApiAssignmentGroupLink`).
 
 ---
 
-## 12. Result transform and param validate (script)
+## 7. Runner
 
-**Files:** `backend/app/core/result_transform.py`, `backend/app/core/param_validate.py`
+**File:** `app/core/gateway/runner.py`
 
-- **Result transform:** Python script (RestrictedPython) receives `result` (executor output) and `params`. Must assign to `result` (or return value, depending on implementation). Macros are prepended so helpers can be used. Raises `ResultTransformError` on failure → 400.
-- **Param validate:** Per-parameter validation scripts. Each defines `def validate(value, params=None): return True/False`. Receives param value and full params dict. Macros prepended. Raises `ParamValidateError` with `message_when_fail` → 400.
+1. **Load config:** `get_or_load_gateway_config(api, session)` -> content, params, validates, result_transform, macros. From Redis cache or DB.
+2. **Prepend macros:** SQL macros prepended to SQL content; Python macros prepended to script content.
+3. **Required check:** Missing required params -> 400.
+4. **Type coercion:** `validate_and_coerce_params()` -> 400 on `ParamTypeError`.
+5. **Param validation:** `run_param_validates()` -> 400 on `ParamValidateError`.
+6. **Datasource check:** Inactive datasource -> 500.
+7. **Execute:** Dispatch to SQL or Script engine via `ApiExecutor`.
+8. **Result transform:** Optional post-processing script (RestrictedPython). On error -> 400.
+9. **Access log:** Write `AccessRecord` with status 200 on success, 500 on error.
+
+---
+
+## 8. Response Envelope
+
+**File:** `app/core/gateway/request_response.py`
+
+All gateway responses use a standard envelope:
+
+```json
+{"success": true, "message": null, "data": [...]}
+```
+
+### How results are normalized
+
+**SQL engine (single statement):**
+
+```json
+{"success": true, "message": null, "data": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]}
+```
+
+**SQL engine (multi-statement):** Returns nested arrays — use a result transform to reshape:
+
+```json
+{"success": true, "message": null, "data": [[{"id": 1, "name": "Alice"}], [{"total": 42}]]}
+```
+
+**Script engine:** If the script returns `{"success": ..., "message": ..., "data": ...}`, those keys are promoted to the top-level envelope. Otherwise the return value is wrapped in `data`.
+
+**Max rows:** `GATEWAY_MAX_RESPONSE_ROWS` (default 10,000) caps `data` length.
+
+**Extra keys** from result transforms (e.g. `offset`, `limit`, `total`) are preserved alongside the standard envelope keys.
+
+---
+
+## 9. Config Cache
+
+**File:** `app/core/gateway/config_cache.py`
+
+- **Key:** `gateway:config:{api_assignment_id}`
+- **TTL:** `GATEWAY_CONFIG_CACHE_TTL_SECONDS` (default 300s)
+- **Contents:** content, params_definition, param_validates, result_transform, macros (Jinja2 and Python)
+- **Source:** ApiContext + linked macro definitions + version commit snapshot
+- **Behavior:** Redis miss or error -> load from DB and cache. Used by the runner to avoid DB hits per request.
+
+---
+
+## 10. SQL Engine (Jinja2)
+
+**Files:** `app/engines/sql/template_engine.py`, `filters.py`, `extensions.py`, `app/engines/sql/executor.py`
+
+### 10.1 Template Rendering
+
+- **Environment:** Jinja2 `Environment` with `autoescape=False`, custom filters and extensions. Request parameters are passed as template variables.
+- **Size limits:** `SQL_TEMPLATE_MAX_SIZE` (source), `SQL_RENDERED_MAX_SIZE` (rendered output). Exceeding either raises an error.
+- **Parameter discovery:** `parse_parameters(template)` uses the Jinja2 AST to list undeclared variables — used by the Debug UI to auto-suggest parameters.
+
+### 10.2 Filters
+
+All filters handle `None` → `NULL`. Always use a filter on user-provided values — never output raw `{{ param }}`.
+
+| Filter | Output | Example |
+|--------|--------|---------|
+| `sql_string` | `'escaped''value'` or `NULL` | `{{ name \| sql_string }}` |
+| `sql_int` | `42` or `NULL` | `{{ age \| sql_int }}` |
+| `sql_float` | `3.14` or `NULL` | `{{ price \| sql_float }}` |
+| `sql_bool` | `TRUE` / `FALSE` or `NULL` | `{{ active \| sql_bool }}` |
+| `sql_date` | `'2024-01-15'` or `NULL` | `{{ start \| sql_date }}` |
+| `sql_datetime` | `'2024-01-15T10:30:00'` or `NULL` | `{{ ts \| sql_datetime }}` |
+| `in_list` | `(1, 2, 3)` or `(SELECT 1 WHERE 1=0)` | `{{ ids \| in_list }}` |
+| `sql_like` | `'%escaped%'` or `NULL` | `{{ q \| sql_like }}` |
+| `sql_like_start` | `'prefix%'` | `{{ q \| sql_like_start }}` |
+| `sql_like_end` | `'%suffix'` | `{{ q \| sql_like_end }}` |
+| `json` | `'{"key": "val"}'` (JSON string) | `{{ payload \| json }}` |
+
+### 10.3 Extensions
+
+- **`{% where %}...{% endwhere %}`** — Generates a `WHERE` clause only if at least one inner condition is present. Automatically strips the leading `AND` or `OR` (case-insensitive) from the first condition. Outputs nothing if all inner blocks are empty.
+- **`{% set %}...{% endset %}`** — Set local template variables with optional default values.
+
+### 10.4 Multi-Statement SQL
+
+Separate multiple SQL statements with `;`. The engine splits on semicolons (respecting string quotes, `$$` dollar-quoting, and comments) and executes each statement sequentially.
+
+- **Single statement:** Returns one result set.
+- **Multiple statements:** Returns a list of per-statement results: `[result1, result2, ...]`.
+  - `SELECT` / `WITH` statements → `list[dict]` (rows)
+  - `INSERT` / `UPDATE` / `DELETE` → `int` (affected row count)
+
+**Common pattern** — data query + count query:
+
+```sql
+-- Statement 1: fetch rows
+SELECT id, name, price FROM items
+{% where %}
+  {% if q %}AND name ILIKE {{ q | sql_like }}{% endif %}
+{% endwhere %}
+ORDER BY id DESC
+LIMIT {{ limit | sql_int }} OFFSET {{ offset | sql_int }};
+
+-- Statement 2: total count
+SELECT COUNT(*) AS total FROM items
+{% where %}
+  {% if q %}AND name ILIKE {{ q | sql_like }}{% endif %}
+{% endwhere %};
+```
+
+Result: `[[{id, name, price}, ...], [{total: 42}]]`. Use a **result transform** to reshape this into `{data: [...], total: 42}`.
+
+### 10.5 Execution
+
+Rendered SQL runs via the connection pool for the configured data source. Supported databases: PostgreSQL (psycopg), MySQL (pymysql), Trino (trino). Compatible-protocol DBs (StarRocks, RisingWave) work via the corresponding type.
+
+---
+
+## 11. Script Engine (Python Sandbox)
+
+**Files:** `app/engines/script/executor.py`, `context.py`, `sandbox.py`, `app/engines/script/modules/`
+
+### 11.1 Sandbox
+
+RestrictedPython — no arbitrary imports, no file system access, no `exec`/`eval`/`compile`/`__import__`.
+
+**Safe built-ins** available as globals: `dict`, `list`, `set`, `tuple`, `str`, `int`, `float`, `bool`, `range`, `type`, `len`, `min`, `max`, `sum`, `abs`, `round`, `sorted`, `enumerate`, `zip`, `map`, `filter`, `json` (loads/dumps), `datetime`, `date`, `time`, `timedelta`.
+
+**Extra modules:** `SCRIPT_EXTRA_MODULES` (comma-separated). Only top-level module names matching `^[a-zA-Z_][a-zA-Z0-9_]*$`. Modules must be installed in the backend environment. Injected as globals (no import needed).
+
+### 11.2 Context Objects
+
+| Object | Methods | Description |
+|--------|---------|-------------|
+| `req` | Dict access (`req.get(key)`, `req[key]`, `req.items()`) | Merged parameters (path > query > body > header) |
+| `db` | `query(sql, params?)` → `list[dict]`, `query_one(sql, params?)` → `dict\|None`, `execute(sql, params?)` → `int` | Database operations against the configured data source. Use `%s` placeholders. |
+| `tx` | `begin()`, `commit()`, `rollback()` | Explicit transactions. All db calls within tx share one connection. |
+| `http` | `get(url, **kw)`, `post(url, **kw)`, `put(url, **kw)`, `delete(url, **kw)` | Outbound HTTP. Supports `params`, `headers`, `cookies`, `json`, `data`, `content` kwargs. 30s default timeout. Restricted by `SCRIPT_HTTP_ALLOWED_HOSTS`. |
+| `cache` | `get(key)`, `set(key, value, ttl_seconds?)`, `delete(key)`, `exists(key)` → `bool`, `incr(key, amount?)` → `int`, `decr(key, amount?)` → `int` | Redis cache. Keys auto-prefixed with `script:`. No-ops when Redis unavailable. |
+| `log` | `info(msg, extra?)`, `warning(msg, extra?)`, `error(msg, extra?)`, `debug(msg, extra?)` | Backend logger with script context. |
+| `env` | `get(key, default?)`, `get_int(key, default?)`, `get_bool(key, default?)` | Whitelisted environment variables. Prevents secret leakage. |
+| `ds` | Dict access: `ds["name"]`, `ds["product_type"]`, `ds["host"]`, `ds["port"]`, `ds["database"]` | Read-only data source metadata. |
+
+### 11.3 Returning Results
+
+The executor checks for results in this order:
+
+1. **Function style (preferred):** If the script defines `def execute(params=None)`, it is called with `req` (the merged params dict), and its return value becomes the result.
+2. **Variable style:** If the script assigns to the global `result` variable, that value is returned.
+3. **Neither:** Returns `None` (gateway wraps it as `{"success": true, "data": null}`).
+
+### 11.4 Execution
+
+- **Timeout:** `SCRIPT_EXEC_TIMEOUT` seconds. Thread-based, works on all platforms.
+- **Connection:** One database connection per script run (or shared across calls when inside `tx.begin()`). Released in `finally`.
+- **Macros:** Python macros from Macro Definitions are string-concatenated before the script content, making macro functions callable directly.
+
+---
+
+## 12. Result Transform
+
+**File:** `app/core/result_transform.py`
+
+- Python script (RestrictedPython) receives `result` (executor output) and `params`.
+- Must assign to `result`.
+- Macros are prepended for helper functions.
+- Raises `ResultTransformError` on failure -> 400.
 
 ---
 
 ## 13. Firewall
 
-**File:** `backend/app/core/gateway/firewall.py`
+**File:** `app/core/gateway/firewall.py`
 
-- **Current behavior:** `check_firewall(ip, session)` always returns **True** (all IPs allowed). No CRUD API or UI for firewall rules. Model `FirewallRules` exists in DB for future use.
+- `check_firewall(ip, session)` currently always returns True (all IPs allowed).
+- No CRUD API or UI. Model exists for future use.
+- Default behavior controlled by `GATEWAY_FIREWALL_DEFAULT_ALLOW`.
 
 ---
 
-## Summary table (status codes)
+## Status Code Summary
 
-| Cause | Status |
-|-------|--------|
+| Cause | Code |
+|-------|------|
 | Firewall deny | 403 |
-| Module/path not found | 404 |
+| Path/method not found | 404 |
 | Private API, no/invalid token | 401 |
-| Client not allowed for this API | 403 |
+| Client not allowed for API | 403 |
 | Over concurrent limit | 503 |
 | Over rate limit | 429 |
 | Missing required param | 400 |
 | Param type/coercion error | 400 |
-| Param validate script failure | 400 |
+| Param validation script failure | 400 |
 | Result transform error | 400 |
-| ApiContext not found / DataSource inactive / execution error | 500 |
+| DataSource inactive / execution error | 500 |
 | Success | 200 |

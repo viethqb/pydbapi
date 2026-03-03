@@ -1,144 +1,161 @@
-# pyDBAPI — Overview and Features
+# Overview
 
-**pyDBAPI** is a DB API platform: you manage data sources (PostgreSQL, MySQL, Trino, and databases using PostgreSQL/MySQL protocol such as StarRocks, RisingWave), define API endpoints with **SQL (Jinja2)** or **Python scripts**, and expose them through a **dynamic gateway** with authentication, rate limiting, concurrency limits, and versioning.
-
-This document describes the **end-to-end flow** and **features** of the tool.
+pyDBAPI is a database API platform. You manage data sources, define API endpoints with SQL or Python, and expose them through a dynamic gateway with auth, rate limiting, concurrency control, and versioning.
 
 ---
 
 ## End-to-End Flow
 
-### 1. Setup and run
+### 1. Setup
 
-- Clone the repo, copy `.env.example` to `.env`, set `SECRET_KEY`, `POSTGRES_PASSWORD`, `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD`.
-- Run with Docker Compose: `docker compose up -d`.
-- Open the dashboard (e.g. `http://localhost` or your configured domain) and log in as the superuser.
+- Clone the repo, copy `.env.example` to `.env`, set required variables (`SECRET_KEY`, `POSTGRES_PASSWORD`, `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD`).
+- Run `docker compose up -d`. Open `http://localhost` and log in with the superuser credentials.
 
-### 2. Create a data source
+### 2. Create a Data Source
 
-- Go to **Connection** (Data Sources).
-- Create a data source: choose **PostgreSQL**, **MySQL**, or **Trino**; or use PostgreSQL/MySQL for databases that speak the same protocol (e.g. StarRocks, RisingWave). Set host, port, database, user, password.
-- Use **Test** to verify connectivity. The app uses a connection pool and health checks for external DBs.
+- Navigate to **Connection** (Data Sources).
+- Add a data source: **PostgreSQL**, **MySQL**, or **Trino**. Databases using compatible protocols (e.g. StarRocks, RisingWave) work via the corresponding type.
+- Configure host, port, database, user, and password. Use **Test** to verify connectivity.
 
-### 3. Organize APIs: modules and API assignments
+### 3. Define APIs
 
-- **Modules** group API endpoints under a common path prefix (e.g. `sales`, `reporting`).
+- **Modules** group endpoints under a common prefix for organization and permissions (the module is not part of the gateway URL).
 - **API Assignments** define each endpoint:
-  - **Engine**: SQL (Jinja2 template) or Python script (RestrictedPython sandbox).
-  - **DataSource**: which DB to use (for SQL) or which DB is available in script context.
-  - **Path**: URL path of the API (e.g. `users`, `users/{id}`). Supports path parameters. Must be unique per HTTP method across all modules.
-  - **HTTP method**: GET, POST, PUT, PATCH, DELETE.
-  - **Parameters**: name, location (query / header / body), type, required, validation (regex or Python).
-  - **Content**: SQL template or Python script body. For SQL you can use **macro definitions** (reusable snippets).
-- **Publish** an API assignment to make it live on the gateway. You can use **version commits** to track changes (api-assignments and macro-defs).
+  - **Engine:** SQL (Jinja2 template) or Script (RestrictedPython sandbox).
+  - **Data Source:** which database to query.
+  - **Path:** URL path (e.g. `users`, `users/{id}`). Supports path parameters. Must be globally unique per HTTP method.
+  - **HTTP Method:** GET, POST, PUT, PATCH, DELETE.
+  - **Parameters:** name, location (query / header / body), type, required flag, validation (regex or Python script).
+  - **Content:** SQL template or Python script body. SQL supports **macro definitions** (reusable snippets).
+- **Publish** an assignment to make it live on the gateway. **Version commits** track changes for audit and rollback.
 
-### 4. Control access: groups and clients
+### 4. Control Access
 
-- **Groups**: authorization groups; an API assignment can be restricted to certain groups (optional).
-- **Clients**: applications that call the gateway. Each client has `client_id` and `client_secret`. You can set **max concurrent** requests per client; rate limits can be global or per client (Redis or in-memory).
+- **Groups:** Authorization groups. An API can be restricted to certain groups.
+- **Clients:** Applications that call the gateway. Each client has a `client_id` and `client_secret`, with configurable rate limits, max concurrent requests, and optional per-client JWT expiry (`token_expire_seconds`).
 
-### 5. Call the gateway
+### 5. Call the Gateway
 
-- **Obtain a token**: `POST /api/token/generate` or `POST /token/generate` with `client_id` and `client_secret` → returns a JWT.
-- **Call the API**:  
-  `GET|POST|PUT|PATCH|DELETE /api/{path}`  
-  e.g. `GET /api/users?status=active`  
-  (full URL = app base URL + `/api/{path}`. Module is for grouping/permissions only; it is not part of the URL.)  
-  Use header `Authorization: Bearer <token>` for private APIs.
-- **Parameters**: path params from URL; query from `?key=value`; body from JSON or form; headers from HTTP headers. When the API has a **params definition**, each param is taken only from its configured location (query, body, or header). Merged priority: path > query > body > header. Naming can be forced to camelCase via `?naming=camel` or `X-Response-Naming: camel`.
-- **Response**: JSON (and optionally naming convention). Access is logged (AccessRecord) when enabled.
+**Public APIs** — call directly, no token needed:
 
-### 6. Admin and security
+```bash
+curl "http://localhost/api/users?limit=10&q=john"
+```
 
-- **Users and roles**: create users, assign roles, manage permissions (Superset-style permission model). UI: Admin (users, roles), Security (roles, permissions).
-- **Access logs**: view recent access to APIs (System > Access logs) when the feature is enabled.
+**Private APIs** — authenticate with a client token first:
+
+```bash
+# Step 1: Get a JWT (using client_id and client_secret)
+curl -X POST http://localhost/api/token/generate \
+  -H "Content-Type: application/json" \
+  -d '{"client_id": "my-app", "client_secret": "secret123"}'
+# → {"access_token": "eyJ...", "token_type": "bearer"}
+
+# Step 2: Call the API with the token
+curl -H "Authorization: Bearer eyJ..." "http://localhost/api/orders?status=1"
+```
+
+**Parameters** are sourced from four locations:
+
+| Source | Example | Notes |
+|--------|---------|-------|
+| **Path** | `/api/users/123` (from path pattern `users/{id}`) | Always takes priority |
+| **Query** | `?limit=10&q=search` | GET and POST |
+| **Body** | JSON `{"filters": {"min": 10}}` or form data | POST/PUT/PATCH |
+| **Header** | `X-User-Id: abc` | Only when parameter definition specifies `location: header` |
+
+When parameter definitions exist, each param is taken only from its configured location. Priority: path > query > body > header.
+
+**Response** — standard JSON envelope:
+
+```json
+{"success": true, "message": null, "data": [...]}
+```
+
+Optional camelCase response keys: add `?naming=camel` or header `X-Response-Naming: camel`.
+
+### 6. Administration
+
+- **Users and Roles:** Create users (username-based login), assign roles (Admin, Dev, Viewer, or custom), manage granular permissions.
+- **Access Logs:** View gateway request history when enabled.
 
 ---
 
 ## Features
 
-### Data sources
+### Data Sources
 
-- **Supported databases**: **PostgreSQL** (psycopg), **MySQL** (pymysql), **Trino** (trino). Databases that use a PostgreSQL or MySQL-compatible protocol are supported via the corresponding type (e.g. **StarRocks**, **RisingWave**).
-- **Connection pool**: configurable pool size, connect timeout, statement timeout.
-- **Health checks**: test connection when creating/editing; used by the pool for reliability.
-- **Pre-test**: validate connection settings before saving (e.g. from UI).
+- **Databases:** PostgreSQL (psycopg), MySQL (pymysql), Trino (trino). Compatible-protocol databases (StarRocks, RisingWave) supported via the corresponding type.
+- **Connection pool:** Configurable pool size, connect timeout, statement timeout.
+- **Health checks:** Test connectivity on create/edit.
 
-### API definitions (API Assignments)
+### API Definitions
 
-- **SQL engine (Jinja2)**:
-  - Template rendering with parameters (query, header, body).
-  - Custom filters: `sql_string`, `sql_int`, `sql_float`, `sql_bool`, `sql_date`, `sql_datetime`, `sql_in_list`, etc.
-  - Custom tags: `where`, `set` for safe dynamic SQL fragments.
-  - Parameter parsing and type handling; validation (regex or Python) before execution.
-- **Script engine (Python)**:
-  - **RestrictedPython** sandbox: no arbitrary `import`; only whitelisted modules (e.g. `pandas`, `numpy`) via `SCRIPT_EXTRA_MODULES`.
-  - **Context**: `db`, `http`, `cache`, `env`, `log`, `req`, `tx`, `ds` (request params, transaction, datasource info).
-  - **Timeout**: `SCRIPT_EXEC_TIMEOUT` (thread-based; works on all platforms).
-- **Parameters**: name, location (query / header / body), data type, required, validation (regex or Python). Merged and passed to SQL as template variables or to script as `req`.
-- **Result transform**: optional post-processing of the result (e.g. rename keys, shape) before returning.
-- **Macro definitions**: reusable SQL/text snippets referenced in SQL templates.
-- **Version commits**: track versions of api-assignments and macro-defs for audit and rollback.
+#### SQL Engine (Jinja2)
+
+- Template rendering with parameters from query, header, body, and path.
+- Custom filters: `sql_string`, `sql_int`, `sql_float`, `sql_bool`, `sql_date`, `sql_datetime`, `in_list`, `sql_like`, `sql_like_start`, `sql_like_end`, `json`.
+- Custom tags: `{% where %}` for conditional WHERE clauses (auto-strips leading AND/OR), `{% set %}` for local variables.
+- **Multi-statement SQL:** Separate statements with `;`. Each SELECT returns its own result set. Useful for data + count queries:
+  ```sql
+  SELECT * FROM items WHERE status = {{ status | sql_int }} LIMIT 20;
+  SELECT COUNT(*) AS total FROM items WHERE status = {{ status | sql_int }};
+  ```
+- Size limits: `SQL_TEMPLATE_MAX_SIZE` (template source), `SQL_RENDERED_MAX_SIZE` (rendered output).
+
+#### Script Engine (Python)
+
+- **RestrictedPython** sandbox: no arbitrary imports. Only whitelisted modules via `SCRIPT_EXTRA_MODULES`.
+- **Context objects:** `db` (query/query_one/execute), `http` (get/post/put/delete), `cache` (get/set/delete/exists/incr/decr), `req` (merged params dict), `tx` (begin/commit/rollback), `ds` (datasource metadata), `env` (get/get_int/get_bool), `log` (info/warning/error/debug).
+- **Timeout:** `SCRIPT_EXEC_TIMEOUT` (thread-based, all platforms).
+- **HTTP whitelist:** Optional `SCRIPT_HTTP_ALLOWED_HOSTS` to restrict outbound HTTP from scripts.
+
+#### Common
+
+- **Parameters:** Typed (string, integer, number, boolean, array, object) with automatic coercion. Required flag, default values, regex or Python script validation.
+- **Result transform:** Optional Python post-processing script applied to results before returning. Useful for reshaping multi-statement SQL results.
+- **Macro definitions:** Reusable snippets scoped per module. Jinja2 macros are prepended to SQL content; Python macros are prepended to script content, parameter validation, and result transform scripts.
+- **Versioning:** Version commits create snapshots of API content, parameters, validations, and transforms. Publish a specific version to make it live; roll back by publishing an older version.
 
 ### Gateway
 
-- **Dynamic routing**: `/api/{path}` — path + HTTP method are unique globally; path can include placeholders (e.g. `users/{id}`). Module is used only for grouping and permissions.
-- **Flow**: resolve → (firewall) → auth (if private) → concurrent limit → rate limit → parse params → run (SQL or script) → format response → write access record.
-- **Concurrent limit**: max concurrent requests per client (or per IP for public APIs). Checked before rate limit; slot is released in all cases (success, 429, 5xx). Redis (shared across workers) or in-memory fallback; per-client override via `app_client.max_concurrent`; global default `FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT`.
-- **Rate limiting**: sliding window, configurable per minute; Redis (preferred) or in-memory. See `FLOW_CONTROL_RATE_LIMIT_*`.
-- **Firewall**: IP-based firewall is **disabled** in the current build (all IPs allowed); model exists for future use.
-- **Request/response**: JSON and form body; query and path params; optional camelCase response via `?naming=camel` or header.
+- **Dynamic routing:** `/api/{path}` — path + method are globally unique. Module is organizational only.
+- **Pipeline:** Firewall -> Resolve -> Auth -> Concurrent limit -> Rate limit -> Parse params -> Execute -> Format response -> Access log.
+- **Concurrent limit:** Max in-flight requests per client or IP. Redis (shared) or in-memory fallback. Per-client override via `max_concurrent`.
+- **Rate limiting:** Sliding window per minute. Redis or in-memory. Per-API and per-client overrides.
+- **Max response rows:** `GATEWAY_MAX_RESPONSE_ROWS` caps the number of rows returned (default 10,000).
+- **Firewall:** IP-based (currently always-allow; model exists for future use).
 
-### Authentication and authorization
+### Authentication
 
-- **Gateway auth**: JWT only. Token from `POST /api/token/generate` (or `POST /token/generate`) with `client_id` and `client_secret`. Bearer token required for private APIs.
-- **Dashboard auth**: login, signup, password recovery (email), secure password hashing. Role-based access to Admin, Security, API Dev, Connection, System.
+- **Dashboard:** Username + password login -> JWT (configurable lifetime via `ACCESS_TOKEN_EXPIRE_MINUTES`). Role-based access control.
+- **Gateway:** `client_id` + `client_secret` -> JWT (configurable via `GATEWAY_JWT_EXPIRE_SECONDS` globally, or `token_expire_seconds` per client). Private APIs require `Authorization: Bearer <token>`.
+- **Auth rate limits:** Separate rate limits for login, password recovery, reset, and token generation endpoints.
 
-### Admin UI (React frontend)
+### Admin UI
 
-- **Tech**: TypeScript, Vite, Tailwind, shadcn/ui; auto-generated OpenAPI client; dark mode.
-- **Sections**:
-  - **Dashboard**: stats, recent access, recent commits.
-  - **Connection**: data sources CRUD, test, pre-test.
-  - **API Dev**: modules, API assignments (APIs), macro definitions; create/edit, publish, debug (run with JSON params).
-  - **API Repository**: version commits and browsing.
-  - **System**: groups, clients (CRUD, regenerate secret); access logs.
-  - **Admin**: users, roles; assign roles to users; edit role permissions (Superset-style).
-  - **Security**: roles list and management.
-- **Permissions**: route and feature visibility driven by backend permissions.
+- **Tech:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui. Auto-generated OpenAPI client. Dark mode.
+- **Sections:**
+  - **Dashboard:** Stats, recent access, recent commits.
+  - **Connection:** Data source CRUD with test.
+  - **API Dev:** Modules, API assignments, macro definitions. Create/edit, publish, debug.
+  - **API Repository:** Version commit history.
+  - **System:** Groups, clients, access logs.
+  - **Admin:** Users, roles, permission management.
+- **Permissions:** Route and feature visibility driven by the backend RBAC system.
 
-### Operations and deployment
+### Operations
 
-- **Docker Compose**: single app (Nginx + FastAPI), PostgreSQL, Redis, optional StarRocks/Trino. See [deployment.md](../deployment.md) and [development.md](../development.md).
-- **Tests**: Pytest; CI/CD with GitHub Actions.
-
-### Configuration (main environment variables)
-
-| Variable | Purpose |
-| -------- | ------- |
-| `SECRET_KEY` | Signing key for tokens (required). |
-| `POSTGRES_PASSWORD`, `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD` | App DB and first admin (required). |
-| `REDIS_URL` / `REDIS_HOST`, `REDIS_PORT`, etc. | Redis for cache, rate limit, concurrent limit (optional; in-memory fallback). |
-| `FLOW_CONTROL_RATE_LIMIT_ENABLED`, `FLOW_CONTROL_RATE_LIMIT_PER_MINUTE` | Gateway rate limiting. |
-| `FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT` | Default max concurrent requests per client (0 = no limit). |
-| `SCRIPT_EXEC_TIMEOUT` | Script engine timeout in seconds (all platforms). |
-| `SCRIPT_EXTRA_MODULES` | Comma-separated whitelist of modules for scripts (e.g. `pandas,numpy`). |
-| `GATEWAY_ACCESS_LOG_BODY` | Whether to store request body in access records. |
-| `EXTERNAL_DB_POOL_SIZE`, `EXTERNAL_DB_STATEMENT_TIMEOUT` | Data source connection pool. |
-
-### Disabled or planned
-
-- **IP Firewall**: gateway always allows all IPs; no firewall CRUD API or UI. Model exists for future use.
-- **Alarm**: model `UnifyAlarm` exists; no API routes or UI yet.
+- **Docker Compose:** Single app container (Nginx + FastAPI), PostgreSQL, Redis. Optional: StarRocks, Trino.
+- **Kubernetes:** Kind-based dev cluster (see `k8s/k8s.md`).
+- **CI/CD:** GitHub Actions with self-hosted runners for staging/production.
+- **Monitoring:** Optional Sentry integration via `SENTRY_DSN`.
 
 ---
 
-## See also
+## See Also
 
-- [docs/ARCHITECTURE.md](./ARCHITECTURE.md) — System architecture, Mermaid diagrams, data model.
-- [docs/TECHNICAL.md](./TECHNICAL.md) — Technical logic: gateway flow, resolution, parameters, concurrent/rate limits, SQL and script engines.
-- [docs/ENV_REFERENCE.md](./ENV_REFERENCE.md) — Complete environment variable reference.
-- [docs/TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — Common issues, debugging, rollback procedures.
-- [deployment.md](../deployment.md) — Deploy with Docker Compose.
-- [development.md](../development.md) — Local development and Docker setup.
-- [backend/README.md](../backend/README.md), [frontend/README.md](../frontend/README.md) — Backend and frontend development.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — System architecture, diagrams, data model
+- [TECHNICAL.md](./TECHNICAL.md) — Gateway internals, engines, parameters, limits
+- [ENV_REFERENCE.md](./ENV_REFERENCE.md) — Complete environment variable reference
+- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — Common issues and solutions

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router"
-import { BookOpen, Code, Database, FileCode } from "lucide-react"
+import { BookOpen, Code, Database, FileCode, Globe, Lock, Zap } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -18,7 +18,7 @@ function About() {
   const matchRoute = useMatchRoute()
   const isSqlJinjaRoute = matchRoute({ to: "/about/sql-jinja" })
   const isPythonScriptRoute = matchRoute({ to: "/about/python-script" })
-  
+
   const activeTab = isSqlJinjaRoute ? "sql-jinja" : isPythonScriptRoute ? "python-script" : "overview"
 
   return (
@@ -26,7 +26,7 @@ function About() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">About & Documentation</h1>
         <p className="text-muted-foreground mt-1">
-          Learn how to use DBAPI to build and manage database APIs
+          Learn how to use pyDBAPI to build and manage database APIs
         </p>
       </div>
 
@@ -59,23 +59,24 @@ function OverviewContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            What is DBAPI?
+            What is pyDBAPI?
           </CardTitle>
           <CardDescription>
-            Database API platform for turning SQL and Python into secure, versioned HTTP APIs
+            A database API platform for turning SQL and Python into secure, versioned HTTP APIs
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            DBAPI is a platform for managing database connections and publishing them as HTTP APIs. You model{" "}
-            <strong className="text-foreground">DataSources</strong>, organize them into{" "}
-            <strong className="text-foreground">Modules</strong>, implement logic with{" "}
-            <strong className="text-foreground">SQL (Jinja2)</strong> or{" "}
-            <strong className="text-foreground">Python scripts</strong>, and expose everything through a{" "}
-            <strong className="text-foreground">gateway</strong> with authentication, rate limiting, and
-            version control.
+            pyDBAPI connects to your databases (<strong className="text-foreground">PostgreSQL</strong>,{" "}
+            <strong className="text-foreground">MySQL</strong>,{" "}
+            <strong className="text-foreground">Trino</strong>, and compatible protocols like StarRocks and RisingWave),
+            lets you define API endpoints with{" "}
+            <strong className="text-foreground">SQL (Jinja2 templates)</strong> or{" "}
+            <strong className="text-foreground">Python scripts</strong>, and exposes them through a{" "}
+            <strong className="text-foreground">dynamic gateway</strong> with authentication, rate limiting,
+            concurrency control, and version management.
           </p>
-          
+
           <div className="grid gap-4 md:grid-cols-2 mt-6">
             <Card>
               <CardHeader>
@@ -87,12 +88,13 @@ function OverviewContent() {
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
                   Write SQL queries with Jinja2 templating for dynamic parameters, conditional logic, and loops.
+                  Built-in filters prevent SQL injection.
                 </p>
                 <Link
                   to="/about/sql-jinja"
                   className="text-sm text-primary hover:underline font-medium"
                 >
-                  Learn more →
+                  View SQL guide →
                 </Link>
               </CardContent>
             </Card>
@@ -106,13 +108,14 @@ function OverviewContent() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Execute Python scripts in a sandboxed environment with database access, HTTP clients, and caching.
+                  Execute Python in a secure sandbox with database access, HTTP client, caching,
+                  transaction control, and logging.
                 </p>
                 <Link
                   to="/about/python-script"
                   className="text-sm text-primary hover:underline font-medium"
                 >
-                  Learn more →
+                  View Python guide →
                 </Link>
               </CardContent>
             </Card>
@@ -124,7 +127,7 @@ function OverviewContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
-            Quick Start Guide
+            Quick Start
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -134,10 +137,11 @@ function OverviewContent() {
                 1
               </div>
               <div>
-                <h4 className="font-semibold">Create a DataSource</h4>
+                <h4 className="font-semibold">Create a Data Source</h4>
                 <p className="text-sm text-muted-foreground">
-                  Go to <Link to="/connection" className="text-primary hover:underline">Connection</Link> and add your database connection 
-                  (PostgreSQL or MySQL). Configure host, port, database name, and credentials.
+                  Go to <Link to="/connection" className="text-primary hover:underline">Connection</Link> and
+                  add your database (PostgreSQL, MySQL, or Trino). Configure host, port, database, and credentials.
+                  Use <strong className="text-foreground">Test</strong> to verify connectivity.
                 </p>
               </div>
             </div>
@@ -149,8 +153,9 @@ function OverviewContent() {
               <div>
                 <h4 className="font-semibold">Create a Module</h4>
                 <p className="text-sm text-muted-foreground">
-                  Go to <Link to="/api-dev/modules" className="text-primary hover:underline">API Dev → Modules</Link> and create a module 
-                  to organize your APIs. Modules help group related APIs together.
+                  Go to <Link to="/api-dev/modules" className="text-primary hover:underline">API Dev → Modules</Link> and
+                  create a module to organize your APIs. Modules group related endpoints together
+                  (the module name is not part of the gateway URL).
                 </p>
               </div>
             </div>
@@ -162,8 +167,9 @@ function OverviewContent() {
               <div>
                 <h4 className="font-semibold">Create an API</h4>
                 <p className="text-sm text-muted-foreground">
-                  Go to <Link to="/api-dev/apis" className="text-primary hover:underline">API Dev → APIs</Link> and create a new API. 
-                  Choose between SQL (Jinja2) or Python Script execution engine, write your code, define parameters, and test it.
+                  Go to <Link to="/api-dev/apis" className="text-primary hover:underline">API Dev → APIs</Link> and
+                  create a new endpoint. Choose SQL (Jinja2) or Python Script engine, select a data source,
+                  define the path and HTTP method, write your content, configure parameters, and test with Debug.
                 </p>
               </div>
             </div>
@@ -173,10 +179,21 @@ function OverviewContent() {
                 4
               </div>
               <div>
-                <h4 className="font-semibold">Publish & Call via Gateway</h4>
+                <h4 className="font-semibold">Publish and Call</h4>
                 <p className="text-sm text-muted-foreground">
-                  Create a version of your API content, publish it, and access it via the generated endpoint on the gateway. 
-                  For private APIs, create a Client and token, then call the API with the configured headers.
+                  Create a <strong className="text-foreground">version commit</strong> (a snapshot of your content, parameters, and transforms),
+                  then <strong className="text-foreground">publish</strong> it. The API becomes live at{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">GET|POST /api/{"your-path"}</code>.
+                  You can roll back by publishing an older version.
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  For <strong className="text-foreground">private APIs</strong>: create a Client in{" "}
+                  <Link to="/system/clients" className="text-primary hover:underline">System → Clients</Link>,
+                  generate a token via{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">POST /api/token/generate</code>{" "}
+                  with <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">client_id</code> and{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">client_secret</code>,
+                  then pass it as <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Authorization: Bearer &lt;token&gt;</code>.
                 </p>
               </div>
             </div>
@@ -191,28 +208,32 @@ function OverviewContent() {
         <CardContent>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Dynamic SQL Templates:</strong> Use Jinja2 syntax, custom filters, and helper tags to build safe, dynamic SQL from request parameters.</span>
+              <FileCode className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span><strong className="text-foreground">SQL Templates:</strong> Jinja2 syntax with custom SQL filters ({`sql_string`}, {`sql_int`}, {`in_list`}, {`sql_like`}, etc.) and the {`{% where %}`} tag for safe, dynamic queries.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Python Script Engine:</strong> Run Python in a sandbox with helpers for database access, HTTP calls, caching, logging, and environment variables.</span>
+              <Code className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span><strong className="text-foreground">Python Scripts:</strong> RestrictedPython sandbox with built-in helpers for database access ({`db`}), HTTP calls ({`http`}), caching ({`cache`}), transactions ({`tx`}), logging ({`log`}), and environment variables ({`env`}).</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Versioned API Content:</strong> Track changes with commits and published versions so you can roll out or roll back behavior safely.</span>
+              <Zap className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span><strong className="text-foreground">Typed Parameters:</strong> Define query/header/body parameters with data types (string, integer, number, boolean, array, object), defaults, and validation (regex or Python script). Automatic type coercion before execution.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Strong Parameter Model:</strong> Define query/header/body parameters with data types, defaults, and validation (regex or Python) before they reach your engine.</span>
+              <BookOpen className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span><strong className="text-foreground">Versioning:</strong> Version commits snapshot content, parameters, and transforms. Publish specific versions to the gateway. Roll back by publishing an older version.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Gateway & Access Control:</strong> Expose APIs via a gateway with public or private access, JWT-based clients, and per-client configuration.</span>
+              <FileCode className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span><strong className="text-foreground">Macros:</strong> Reusable SQL/Python snippets scoped per module. Jinja macros for SQL fragments, Python macros for helper functions. Auto-prepended to API content, validations, and transforms.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span><strong className="text-foreground">Debug & Observability:</strong> Use the built-in Debug tab to test with parameters and inspect behavior before exposing APIs to consumers.</span>
+              <Lock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span><strong className="text-foreground">Access Control:</strong> Public or private APIs. JWT-based client authentication with per-client rate limits, concurrent limits, and custom token expiry.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Globe className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span><strong className="text-foreground">Gateway:</strong> Dynamic routing at <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">/api/{"{path}"}</code> with rate limiting, concurrency control, config caching, access logging, and optional camelCase response naming.</span>
             </li>
           </ul>
         </CardContent>
