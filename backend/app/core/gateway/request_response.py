@@ -161,8 +161,9 @@ def merge_params(
     else:
         # Backward-compatible: merge path > query > body; and include extracted header params.
         # Header extraction only applies when params_definition exists, so here it's just body/query/path.
+        # Strip the gateway-internal "naming" control key so it never leaks into SQL/script params.
         out.update(body)
-        out.update(query)
+        out.update({k: v for k, v in query.items() if k != "naming"})
         out.update(path_params)
 
     body_for_log: str | None = None

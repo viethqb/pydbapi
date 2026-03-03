@@ -52,6 +52,14 @@ def _coerce_integer(value: Any) -> int:
     s = str(value).strip()
     if not s:
         raise ParamTypeError("Value is empty")
+    # Try direct int() first to preserve full precision for large integers.
+    # Fall back to float() only for scientific notation (e.g. "1e10") which
+    # int() cannot parse; float->int is safe there since the exponent form
+    # only represents integer values.
+    try:
+        return int(s)
+    except ValueError:
+        pass
     try:
         x = float(s)
     except ValueError as e:

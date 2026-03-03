@@ -19,6 +19,7 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.core.security import ALGORITHM, TOKEN_TYPE_DASHBOARD
+from app.core.token_blocklist import is_token_revoked
 from app.models_dbapi import (
     ApiAssignmentGroupLink,
     AppClient,
@@ -96,6 +97,10 @@ def verify_gateway_client(auth_header: str, session: Session) -> AppClient | Non
         return None
 
     if payload.get("type") == TOKEN_TYPE_DASHBOARD:
+        return None
+
+    jti = payload.get("jti")
+    if jti and is_token_revoked(jti):
         return None
 
     client_id = payload.get("sub")

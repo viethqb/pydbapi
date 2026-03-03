@@ -142,14 +142,18 @@ def _get_route_table(
         if _route_cache is not None and (now - _route_cache_ts) < _ROUTE_CACHE_TTL:
             return _route_cache
         if _route_cache_rebuilding:
-            # Another thread is already rebuilding; serve stale.
+            # Another thread is already rebuilding; serve stale if available.
             if _route_cache is not None:
                 return _route_cache
-            # No stale cache at all (first request); must wait below.
+            # Cold start: no stale cache exists yet.  Fall through and rebuild
+            # in this thread too — multiple threads may build concurrently on
+            # the very first request, with the last write winning.  This is
+            # safe (idempotent) and avoids blocking the caller.
         else:
             _route_cache_rebuilding = True
 
-    # Only the rebuilder reaches here (or the very first request).
+    # All threads that found no stale cache reach here and rebuild.
+    # On a warm cache only the elected rebuilder reaches this point.
     try:
         table = _build_route_table(session)
         with _route_cache_lock:

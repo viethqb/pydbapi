@@ -267,7 +267,7 @@ def delete_user(
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if user == current_user:
+    if user.id == current_user.id:
         raise HTTPException(
             status_code=403, detail="Super users are not allowed to delete themselves"
         )

@@ -81,13 +81,19 @@ DRIVERS_BY_TYPE: dict[str, list[str]] = {
 
 def _test_connection(datasource: DataSource | DataSourcePreTestIn) -> tuple[bool, str]:
     """Connect, run SELECT 1, close. Uses core.pool (Phase 3)."""
+    conn = None
     try:
         conn = connect(datasource)
         health_check(conn, datasource.product_type)
-        conn.close()
         return True, "Connection successful"
     except Exception as e:
         return False, str(e)
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def _to_public(ds: DataSource) -> DataSourcePublic:
@@ -229,8 +235,11 @@ def update_datasource(
     if not ds:
         raise HTTPException(status_code=404, detail="DataSource not found")
     update = body.model_dump(exclude_unset=True, exclude={"id"})
-    if "password" in update and update["password"]:
-        update["password"] = encrypt_value(update["password"])
+    if "password" in update:
+        if update["password"]:
+            update["password"] = encrypt_value(update["password"])
+        else:
+            del update["password"]  # empty string → skip; don't overwrite stored password
     ds.sqlmodel_update(update)
     session.add(ds)
     session.commit()

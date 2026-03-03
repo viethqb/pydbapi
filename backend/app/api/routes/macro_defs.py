@@ -4,6 +4,7 @@ ApiMacroDef management: Jinja macro / Python function definitions for API conten
 Endpoints: list (POST), create, update, delete, get detail, publish, versions.
 """
 
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -232,17 +233,20 @@ def _count_apis_using_macro_def(m: ApiMacroDef, session) -> int:
 
     - Global macro (module_id is None): search all ApiContext.content for the macro name.
     - Module-specific macro: search only APIs in that module.
+
+    Uses word-boundary regex to avoid false positives (e.g. macro 'user' ≠ 'users').
     """
-    # Join ApiContext -> ApiAssignment to optionally filter by module_id
     stmt = (
-        select(func.count())
+        select(ApiContext.content)
         .select_from(ApiContext)
         .join(ApiAssignment, ApiContext.api_assignment_id == ApiAssignment.id)
-        .where(ApiContext.content.contains(m.name))
     )
     if m.module_id is not None:
         stmt = stmt.where(ApiAssignment.module_id == m.module_id)
-    return session.exec(stmt).one() or 0
+    pattern = re.compile(r"\b" + re.escape(m.name) + r"\b")
+    return sum(
+        1 for content in session.exec(stmt).all() if content and pattern.search(content)
+    )
 
 
 @router.delete(

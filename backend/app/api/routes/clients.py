@@ -154,14 +154,12 @@ def create_client(
     ensure_resource_permissions(
         session, ResourceTypeEnum.CLIENT, c.id, CLIENT_RESOURCE_ACTIONS
     )
-    session.commit()
-    session.refresh(c)
     for gid in body.group_ids or []:
         session.add(AppClientGroupLink(app_client_id=c.id, api_group_id=gid))
     for aid in body.api_assignment_ids or []:
         session.add(AppClientApiLink(app_client_id=c.id, api_assignment_id=aid))
-    if body.group_ids or body.api_assignment_ids:
-        session.commit()
+    session.commit()
+    session.refresh(c)
     return _to_public(c)
 
 

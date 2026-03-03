@@ -44,9 +44,9 @@ def make_db_module(
         conn = get_connection()
         try:
             cur = pool_execute(conn, sql, params, product_type=datasource.product_type)
-            rc = cur.rowcount if cur.rowcount is not None else 0
+            rc = cur.rowcount
             commit_after_dml(conn, is_dml=True)
-            return rc
+            return max(0, rc) if rc is not None else 0
         finally:
             release_connection(conn)
 

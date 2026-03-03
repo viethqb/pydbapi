@@ -9,6 +9,7 @@ returns True (allow). This avoids blocking traffic when Redis is down.
 To fail closed (reject on Redis error), you would need a separate config.
 """
 
+import os
 import threading
 import time
 
@@ -28,12 +29,13 @@ local cutoff  = tonumber(ARGV[1])
 local now     = ARGV[2]
 local limit   = tonumber(ARGV[3])
 local ttl     = tonumber(ARGV[4])
+local member  = ARGV[5]
 
 redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
 if redis.call('ZCARD', key) >= limit then
     return 0
 end
-redis.call('ZADD', key, now, now)
+redis.call('ZADD', key, now, member)
 redis.call('EXPIRE', key, ttl)
 return 1
 """
@@ -46,15 +48,18 @@ def _check_redis(key: str, limit: int, window_sec: float, r: "redis.Redis") -> b
     now = time.time()
     cutoff = now - window_sec
     ttl = int(window_sec) + 1
+    # Unique member prevents two simultaneous requests at the same timestamp
+    # from colliding on the same sorted-set entry (ZADD update vs. insert).
+    member = f"{now}:{os.urandom(4).hex()}"
     try:
         if _rate_limit_sha is None:
             _rate_limit_sha = r.script_load(_RATE_LIMIT_SCRIPT)
         try:
-            result = r.evalsha(_rate_limit_sha, 1, k, cutoff, now, limit, ttl)
+            result = r.evalsha(_rate_limit_sha, 1, k, cutoff, now, limit, ttl, member)
         except Exception:
             # Script evicted from cache; reload once
             _rate_limit_sha = r.script_load(_RATE_LIMIT_SCRIPT)
-            result = r.evalsha(_rate_limit_sha, 1, k, cutoff, now, limit, ttl)
+            result = r.evalsha(_rate_limit_sha, 1, k, cutoff, now, limit, ttl, member)
         return result == 1
     except Exception:
         return True  # fail-open

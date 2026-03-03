@@ -40,6 +40,17 @@ return 1
 """
 _acquire_sha: str | None = None
 
+# Decrement only when the counter is > 0 so a stale/expired key (created by a
+# previous INCR whose TTL elapsed) is never pushed below zero.
+_RELEASE_SCRIPT = """\
+local key = KEYS[1]
+local n = tonumber(redis.call('GET', key) or '0')
+if n > 0 then
+    redis.call('DECR', key)
+end
+"""
+_release_sha: str | None = None
+
 
 def _acquire_redis(key: str, max_concurrent: int, r: "redis.Redis") -> bool:  # type: ignore[name-defined]
     global _acquire_sha
@@ -59,9 +70,17 @@ def _acquire_redis(key: str, max_concurrent: int, r: "redis.Redis") -> bool:  # 
 
 
 def _release_redis(key: str, r: "redis.Redis") -> None:  # type: ignore[name-defined]
+    global _release_sha
     k = _CONCURRENT_KEY_PREFIX + key
     try:
-        r.decr(k)
+        if _release_sha is None:
+            _release_sha = r.script_load(_RELEASE_SCRIPT)
+        try:
+            r.evalsha(_release_sha, 1, k)
+        except Exception:
+            # Script evicted from cache; reload once
+            _release_sha = r.script_load(_RELEASE_SCRIPT)
+            r.evalsha(_release_sha, 1, k)
     except Exception:
         pass
 
@@ -133,13 +152,29 @@ def acquire_concurrent_slot(
     return ok
 
 
-def release_concurrent_slot(client_key: str) -> None:
+def release_concurrent_slot(
+    client_key: str, max_concurrent_override: int | None = None
+) -> None:
     """
     Release one concurrent slot. Must be called after acquire_concurrent_slot
-    when the request is done (e.g. in finally). Always decrements so that
-    slots are freed even when client used per-client max_concurrent and
-    global FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT is 0.
+    when the request is done (e.g. in finally).
+
+    ``max_concurrent_override`` must match the value passed to
+    ``acquire_concurrent_slot`` so that this function can detect when the
+    acquire was a no-op (effective limit <= 0) and skip the decrement.
+    Skipping is critical: a spurious DECR on a key that was never INCRd
+    would create a stale negative key in Redis with no TTL.
     """
+    # Mirror the same no-op guard from acquire_concurrent_slot.
+    global_max = getattr(settings, "FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT", 0) or 0
+    max_c = (
+        max_concurrent_override
+        if max_concurrent_override is not None and max_concurrent_override > 0
+        else None
+    ) or global_max
+    if max_c <= 0:
+        return  # acquire was also a no-op; nothing to release
+
     if not client_key or not isinstance(client_key, str):
         return
     r = get_redis(decode_responses=False)

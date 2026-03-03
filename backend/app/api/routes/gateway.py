@@ -199,7 +199,7 @@ def _gateway_pipeline(
             )
             return {"_result": result, "_engine": engine_value}
         finally:
-            release_concurrent_slot(client_key)
+            release_concurrent_slot(client_key, client_max)
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])

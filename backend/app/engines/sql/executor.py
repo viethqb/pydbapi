@@ -141,7 +141,8 @@ def execute_sql(
             cur = execute(conn, single_sql, product_type=datasource.product_type)
             if _is_select_like(single_sql):
                 return [cursor_to_dicts(cur)]
-            return [cur.rowcount if cur.rowcount is not None else 0]
+            rc = cur.rowcount
+            return [max(0, rc) if rc is not None else 0]
 
         # Multi-statement: execute sequentially and collect results
         results: list[Any] = []
@@ -150,7 +151,8 @@ def execute_sql(
             if _is_select_like(stmt):
                 results.append(cursor_to_dicts(cur))
             else:
-                results.append(cur.rowcount if cur.rowcount is not None else 0)
+                rc = cur.rowcount
+                results.append(max(0, rc) if rc is not None else 0)
         return results
     except Exception:
         # If execution fails, rollback transaction before releasing connection
