@@ -13,7 +13,7 @@ Set in `.env` or as environment variables before starting:
 
 - **Required:** `SECRET_KEY`, `POSTGRES_PASSWORD`, `POSTGRES_USER`, `POSTGRES_DB`, `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD`
 - **Deploy:** `ENVIRONMENT=production`, `DOMAIN=your-domain.com` (if used)
-- **Optional:** `BACKEND_CORS_ORIGINS`, `SMTP_*`, `SENTRY_DSN`, `REDIS_HOST=redis`, etc.
+- **Optional:** `BACKEND_CORS_ORIGINS`, `REDIS_HOST=redis`, etc.
 
 See [docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md) for the full list.
 

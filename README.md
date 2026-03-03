@@ -66,7 +66,7 @@ Required environment variables (set in `.env`):
 | `FIRST_SUPERUSER` | Initial admin username |
 | `FIRST_SUPERUSER_PASSWORD` | Initial admin password |
 
-See [docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md) for the complete reference (50+ variables for Redis, SMTP, rate limits, script sandbox, etc.).
+See [docs/ENV_REFERENCE.md](docs/ENV_REFERENCE.md) for the complete reference (50+ variables for Redis, rate limits, script sandbox, etc.).
 
 ## Documentation
 

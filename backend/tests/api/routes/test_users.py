@@ -1,5 +1,4 @@
 import uuid
-from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -30,31 +29,26 @@ def test_get_users_normal_user_me(
     assert current_user
     assert current_user["is_active"] is True
     assert current_user["is_superuser"] is False
-    assert current_user["username"] == settings.EMAIL_TEST_USER
+    assert current_user["username"] == settings.TEST_USER
 
 
 def test_create_user_new_email(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    with (
-        patch("app.utils.send_email", return_value=None),
-        patch("app.core.config.settings.SMTP_HOST", "smtp.example.com"),
-        patch("app.core.config.settings.SMTP_USER", "admin@example.com"),
-    ):
-        username = random_username()
-        email = random_email()
-        password = random_lower_string()
-        data = {"username": username, "email": email, "password": password}
-        r = client.post(
-            f"{settings.API_V1_STR}/users/",
-            headers=superuser_token_headers,
-            json=data,
-        )
-        assert 200 <= r.status_code < 300
-        created_user = r.json()
-        user = crud.get_user_by_username(session=db, username=username)
-        assert user
-        assert user.username == created_user["username"]
+    username = random_username()
+    email = random_email()
+    password = random_lower_string()
+    data = {"username": username, "email": email, "password": password}
+    r = client.post(
+        f"{settings.API_V1_STR}/users/",
+        headers=superuser_token_headers,
+        json=data,
+    )
+    assert 200 <= r.status_code < 300
+    created_user = r.json()
+    user = crud.get_user_by_username(session=db, username=username)
+    assert user
+    assert user.username == created_user["username"]
 
 
 def test_get_existing_user(

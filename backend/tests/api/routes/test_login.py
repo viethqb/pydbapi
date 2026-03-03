@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -43,39 +41,6 @@ def test_use_access_token(
     result = r.json()
     assert r.status_code == 200
     assert "username" in result
-
-
-def test_recovery_password(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    with (
-        patch("app.core.config.settings.SMTP_HOST", "smtp.example.com"),
-        patch("app.core.config.settings.SMTP_USER", "admin@example.com"),
-    ):
-        email = "test@example.com"
-        r = client.post(
-            f"{settings.API_V1_STR}/password-recovery/{email}",
-            headers=normal_user_token_headers,
-        )
-        assert r.status_code == 200
-        assert r.json() == {
-            "message": "If that email is registered, a recovery link has been sent"
-        }
-
-
-def test_recovery_password_user_not_exists(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    """Non-existent email returns the same 200 response (no user enumeration)."""
-    email = "jVgQr@example.com"
-    r = client.post(
-        f"{settings.API_V1_STR}/password-recovery/{email}",
-        headers=normal_user_token_headers,
-    )
-    assert r.status_code == 200
-    assert r.json() == {
-        "message": "If that email is registered, a recovery link has been sent"
-    }
 
 
 def test_reset_password(client: TestClient, db: Session) -> None:

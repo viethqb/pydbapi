@@ -107,7 +107,7 @@ class TestCreateAccessTokenType:
 
 class TestPasswordResetExpiry:
     def test_default_is_one_hour(self):
-        assert settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS == 1
+        assert settings.RESET_TOKEN_EXPIRE_HOURS == 1
 
 
 # ---------------------------------------------------------------------------

@@ -114,7 +114,7 @@ docker compose exec app bash -c "cd /app/backend && alembic revision --autogener
 
 - **Local/staging:** The exception handler returns full error details when `ENVIRONMENT != "production"`.
 - **Production:** Only `"Internal server error"` is shown. Check logs: `docker compose logs app --tail=100`
-- If `SENTRY_DSN` is configured, full tracebacks appear in Sentry.
+- Check application logs for full tracebacks: `docker compose logs app --tail=200`
 
 ### Health check returns 503
 

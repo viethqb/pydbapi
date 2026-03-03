@@ -95,7 +95,6 @@ Separate rate limits for authentication endpoints to prevent brute-force attacks
 | Variable | Type | Default | Required | Description |
 |----------|------|---------|----------|-------------|
 | `AUTH_RATE_LIMIT_LOGIN` | int | `5` | No | Max login attempts per minute per IP. |
-| `AUTH_RATE_LIMIT_PASSWORD_RECOVERY` | int | `3` | No | Max password recovery requests per minute per IP. |
 | `AUTH_RATE_LIMIT_RESET_PASSWORD` | int | `5` | No | Max password reset attempts per minute per IP. |
 | `AUTH_RATE_LIMIT_TOKEN_GENERATE` | int | `10` | No | Max gateway token generation requests per minute per IP. |
 
@@ -134,24 +133,6 @@ Controls the connection pool for **external data sources** (not the app database
 
 ---
 
-## Email (SMTP)
-
-Used for password-reset flows. If `SMTP_HOST` and `EMAILS_FROM_EMAIL` are both empty, email features are disabled.
-
-| Variable | Type | Default | Required | Description |
-|----------|------|---------|----------|-------------|
-| `SMTP_HOST` | string | `None` | No | SMTP server hostname. |
-| `SMTP_PORT` | int | `587` | No | SMTP port. |
-| `SMTP_USER` | string | `None` | No | SMTP username. |
-| `SMTP_PASSWORD` | string | `None` | No | SMTP password. |
-| `SMTP_TLS` | bool | `True` | No | Use STARTTLS. |
-| `SMTP_SSL` | bool | `False` | No | Use implicit SSL/TLS (port 465). |
-| `EMAILS_FROM_EMAIL` | email | `None` | No | Sender email address. |
-| `EMAILS_FROM_NAME` | string | `PROJECT_NAME` | No | Sender display name. |
-| `EMAIL_RESET_TOKEN_EXPIRE_HOURS` | int | `1` | No | Password-reset token lifetime (hours). |
-
----
-
 ## First Superuser
 
 Created automatically on first startup by the prestart seed.
@@ -160,15 +141,7 @@ Created automatically on first startup by the prestart seed.
 |----------|------|---------|----------|-------------|
 | `FIRST_SUPERUSER` | string | --- | **Yes** | Username of the initial superuser account. |
 | `FIRST_SUPERUSER_PASSWORD` | string | --- | **Yes** | Password. Must be changed from `"changethis"` in staging/production. |
-| `FIRST_SUPERUSER_EMAIL` | string | `None` | No | Optional email for the superuser (used for password recovery). |
-
----
-
-## Monitoring
-
-| Variable | Type | Default | Required | Description |
-|----------|------|---------|----------|-------------|
-| `SENTRY_DSN` | URL | `None` | No | Sentry DSN for error tracking. Leave empty to disable. |
+| `FIRST_SUPERUSER_EMAIL` | string | `None` | No | Optional email for the superuser. |
 
 ---
 

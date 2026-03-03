@@ -5,8 +5,6 @@ from typing import Annotated, Any, Literal, Self
 from pydantic import (
     AnyUrl,
     BeforeValidator,
-    EmailStr,
-    HttpUrl,
     PostgresDsn,
     computed_field,
     model_validator,
@@ -63,7 +61,6 @@ class Settings(BaseSettings):
         return origins
 
     PROJECT_NAME: str
-    SENTRY_DSN: HttpUrl | None = None
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str
@@ -162,33 +159,12 @@ class Settings(BaseSettings):
     # Set to 0 to disable a specific limit. Respects FLOW_CONTROL_RATE_LIMIT_ENABLED.
     # -------------------------------------------------------------------------
     AUTH_RATE_LIMIT_LOGIN: int = 5  # POST /login/access-token
-    AUTH_RATE_LIMIT_PASSWORD_RECOVERY: int = 3  # POST /password-recovery/{email}
     AUTH_RATE_LIMIT_RESET_PASSWORD: int = 5  # POST /reset-password/
     AUTH_RATE_LIMIT_TOKEN_GENERATE: int = 10  # POST|GET /token/generate
 
-    SMTP_TLS: bool = True
-    SMTP_SSL: bool = False
-    SMTP_PORT: int = 587
-    SMTP_HOST: str | None = None
-    SMTP_USER: str | None = None
-    SMTP_PASSWORD: str | None = None
-    EMAILS_FROM_EMAIL: EmailStr | None = None
-    EMAILS_FROM_NAME: str | None = None
+    RESET_TOKEN_EXPIRE_HOURS: int = 1
 
-    @model_validator(mode="after")
-    def _set_default_emails_from(self) -> Self:
-        if not self.EMAILS_FROM_NAME:
-            self.EMAILS_FROM_NAME = self.PROJECT_NAME
-        return self
-
-    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 1
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def emails_enabled(self) -> bool:
-        return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
-
-    EMAIL_TEST_USER: str = "testuser"
+    TEST_USER: str = "testuser"
     FIRST_SUPERUSER: str
     FIRST_SUPERUSER_PASSWORD: str
     FIRST_SUPERUSER_EMAIL: str | None = None

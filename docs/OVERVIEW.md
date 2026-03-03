@@ -148,7 +148,7 @@ Optional camelCase response keys: add `?naming=camel` or header `X-Response-Nami
 
 - **Docker Compose:** Single app container (Nginx + FastAPI), PostgreSQL, Redis. Optional: StarRocks, Trino.
 - **Kubernetes:** Kind-based dev cluster (see `k8s/k8s.md`).
-- **Monitoring:** Optional Sentry integration via `SENTRY_DSN`.
+- **Monitoring:** Application logs via standard Python logging.
 
 ---
 
