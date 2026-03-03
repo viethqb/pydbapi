@@ -76,7 +76,10 @@ def _build_route_table(
         select(ApiAssignment, ApiModule)
         .join(ApiModule, ApiAssignment.module_id == ApiModule.id)
         .where(ApiModule.is_active.is_(True), ApiAssignment.is_published.is_(True))
-        .options(selectinload(ApiAssignment.datasource))
+        .options(
+            selectinload(ApiAssignment.datasource),
+            selectinload(ApiAssignment.module),
+        )
         .order_by(
             ApiModule.sort_order.asc(),
             ApiModule.id.asc(),
@@ -87,6 +90,7 @@ def _build_route_table(
     rows = session.exec(stmt).all()
     static: _StaticRoutes = {}
     dynamic: _DynamicRoutes = {}
+    expunged_mod_ids: set[UUID] = set()
     for api, mod in rows:
         api_path = (api.path or "").strip("/")
         method_val = (
@@ -96,9 +100,11 @@ def _build_route_table(
         )
         # Detach from session so cached objects survive beyond the
         # building session's lifetime.  Eagerly-loaded attributes
-        # (scalars + datasource) remain accessible.
+        # (scalars + datasource + module) remain accessible.
         session.expunge(api)
-        session.expunge(mod)
+        if mod.id not in expunged_mod_ids:
+            session.expunge(mod)
+            expunged_mod_ids.add(mod.id)
         if "{" not in api_path:
             # Static route — first match wins (priority order from ORDER BY)
             key = (method_val, api_path)
