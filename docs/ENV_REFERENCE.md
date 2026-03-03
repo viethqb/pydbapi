@@ -193,22 +193,3 @@ Vite build-time variables, set as Docker build args or in `frontend/.env`.
 | `VITE_API_URL` | URL | `""` | Backend API base URL baked into the frontend build. Empty = same origin (recommended). |
 | `NODE_ENV` | string | `development` | `"production"` enables minification and optimizations. |
 
----
-
-## GitHub Actions Secrets
-
-Configured in GitHub repository settings, not in `.env`.
-
-| Secret | Used in | Description |
-|--------|---------|-------------|
-| `DOMAIN_STAGING` | deploy-staging | Staging domain. |
-| `DOMAIN_PRODUCTION` | deploy-production | Production domain. |
-| `STACK_NAME_STAGING` | deploy-staging | Staging stack name. |
-| `STACK_NAME_PRODUCTION` | deploy-production | Production stack name. |
-| `SECRET_KEY` | Both deploys | JWT signing key. |
-| `FIRST_SUPERUSER` | Both deploys | Superuser username. |
-| `FIRST_SUPERUSER_PASSWORD` | Both deploys | Superuser password. |
-| `POSTGRES_PASSWORD` | Both deploys | Database password. |
-| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` | Both deploys | Email config. |
-| `EMAILS_FROM_EMAIL` | Both deploys | Sender address. |
-| `SENTRY_DSN` | Both deploys | Error tracking. |

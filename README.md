@@ -26,16 +26,16 @@ Management API docs: `http://localhost/api/docs`
 ## How It Works
 
 ```text
-┌─────────────┐       ┌──────────────────┐       ┌──────────────┐
-│  Dashboard   │──────▶│  Management API   │──────▶│  PostgreSQL  │
-│  (React UI)  │       │  /api/v1/...      │       │  (app DB)    │
-└─────────────┘       └──────────────────┘       └──────────────┘
+┌──────────────┐       ┌──────────────────┐       ┌──────────────┐
+│  Dashboard   │──────▶│  Management API  │──────▶│  PostgreSQL  │
+│  (React UI)  │       │  /api/v1/...     │       │  (app DB)    │
+└──────────────┘       └──────────────────┘       └──────────────┘
 
 ┌─────────────┐       ┌──────────────────┐       ┌──────────────┐
-│  External    │──────▶│  Gateway          │──────▶│  Your DB     │
-│  Client      │       │  /api/{path}      │       │  (PG/MySQL/  │
+│  External   │──────▶│  Gateway         │──────▶│  Your DB     │
+│  Client     │       │  /api/{path}     │       │  (PG/MySQL/  │
 └─────────────┘       └──────────────────┘       │   Trino)     │
-                                                  └──────────────┘
+                                                 └──────────────┘
 ```
 
 1. **Connect** — Add a data source (PostgreSQL, MySQL, Trino, or compatible DBs) in the dashboard

@@ -90,8 +90,6 @@ $ bash ./scripts/test.sh
 
 The tests run with Pytest, modify and add tests to `./backend/tests/`.
 
-If you use GitHub Actions the tests will run automatically.
-
 ### Test running stack
 
 If your stack is already up and you just want to run the tests, you can use:

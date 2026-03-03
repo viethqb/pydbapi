@@ -384,51 +384,22 @@ erDiagram
 
 ---
 
-## Deployment Architecture
-
-```mermaid
-graph TB
-    subgraph "GitHub"
-        Repo["Repository"]
-        Actions["GitHub Actions"]
-    end
-
-    subgraph "Staging Server"
-        S_Runner["Self-hosted Runner<br/>(staging label)"]
-        S_Docker["Docker Compose<br/>(staging stack)"]
-    end
-
-    subgraph "Production Server"
-        P_Runner["Self-hosted Runner<br/>(production label)"]
-        P_Docker["Docker Compose<br/>(production stack)"]
-    end
-
-    Repo -->|"push to master"| Actions
-    Repo -->|"release published"| Actions
-
-    Actions -->|"staging job"| S_Runner
-    Actions -->|"production job"| P_Runner
-
-    S_Runner -->|"build + up -d"| S_Docker
-    P_Runner -->|"build + up -d"| P_Docker
-```
+## Deployment
 
 ### Deployment Flow
 
 ```text
-1. Code pushed to master (staging) or release published (production)
-2. GitHub Actions triggers on self-hosted runner
-3. docker compose build        — builds app image
-4. docker compose up -d        — starts all services
-5. prestart container:
+1. docker compose build        — builds app image
+2. docker compose up -d        — starts all services
+3. prestart container:
    a. Waits for PostgreSQL health check
    b. Runs alembic upgrade head
    c. Verifies migration is at head
    d. Seeds initial data (superuser, roles, permissions)
    e. Exits with code 0
-6. Backend starts (depends on prestart success + db + redis healthy)
-7. CI waits for backend health check (up to 120s)
-8. Deployment complete
+4. Backend starts (depends on prestart success + db + redis healthy)
+5. Verify health check
+6. Deployment complete
 ```
 
 ### Rollback

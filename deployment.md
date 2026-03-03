@@ -37,10 +37,6 @@ Use only `docker-compose.yml` (no override file) so production is predictable.
 
 For HTTPS, run a reverse proxy (e.g. Nginx, Caddy, Traefik) on the host or in front of Docker, and proxy to the app (e.g. `http://127.0.0.1:80`). Configure TLS and optional `BACKEND_CORS_ORIGINS` for the frontend origin.
 
-## CI/CD (e.g. GitHub Actions)
-
-Use repository secrets for `SECRET_KEY`, `POSTGRES_PASSWORD`, `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD`, and any `SMTP_*` or `SENTRY_DSN`. Run `docker compose up -d` on the target server (e.g. via a self-hosted runner or SSH).
-
 ## URLs after deploy
 
 - App (dashboard + API): `http://<host>:80` or `https://<your-domain>` if you put a reverse proxy in front.

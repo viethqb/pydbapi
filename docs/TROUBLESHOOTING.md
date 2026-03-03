@@ -384,19 +384,7 @@ BACKEND_CORS_ORIGINS="https://dashboard.example.com,http://localhost:5173"
 
 ---
 
-## Deployment and CI/CD
-
-### CI fails: "Backend did not become healthy within 120s"
-
-```bash
-docker compose logs app --tail=100
-docker compose logs prestart --tail=50
-```
-
-**Common causes:**
-- Migration failed (prestart exited with error -> backend never starts).
-- DB unreachable (wrong `POSTGRES_SERVER` or password).
-- OOM kill — check `docker inspect <container>`.
+## Deployment
 
 ### Rolling back a production deployment
 
