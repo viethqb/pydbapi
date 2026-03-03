@@ -8,6 +8,11 @@ not already processed by an explicit SQL filter.  This means ``{{ name }}``
 is safe by default (escaped as a quoted string).  Use type-specific
 filters (``| sql_int``, ``| sql_string``, etc.) for explicit control.
 
+Macros: Jinja2 macro call results (``{{ my_macro(args) }}``) are marked
+as ``SqlSafe`` so that ``sql_finalize`` passes them through without
+double-escaping.  Individual ``{{ }}`` expressions inside the macro body
+are still finalized normally.
+
 Performance: Compiled Jinja2 ``Template`` objects are cached in an LRU
 dict keyed by template source hash so repeated calls with the same SQL
 template skip the parse phase entirely.
@@ -17,18 +22,43 @@ import hashlib
 import threading
 from collections import OrderedDict
 
+import jinja2.runtime
 from jinja2 import Template, TemplateError, TemplateSyntaxError, UndefinedError, meta
 from jinja2.sandbox import SandboxedEnvironment
 
 from app.core.config import settings
 from app.engines.sql.extensions import SQL_EXTENSIONS
-from app.engines.sql.filters import SQL_FILTERS, sql_finalize
+from app.engines.sql.filters import SQL_FILTERS, SqlSafe, sql_finalize
 
 _SQL_ENV: SandboxedEnvironment | None = None
 
 _CACHE_MAX_SIZE = 512
 _template_cache: OrderedDict[str, Template] = OrderedDict()
 _cache_lock = threading.Lock()
+
+# ---------------------------------------------------------------------------
+# Patch Jinja2 Macro.__call__ so that macro return values are marked as
+# SqlSafe.  Without this, ``{{ my_macro(args) }}`` would pass the rendered
+# SQL fragment through ``sql_finalize`` → ``sql_string()`` which wraps it
+# in single quotes, breaking the SQL.
+#
+# The patch only applies when the macro belongs to our SQL environment
+# (identified by the ``_sql_safe_macros`` flag) so other Jinja2 usage in
+# the process is unaffected.
+# ---------------------------------------------------------------------------
+_original_macro_call = jinja2.runtime.Macro.__call__
+
+
+def _sql_safe_macro_call(self, *args, **kwargs):
+    rv = _original_macro_call(self, *args, **kwargs)
+    if isinstance(rv, str) and getattr(
+        self._environment, "_sql_safe_macros", False
+    ):
+        return SqlSafe(rv)
+    return rv
+
+
+jinja2.runtime.Macro.__call__ = _sql_safe_macro_call
 
 
 def _get_sql_env() -> SandboxedEnvironment:
@@ -42,6 +72,7 @@ def _get_sql_env() -> SandboxedEnvironment:
             finalize=sql_finalize,
         )
         _SQL_ENV.filters.update(SQL_FILTERS)
+        _SQL_ENV._sql_safe_macros = True  # type: ignore[attr-defined]
     return _SQL_ENV
 
 
