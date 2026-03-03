@@ -87,7 +87,9 @@ export const MacroDefsService = {
     })
   },
 
-  listSimple: async (moduleId?: string | null): Promise<ApiMacroDefPublic[]> => {
+  listSimple: async (
+    moduleId?: string | null,
+  ): Promise<ApiMacroDefPublic[]> => {
     const params = moduleId ? `?module_id=${moduleId}` : ""
     return request<ApiMacroDefPublic[]>(`/api/v1/macro-defs${params}`, {
       method: "GET",
@@ -138,43 +140,62 @@ export const MacroDefsService = {
     id: string,
     body: MacroDefVersionCommitCreate,
   ): Promise<MacroDefVersionCommitDetail> => {
-    return request<MacroDefVersionCommitDetail>(`/api/v1/macro-defs/${id}/versions/create`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    })
+    return request<MacroDefVersionCommitDetail>(
+      `/api/v1/macro-defs/${id}/versions/create`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    )
   },
 
   listVersions: async (id: string): Promise<MacroDefVersionCommitListOut> => {
-    return request<MacroDefVersionCommitListOut>(`/api/v1/macro-defs/${id}/versions`, {
-      method: "GET",
-    })
+    return request<MacroDefVersionCommitListOut>(
+      `/api/v1/macro-defs/${id}/versions`,
+      {
+        method: "GET",
+      },
+    )
   },
 
-  getVersion: async (versionId: string): Promise<MacroDefVersionCommitDetail> => {
-    return request<MacroDefVersionCommitDetail>(`/api/v1/macro-defs/versions/${versionId}`, {
-      method: "GET",
-    })
+  getVersion: async (
+    versionId: string,
+  ): Promise<MacroDefVersionCommitDetail> => {
+    return request<MacroDefVersionCommitDetail>(
+      `/api/v1/macro-defs/versions/${versionId}`,
+      {
+        method: "GET",
+      },
+    )
   },
 
   restoreVersion: async (
     id: string,
     versionId: string,
   ): Promise<ApiMacroDefPublic> => {
-    return request<ApiMacroDefPublic>(`/api/v1/macro-defs/${id}/versions/${versionId}/restore`, {
-      method: "POST",
-    })
+    return request<ApiMacroDefPublic>(
+      `/api/v1/macro-defs/${id}/versions/${versionId}/restore`,
+      {
+        method: "POST",
+      },
+    )
   },
 
   deleteVersion: async (versionId: string): Promise<{ message: string }> => {
-    return request<{ message: string }>(`/api/v1/macro-defs/versions/${versionId}`, {
-      method: "DELETE",
-    })
+    return request<{ message: string }>(
+      `/api/v1/macro-defs/versions/${versionId}`,
+      {
+        method: "DELETE",
+      },
+    )
   },
 
-  revertVersionToDraft: async (versionId: string): Promise<{ message: string }> => {
+  revertVersionToDraft: async (
+    versionId: string,
+  ): Promise<{ message: string }> => {
     return request<{ message: string }>(
       `/api/v1/macro-defs/versions/${versionId}/revert-to-draft`,
-      { method: "POST" }
+      { method: "POST" },
     )
   },
 }

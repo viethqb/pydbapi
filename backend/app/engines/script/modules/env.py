@@ -9,14 +9,16 @@ from types import SimpleNamespace
 from typing import Any
 
 # Default whitelist: non-secret config keys
-DEFAULT_ENV_WHITELIST = frozenset({
-    "PROJECT_NAME",
-    "ENVIRONMENT",
-    "API_V1_STR",
-    "EXTERNAL_DB_POOL_SIZE",
-    "EXTERNAL_DB_CONNECT_TIMEOUT",
-    "CACHE_ENABLED",
-})
+DEFAULT_ENV_WHITELIST = frozenset(
+    {
+        "PROJECT_NAME",
+        "ENVIRONMENT",
+        "API_V1_STR",
+        "EXTERNAL_DB_POOL_SIZE",
+        "EXTERNAL_DB_CONNECT_TIMEOUT",
+        "CACHE_ENABLED",
+    }
+)
 
 
 def make_env_module(
@@ -28,7 +30,9 @@ def make_env_module(
     Build the `env` object: get, get_int, get_bool.
     Only whitelisted keys are readable. settings can be an object with attributes or a dict.
     """
-    wl = frozenset(env_whitelist) if env_whitelist is not None else DEFAULT_ENV_WHITELIST
+    wl = (
+        frozenset(env_whitelist) if env_whitelist is not None else DEFAULT_ENV_WHITELIST
+    )
 
     def _get_raw(key: str) -> Any:
         if key not in wl:

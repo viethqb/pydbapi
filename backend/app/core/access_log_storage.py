@@ -8,6 +8,7 @@ starrocks_audit_db__.pydbapi_access_log_tbl__ via starrocks_audit module.
 """
 
 import threading
+from datetime import UTC
 from typing import Any
 from urllib.parse import quote_plus
 from uuid import UUID
@@ -124,7 +125,9 @@ def get_log_engine_for_reading(main_session: Session):
     return get_log_engine(ds), False, use_sr
 
 
-def get_access_log_config_and_datasource(main_session: Session) -> tuple[AccessLogConfig | None, DataSource | None]:
+def get_access_log_config_and_datasource(
+    main_session: Session,
+) -> tuple[AccessLogConfig | None, DataSource | None]:
     """Return (config, datasource). Either can be None."""
     config = main_session.get(AccessLogConfig, ACCESS_LOG_CONFIG_ROW_ID)
     if not config or not config.datasource_id:
@@ -152,7 +155,7 @@ def write_access_record(
     Write one access record. Uses main DB, external access_record table,
     or StarRocks audit table depending on config.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     config, ds = get_access_log_config_and_datasource(main_session)
     if not config or not config.datasource_id or not ds or not ds.is_active:
@@ -193,7 +196,7 @@ def write_access_record(
             request_body=request_body,
             request_headers=request_headers,
             request_params=request_params,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             duration_ms=duration_ms,
         )
         return

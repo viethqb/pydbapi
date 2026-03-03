@@ -216,7 +216,9 @@ def test_resolve_gateway_api_with_path_params(db: Session) -> None:
 
 def test_resolve_gateway_api_not_found(db: Session) -> None:
     """No matching api.path -> None."""
-    assert resolve_gateway_api(f"nonexistent-{random_lower_string()}", "GET", db) is None
+    assert (
+        resolve_gateway_api(f"nonexistent-{random_lower_string()}", "GET", db) is None
+    )
 
 
 def test_resolve_gateway_api_inactive_module(db: Session) -> None:

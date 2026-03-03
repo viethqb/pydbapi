@@ -39,9 +39,7 @@ export const UserActionsMenu = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {canUpdate && (
-          <EditUser user={user} onSuccess={() => setOpen(false)} />
-        )}
+        {canUpdate && <EditUser user={user} onSuccess={() => setOpen(false)} />}
         {canUpdate && (
           <AssignRolesDialog user={user} onSuccess={() => setOpen(false)} />
         )}

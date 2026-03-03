@@ -8,10 +8,8 @@ Runs without database:
 """
 
 from datetime import timedelta
-from unittest.mock import patch
 
 import jwt
-import pytest
 
 from app.core.config import settings
 from app.core.security import (
@@ -22,7 +20,6 @@ from app.core.security import (
     create_access_token,
 )
 from app.utils import generate_password_reset_token, verify_password_reset_token
-
 
 # ---------------------------------------------------------------------------
 # #25: Access token lifetime reduced to 1 day
@@ -96,7 +93,9 @@ class TestCreateAccessTokenType:
         assert payload["type"] == TOKEN_TYPE_DASHBOARD
 
     def test_gateway_type(self):
-        token = create_access_token("sub", timedelta(hours=1), token_type=TOKEN_TYPE_GATEWAY)
+        token = create_access_token(
+            "sub", timedelta(hours=1), token_type=TOKEN_TYPE_GATEWAY
+        )
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         assert payload["type"] == TOKEN_TYPE_GATEWAY
 

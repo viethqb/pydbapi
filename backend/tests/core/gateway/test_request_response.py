@@ -13,12 +13,14 @@ from app.core.gateway.request_response import (
     parse_params,
 )
 
-
 # --- keys_to_snake / keys_to_camel ---
 
 
 def test_keys_to_snake_simple() -> None:
-    assert keys_to_snake({"userId": 1, "firstName": "x"}) == {"user_id": 1, "first_name": "x"}
+    assert keys_to_snake({"userId": 1, "firstName": "x"}) == {
+        "user_id": 1,
+        "first_name": "x",
+    }
 
 
 def test_keys_to_snake_nested() -> None:
@@ -28,7 +30,10 @@ def test_keys_to_snake_nested() -> None:
 
 
 def test_keys_to_snake_list_of_dicts() -> None:
-    assert keys_to_snake([{"itemId": 1}, {"itemId": 2}]) == [{"item_id": 1}, {"item_id": 2}]
+    assert keys_to_snake([{"itemId": 1}, {"itemId": 2}]) == [
+        {"item_id": 1},
+        {"item_id": 2},
+    ]
 
 
 def test_keys_to_snake_non_dict_unchanged() -> None:
@@ -37,7 +42,10 @@ def test_keys_to_snake_non_dict_unchanged() -> None:
 
 
 def test_keys_to_camel_simple() -> None:
-    assert keys_to_camel({"user_id": 1, "first_name": "x"}) == {"userId": 1, "firstName": "x"}
+    assert keys_to_camel({"user_id": 1, "first_name": "x"}) == {
+        "userId": 1,
+        "firstName": "x",
+    }
 
 
 def test_keys_to_camel_nested() -> None:
@@ -47,7 +55,10 @@ def test_keys_to_camel_nested() -> None:
 
 
 def test_keys_to_camel_list_of_dicts() -> None:
-    assert keys_to_camel([{"item_id": 1}, {"item_id": 2}]) == [{"itemId": 1}, {"itemId": 2}]
+    assert keys_to_camel([{"item_id": 1}, {"item_id": 2}]) == [
+        {"itemId": 1},
+        {"itemId": 2},
+    ]
 
 
 def test_keys_to_camel_row_count_key() -> None:
@@ -206,6 +217,7 @@ def test_parse_params_unknown_content_type_body_empty() -> None:
 
 def test_parse_params_body_for_log_returned() -> None:
     """When body is present, body_for_log is JSON string; when empty, None."""
+
     async def run_json() -> tuple[dict, str | None]:
         req = _make_request(
             method="POST",
@@ -337,13 +349,25 @@ def test_normalize_api_result_raw_list_no_engine() -> None:
 
 def test_format_response_snake_default() -> None:
     result = {"success": True, "message": None, "data": [{"user_id": 1}]}
-    assert format_response(result, "snake") == {"success": True, "message": None, "data": [{"user_id": 1}]}
+    assert format_response(result, "snake") == {
+        "success": True,
+        "message": None,
+        "data": [{"user_id": 1}],
+    }
 
 
 def test_format_response_camel() -> None:
-    result = {"success": True, "message": None, "data": [{"user_id": 1, "first_name": "x"}]}
+    result = {
+        "success": True,
+        "message": None,
+        "data": [{"user_id": 1, "first_name": "x"}],
+    }
     out = format_response(result, "camel")
-    assert out == {"success": True, "message": None, "data": [{"userId": 1, "firstName": "x"}]}
+    assert out == {
+        "success": True,
+        "message": None,
+        "data": [{"userId": 1, "firstName": "x"}],
+    }
 
 
 def test_format_response_camel_row_count() -> None:
@@ -378,7 +402,11 @@ def test_merge_params_merge_order_path_wins() -> None:
 def test_merge_params_header_location() -> None:
     headers = {"col1": "header", "content-type": "application/json"}
     params, _ = merge_params(
-        {"col1": "query"}, {"col1": "body"}, {}, headers, "POST",
+        {"col1": "query"},
+        {"col1": "body"},
+        {},
+        headers,
+        "POST",
         params_definition=[{"name": "col1", "location": "header"}],
     )
     assert params == {"col1": "header"}

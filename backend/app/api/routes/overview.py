@@ -4,9 +4,10 @@ Overview / Dashboard (Phase 2, Task 2.7).
 Endpoints: stats, recent-access, recent-commits.
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends
+from sqlmodel import Session as SMSession
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep, require_permission
@@ -16,7 +17,6 @@ from app.core.starrocks_audit import (
     read_starrocks_audit_requests_by_day,
     read_starrocks_audit_top_paths,
 )
-from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models import User
 from app.models_dbapi import (
     AccessRecord,
@@ -27,7 +27,7 @@ from app.models_dbapi import (
     DataSource,
     VersionCommit,
 )
-from sqlmodel import Session as SMSession
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.schemas_dbapi import (
     AccessRecordPublic,
     OverviewStats,
@@ -106,7 +106,7 @@ def get_requests_by_day(
 
     log_session = session if use_main else SMSession(engine)
     try:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         day_expr = func.date(AccessRecord.created_at).label("day")
         count_expr = func.count().label("count")
         stmt = (
@@ -124,7 +124,9 @@ def get_requests_by_day(
             elif isinstance(day_value, str):
                 # SQLite returns YYYY-MM-DD strings for date(...)
                 day_value = date.fromisoformat(day_value.split("T")[0])
-            points.append(RequestsByDayPoint(day=day_value, count=int(count_value or 0)))
+            points.append(
+                RequestsByDayPoint(day=day_value, count=int(count_value or 0))
+            )
 
         return RequestsByDayOut(data=points)
     finally:
@@ -159,7 +161,7 @@ def get_top_paths(
 
     log_session = session if use_main else SMSession(engine)
     try:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         count_expr = func.count().label("count")
         stmt = (
             select(AccessRecord.path, count_expr)
@@ -170,7 +172,9 @@ def get_top_paths(
         )
         rows = log_session.exec(stmt).all()
         return TopPathsOut(
-            data=[TopPathPoint(path=path, count=int(count or 0)) for path, count in rows]
+            data=[
+                TopPathPoint(path=path, count=int(count or 0)) for path, count in rows
+            ]
         )
     finally:
         if log_session is not None and log_session is not session:
@@ -228,12 +232,18 @@ def get_recent_access(
             data.append(
                 AccessRecordPublic(
                     id=uuid_mod.UUID(_id) if isinstance(_id, str) else _id,
-                    api_assignment_id=uuid_mod.UUID(r["api_assignment_id"]) if r.get("api_assignment_id") else None,
-                    app_client_id=uuid_mod.UUID(r["app_client_id"]) if r.get("app_client_id") else None,
+                    api_assignment_id=uuid_mod.UUID(r["api_assignment_id"])
+                    if r.get("api_assignment_id")
+                    else None,
+                    app_client_id=uuid_mod.UUID(r["app_client_id"])
+                    if r.get("app_client_id")
+                    else None,
                     ip_address=r.get("ip_address") or "",
                     http_method=r.get("http_method") or "GET",
                     path=r.get("path") or "",
-                    status_code=int(r["status_code"]) if r.get("status_code") is not None else 0,
+                    status_code=int(r["status_code"])
+                    if r.get("status_code") is not None
+                    else 0,
                     created_at=r["created_at"],
                     duration_ms=r.get("duration_ms"),
                     request_body=_truncate_for_list(r.get("request_body")),
@@ -245,7 +255,9 @@ def get_recent_access(
 
     log_session = session if use_main else SMSession(engine)
     try:
-        stmt = select(AccessRecord).order_by(AccessRecord.created_at.desc()).limit(limit)
+        stmt = (
+            select(AccessRecord).order_by(AccessRecord.created_at.desc()).limit(limit)
+        )
         rows = log_session.exec(stmt).all()
         return RecentAccessOut(data=[_to_access_public(r) for r in rows])
     finally:

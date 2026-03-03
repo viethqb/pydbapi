@@ -1,6 +1,6 @@
-import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Key, ExternalLink } from "lucide-react"
 import { Link } from "@tanstack/react-router"
+import type { ColumnDef } from "@tanstack/react-table"
+import { ExternalLink, Key, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -77,9 +77,7 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
                 client.is_active ? "bg-green-500" : "bg-gray-400",
               )}
             />
-            <span
-              className={client.is_active ? "" : "text-muted-foreground"}
-            >
+            <span className={client.is_active ? "" : "text-muted-foreground"}>
               {client.is_active ? "Active" : "Inactive"}
             </span>
           </div>
@@ -137,7 +135,10 @@ export const clientsColumns: ColumnDef<ClientTableData>[] = [
                   View
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild disabled={client.canUpdate === false || !client.onEdit}>
+              <DropdownMenuItem
+                asChild
+                disabled={client.canUpdate === false || !client.onEdit}
+              >
                 <Link
                   to="/system/clients/$id/edit"
                   params={{ id: client.id }}

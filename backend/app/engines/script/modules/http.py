@@ -123,7 +123,9 @@ def _check_url_allowed(url: str, allowed_hosts: frozenset[str]) -> None:
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
-        raise PermissionError(f"URL scheme '{parsed.scheme}' is not allowed; only http/https.")
+        raise PermissionError(
+            f"URL scheme '{parsed.scheme}' is not allowed; only http/https."
+        )
 
     hostname = (parsed.hostname or "").lower()
     if not hostname:
@@ -141,14 +143,16 @@ _MAX_REDIRECTS = 10
 # Only these httpx request kwargs are allowed from scripts.  Anything else
 # (e.g. transport, auth, verify, cert, follow_redirects, extensions) is
 # rejected to prevent bypassing SSRF protections or leaking data.
-_ALLOWED_REQUEST_KWARGS = frozenset({
-    "params",    # query parameters
-    "headers",   # request headers
-    "cookies",   # request cookies
-    "json",      # JSON body
-    "data",      # form-encoded body
-    "content",   # raw bytes body
-})
+_ALLOWED_REQUEST_KWARGS = frozenset(
+    {
+        "params",  # query parameters
+        "headers",  # request headers
+        "cookies",  # request cookies
+        "json",  # JSON body
+        "data",  # form-encoded body
+        "content",  # raw bytes body
+    }
+)
 
 
 def _filter_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:

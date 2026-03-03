@@ -9,7 +9,10 @@ from tests.utils.client import create_random_client
 from tests.utils.datasource import create_random_datasource
 from tests.utils.group import create_random_group
 from tests.utils.module import create_random_module
-from tests.utils.overview import create_random_access_record, create_random_version_commit
+from tests.utils.overview import (
+    create_random_access_record,
+    create_random_version_commit,
+)
 
 
 def _base() -> str:
@@ -94,7 +97,10 @@ def test_get_recent_access_with_data(
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) >= 1
-    rec = next((r for r in data["data"] if r.get("path") == "/api/overview-test"), data["data"][0])
+    rec = next(
+        (r for r in data["data"] if r.get("path") == "/api/overview-test"),
+        data["data"][0],
+    )
     assert "id" in rec
     assert "api_assignment_id" in rec
     assert "app_client_id" in rec
@@ -207,7 +213,9 @@ def test_get_requests_by_day_empty(
 ) -> None:
     """GET /overview/requests-by-day returns 200 and data list."""
     response = client.get(
-        f"{_base()}/requests-by-day", headers=superuser_token_headers, params={"days": 14}
+        f"{_base()}/requests-by-day",
+        headers=superuser_token_headers,
+        params={"days": 14},
     )
     assert response.status_code == 200
     data = response.json()
@@ -224,7 +232,9 @@ def test_get_requests_by_day_with_data(
     create_random_access_record(db, path="/chart-a")
 
     response = client.get(
-        f"{_base()}/requests-by-day", headers=superuser_token_headers, params={"days": 7}
+        f"{_base()}/requests-by-day",
+        headers=superuser_token_headers,
+        params={"days": 7},
     )
     assert response.status_code == 200
     payload = response.json()
@@ -248,7 +258,9 @@ def test_get_top_paths_empty(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     response = client.get(
-        f"{_base()}/top-paths", headers=superuser_token_headers, params={"days": 7, "limit": 10}
+        f"{_base()}/top-paths",
+        headers=superuser_token_headers,
+        params={"days": 7, "limit": 10},
     )
     assert response.status_code == 200
     data = response.json()
@@ -265,7 +277,9 @@ def test_get_top_paths_with_data_and_limit(
     create_random_access_record(db, path="/top/b")
 
     response = client.get(
-        f"{_base()}/top-paths", headers=superuser_token_headers, params={"days": 7, "limit": 1}
+        f"{_base()}/top-paths",
+        headers=superuser_token_headers,
+        params={"days": 7, "limit": 1},
     )
     assert response.status_code == 200
     payload = response.json()

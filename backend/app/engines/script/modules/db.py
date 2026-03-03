@@ -5,7 +5,8 @@ DB module for script engine: query, query_one, execute, insert, update, delete (
 from types import SimpleNamespace
 from typing import Any
 
-from app.core.pool import cursor_to_dicts, execute as pool_execute
+from app.core.pool import cursor_to_dicts
+from app.core.pool import execute as pool_execute
 from app.models_dbapi import DataSource
 
 
@@ -21,7 +22,9 @@ def make_db_module(
     get_connection() -> conn; release_connection(conn); commit_after_dml(conn).
     """
 
-    def query(sql: str, params: dict | list | tuple | None = None) -> list[dict[str, Any]]:
+    def query(
+        sql: str, params: dict | list | tuple | None = None
+    ) -> list[dict[str, Any]]:
         conn = get_connection()
         try:
             cur = pool_execute(conn, sql, params, product_type=datasource.product_type)
@@ -31,7 +34,9 @@ def make_db_module(
         finally:
             release_connection(conn)
 
-    def query_one(sql: str, params: dict | list | tuple | None = None) -> dict[str, Any] | None:
+    def query_one(
+        sql: str, params: dict | list | tuple | None = None
+    ) -> dict[str, Any] | None:
         rows = query(sql, params)
         return rows[0] if rows else None
 

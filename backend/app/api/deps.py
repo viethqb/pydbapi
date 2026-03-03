@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.db import engine
 from app.core.gateway.ratelimit import check_rate_limit
 from app.core.permission import has_permission
-from app.core.security import TOKEN_TYPE_DASHBOARD, TOKEN_TYPE_GATEWAY
+from app.core.security import TOKEN_TYPE_DASHBOARD
 from app.models import TokenPayload, User
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 

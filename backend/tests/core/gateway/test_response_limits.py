@@ -9,10 +9,8 @@ from unittest.mock import patch
 from app.core.config import settings
 from app.core.gateway.request_response import (
     _cap_rows,
-    format_response,
     normalize_api_result,
 )
-
 
 # ---------------------------------------------------------------------------
 # #41: _cap_rows truncates data and sets truncated flag

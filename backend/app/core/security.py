@@ -1,11 +1,11 @@
 import base64
 import hashlib
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -38,7 +38,7 @@ def create_access_token(
     expires_delta: timedelta,
     token_type: str = TOKEN_TYPE_DASHBOARD,
 ) -> str:
-    expire = datetime.now(timezone.utc) + expires_delta
+    expire = datetime.now(UTC) + expires_delta
     to_encode = {"exp": expire, "sub": str(subject), "type": token_type}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

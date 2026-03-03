@@ -10,18 +10,19 @@ McpTool and McpClient excluded from product scope.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Optional
 
-from sqlalchemy import Column, Enum as SQLEnum, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import Column, Text, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 
 def _utc_now() -> datetime:
     """Timezone-aware UTC now (replaces deprecated datetime.utcnow())."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -571,7 +572,9 @@ class AccessRecord(SQLModel, table=True):
     request_headers: str | None = Field(default=None, sa_column=Column(Text))
     request_params: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=_utc_now)
-    duration_ms: int | None = Field(default=None, description="Request duration in milliseconds")
+    duration_ms: int | None = Field(
+        default=None, description="Request duration in milliseconds"
+    )
 
     api_assignment: "ApiAssignment" = Relationship(back_populates="access_records")
     app_client: "AppClient" = Relationship(back_populates="access_records")

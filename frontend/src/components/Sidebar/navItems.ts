@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react"
 import {
   BookOpen,
   Code2,
@@ -5,9 +6,7 @@ import {
   LayoutDashboard,
   Settings,
   Shield,
-  Users,
 } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
 
 export type SubMenuItem = {
   title: string

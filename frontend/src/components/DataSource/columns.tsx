@@ -1,6 +1,6 @@
-import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "@tanstack/react-router"
-import { MoreHorizontal, Play, Trash2, Eye, Pencil } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { Eye, MoreHorizontal, Pencil, Play, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -187,7 +187,9 @@ export const columns: ColumnDef<DataSourceTableData>[] = [
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                disabled={datasource.canDelete === false || !datasource.onDelete}
+                disabled={
+                  datasource.canDelete === false || !datasource.onDelete
+                }
                 onClick={
                   datasource.canDelete === false || !datasource.onDelete
                     ? undefined

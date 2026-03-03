@@ -6,18 +6,8 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type UserCreate, UsersService } from "@/client"
-import {
-  confirmPasswordSchema,
-  optionalEmailSchema,
-  passwordSchema,
-  passwordsMatch,
-  passwordsMismatchError,
-  usernameSchema,
-} from "@/lib/validations"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { RolesService } from "@/services/roles"
-import { UserPermissionsService } from "@/services/user-permissions"
 import {
   Dialog,
   DialogClose,
@@ -39,6 +29,16 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  confirmPasswordSchema,
+  optionalEmailSchema,
+  passwordSchema,
+  passwordsMatch,
+  passwordsMismatchError,
+  usernameSchema,
+} from "@/lib/validations"
+import { RolesService } from "@/services/roles"
+import { UserPermissionsService } from "@/services/user-permissions"
 import { handleError } from "@/utils"
 
 const formSchema = z
@@ -168,11 +168,7 @@ const AddUser = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Email"
-                        type="email"
-                        {...field}
-                      />
+                      <Input placeholder="Email" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -273,10 +269,7 @@ const AddUser = () => {
                   <FormLabel>Roles</FormLabel>
                   <div className="flex flex-wrap gap-3">
                     {roles.map((role) => (
-                      <div
-                        key={role.id}
-                        className="flex items-center gap-2"
-                      >
+                      <div key={role.id} className="flex items-center gap-2">
                         <Checkbox
                           id={`add-role-${role.id}`}
                           checked={selectedRoleIds.includes(role.id)}

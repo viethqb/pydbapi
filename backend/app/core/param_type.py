@@ -98,7 +98,9 @@ def _coerce_array(value: Any) -> list[Any]:
                 raise ParamTypeError("JSON is not an array")
             return out
         return [x.strip() for x in s.split(",") if x.strip()]
-    raise ParamTypeError(f"Expected array or JSON array string, got: {type(value).__name__}")
+    raise ParamTypeError(
+        f"Expected array or JSON array string, got: {type(value).__name__}"
+    )
 
 
 def _coerce_object(value: Any) -> dict[str, Any]:
@@ -117,7 +119,9 @@ def _coerce_object(value: Any) -> dict[str, Any]:
         if not isinstance(out, dict):
             raise ParamTypeError("JSON is not an object")
         return out
-    raise ParamTypeError(f"Expected object or JSON object string, got: {type(value).__name__}")
+    raise ParamTypeError(
+        f"Expected object or JSON object string, got: {type(value).__name__}"
+    )
 
 
 _COERCERS: dict[str, type] = {
@@ -158,7 +162,11 @@ def validate_and_coerce_params(
             continue
         name = name.strip()
         data_type = param_def.get("data_type")
-        dtype = (data_type or "string").strip().lower() if isinstance(data_type, str) else "string"
+        dtype = (
+            (data_type or "string").strip().lower()
+            if isinstance(data_type, str)
+            else "string"
+        )
         coerce_fn = _COERCERS.get(dtype) or _coerce_string
 
         raw = _params.get(name)
@@ -168,7 +176,9 @@ def validate_and_coerce_params(
                 try:
                     _params[name] = coerce_fn(default)
                 except ParamTypeError as e:
-                    raise ParamTypeError(f"Parameter '{name}' default_value invalid: {e}") from e
+                    raise ParamTypeError(
+                        f"Parameter '{name}' default_value invalid: {e}"
+                    ) from e
             else:
                 _params.pop(name, None)
             continue

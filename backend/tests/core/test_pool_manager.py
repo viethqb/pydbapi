@@ -62,7 +62,9 @@ class TestPoolManagerCreatedAtPreserved:
         cursor_mock = MagicMock()
         cursor_mock.execute.return_value = None
         mock_conn.cursor.return_value = cursor_mock
-        entry = _PoolEntry(conn=mock_conn, created_at=original_time, last_used=time.monotonic())
+        entry = _PoolEntry(
+            conn=mock_conn, created_at=original_time, last_used=time.monotonic()
+        )
         pm._pools[ds_id] = [entry]
 
         mock_ds = MagicMock()
@@ -118,7 +120,9 @@ class TestPoolManagerDispose:
         pm = PoolManager()
         ds_id = uuid.uuid4()
         conn = _make_mock_conn()
-        entry = _PoolEntry(conn=conn, created_at=time.monotonic(), last_used=time.monotonic())
+        entry = _PoolEntry(
+            conn=conn, created_at=time.monotonic(), last_used=time.monotonic()
+        )
         pm._pools[ds_id] = [entry]
 
         pm.dispose(ds_id)
@@ -130,7 +134,9 @@ class TestPoolManagerDispose:
         for _ in range(3):
             ds_id = uuid.uuid4()
             conn = _make_mock_conn()
-            entry = _PoolEntry(conn=conn, created_at=time.monotonic(), last_used=time.monotonic())
+            entry = _PoolEntry(
+                conn=conn, created_at=time.monotonic(), last_used=time.monotonic()
+            )
             pm._pools[ds_id] = [entry]
 
         pm.dispose()
@@ -141,7 +147,11 @@ class TestPoolManagerDispose:
         ds1, ds2 = uuid.uuid4(), uuid.uuid4()
         for ds_id, count in [(ds1, 2), (ds2, 3)]:
             pm._pools[ds_id] = [
-                _PoolEntry(conn=_make_mock_conn(), created_at=time.monotonic(), last_used=time.monotonic())
+                _PoolEntry(
+                    conn=_make_mock_conn(),
+                    created_at=time.monotonic(),
+                    last_used=time.monotonic(),
+                )
                 for _ in range(count)
             ]
         stats = pm.stats()

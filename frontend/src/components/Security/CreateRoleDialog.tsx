@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, Plus, X } from "lucide-react"
 import { useNavigate } from "@tanstack/react-router"
+import { ChevronDown, Plus, X } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -25,9 +25,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { Textarea } from "@/components/ui/textarea"
+import useCustomToast from "@/hooks/useCustomToast"
 import { PermissionsService } from "@/services/permissions"
 import { RolesService } from "@/services/roles"
-import useCustomToast from "@/hooks/useCustomToast"
 
 const RESOURCE_TYPE_LABELS: Record<string, string> = {
   datasource: "Datasource",
@@ -120,17 +120,31 @@ export default function CreateRoleDialog() {
       const key = normId(resourceId)
       switch (resourceType) {
         case "module":
-          return moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "datasource":
-          return datasourceNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            datasourceNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "group":
-          return groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "api_assignment":
-          return apiAssignmentNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            apiAssignmentNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "macro_def":
-          return macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "client":
-          return clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         default:
           return `ID:${String(resourceId).slice(0, 8)}…`
       }
@@ -176,7 +190,9 @@ export default function CreateRoleDialog() {
     }
     return order
       .filter((t) => byType.has(t))
-      .map((t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const)
+      .map(
+        (t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const,
+      )
   }, [permissionRows])
 
   const createMutation = useMutation({
@@ -228,7 +244,8 @@ export default function CreateRoleDialog() {
         <DialogHeader>
           <DialogTitle>Create custom role</DialogTitle>
           <DialogDescription>
-            Set name, description, and permissions. Format: <code className="text-xs">resource_type:name:action</code>.
+            Set name, description, and permissions. Format:{" "}
+            <code className="text-xs">resource_type:name:action</code>.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -255,8 +272,8 @@ export default function CreateRoleDialog() {
             <CardHeader className="py-3">
               <CardTitle className="text-sm">Permissions</CardTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Select permissions by group (Datasource, Module, …). When closed, only selected
-                permissions are shown.
+                Select permissions by group (Datasource, Module, …). When
+                closed, only selected permissions are shown.
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -264,7 +281,9 @@ export default function CreateRoleDialog() {
                 <p className="text-sm text-muted-foreground">Loading…</p>
               ) : (
                 permissionRowsByType.map(([typeKey, typeLabel, rows]) => {
-                  const selectedInType = rows.filter((r) => selectedIds.has(r.id))
+                  const selectedInType = rows.filter((r) =>
+                    selectedIds.has(r.id),
+                  )
                   return (
                     <div key={typeKey} className="space-y-1.5">
                       <Label className="text-sm font-medium">{typeLabel}</Label>
@@ -324,7 +343,10 @@ export default function CreateRoleDialog() {
                               key={row.id}
                               onSelect={(e) => {
                                 e.preventDefault()
-                                togglePermission(row.id, !selectedIds.has(row.id))
+                                togglePermission(
+                                  row.id,
+                                  !selectedIds.has(row.id),
+                                )
                               }}
                             >
                               <div className="flex items-center gap-2 w-full">
@@ -334,7 +356,10 @@ export default function CreateRoleDialog() {
                                   readOnly
                                   className="h-4 w-4 rounded border-gray-300"
                                 />
-                                <span className="font-mono text-xs truncate" title={row.label}>
+                                <span
+                                  className="font-mono text-xs truncate"
+                                  title={row.label}
+                                >
                                   {row.label}
                                 </span>
                               </div>

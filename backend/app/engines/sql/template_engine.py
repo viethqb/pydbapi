@@ -51,9 +51,7 @@ _original_macro_call = jinja2.runtime.Macro.__call__
 
 def _sql_safe_macro_call(self, *args, **kwargs):
     rv = _original_macro_call(self, *args, **kwargs)
-    if isinstance(rv, str) and getattr(
-        self._environment, "_sql_safe_macros", False
-    ):
+    if isinstance(rv, str) and getattr(self._environment, "_sql_safe_macros", False):
         return SqlSafe(rv)
     return rv
 

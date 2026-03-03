@@ -1,9 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { Search, Loader2, BookOpen } from "lucide-react"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import type { ColumnDef } from "@tanstack/react-table"
+import { BookOpen, Loader2, Search } from "lucide-react"
 import { useState } from "react"
-
+import { DataTable } from "@/components/Common/DataTable"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -11,17 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { DataTable } from "@/components/Common/DataTable"
-import { Badge } from "@/components/ui/badge"
+import type { ApiAssignmentPublic } from "@/services/api-assignments"
 import {
-  ApiAssignmentsService,
   type ApiAssignmentListIn,
+  ApiAssignmentsService,
   type HttpMethodEnum,
 } from "@/services/api-assignments"
 import { ModulesService } from "@/services/modules"
-import type { ColumnDef } from "@tanstack/react-table"
-import type { ApiAssignmentPublic } from "@/services/api-assignments"
 
 type ApiRepositoryTableData = ApiAssignmentPublic & {
   module_name?: string
@@ -61,12 +60,8 @@ const repositoryColumns: ColumnDef<ApiRepositoryTableData>[] = [
       const api = row.original
       const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
       const fullPath = `/api/${apiPath}`
-      
-      return (
-        <span className="font-mono text-sm">
-          {fullPath}
-        </span>
-      )
+
+      return <span className="font-mono text-sm">{fullPath}</span>
     },
   },
   {
@@ -81,11 +76,7 @@ const repositoryColumns: ColumnDef<ApiRepositoryTableData>[] = [
         DELETE: "bg-red-500",
         PATCH: "bg-purple-500",
       }
-      return (
-        <Badge className={colors[method] || "bg-gray-500"}>
-          {method}
-        </Badge>
-      )
+      return <Badge className={colors[method] || "bg-gray-500"}>{method}</Badge>
     },
   },
   {
@@ -147,15 +138,22 @@ function ApiRepository() {
   })
 
   // Create maps for lookup
-  const moduleMap = new Map(Array.isArray(modulesData) ? modulesData.map(m => [m.id, m.name]) : [])
-  const modulePathPrefixMap = new Map(Array.isArray(modulesData) ? modulesData.map(m => [m.id, m.path_prefix]) : [])
+  const moduleMap = new Map(
+    Array.isArray(modulesData) ? modulesData.map((m) => [m.id, m.name]) : [],
+  )
+  const modulePathPrefixMap = new Map(
+    Array.isArray(modulesData)
+      ? modulesData.map((m) => [m.id, m.path_prefix])
+      : [],
+  )
 
-  const tableData: ApiRepositoryTableData[] =
-    (Array.isArray(data?.data) ? data.data : []).map((api) => ({
-      ...api,
-      module_name: moduleMap.get(api.module_id),
-      module_path_prefix: modulePathPrefixMap.get(api.module_id),
-    }))
+  const tableData: ApiRepositoryTableData[] = (
+    Array.isArray(data?.data) ? data.data : []
+  ).map((api) => ({
+    ...api,
+    module_name: moduleMap.get(api.module_id),
+    module_path_prefix: modulePathPrefixMap.get(api.module_id),
+  }))
 
   const page = filters.page ?? 1
   const pageSize = filters.page_size ?? 20
@@ -208,11 +206,12 @@ function ApiRepository() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Modules</SelectItem>
-              {Array.isArray(modulesData) && modulesData.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.name}
-                </SelectItem>
-              ))}
+              {Array.isArray(modulesData) &&
+                modulesData.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <Select
@@ -280,9 +279,7 @@ function ApiRepository() {
             <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
                 Showing{" "}
-                <span className="font-medium">
-                  {(page - 1) * pageSize + 1}
-                </span>{" "}
+                <span className="font-medium">{(page - 1) * pageSize + 1}</span>{" "}
                 to{" "}
                 <span className="font-medium">
                   {Math.min(page * pageSize, total)}
@@ -294,9 +291,7 @@ function ApiRepository() {
                   variant="outline"
                   size="sm"
                   disabled={page === 1}
-                  onClick={() =>
-                    setFilters({ ...filters, page: page - 1 })
-                  }
+                  onClick={() => setFilters({ ...filters, page: page - 1 })}
                 >
                   Previous
                 </Button>
@@ -304,9 +299,7 @@ function ApiRepository() {
                   variant="outline"
                   size="sm"
                   disabled={page * pageSize >= total}
-                  onClick={() =>
-                    setFilters({ ...filters, page: page + 1 })
-                  }
+                  onClick={() => setFilters({ ...filters, page: page + 1 })}
                 >
                   Next
                 </Button>

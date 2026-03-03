@@ -1,9 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { ChevronDown, Search, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -13,30 +21,19 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { ChevronDown, Search, X } from "lucide-react"
 import { LoadingButton } from "@/components/ui/loading-button"
+import { Textarea } from "@/components/ui/textarea"
+import useCustomToast from "@/hooks/useCustomToast"
+import type { ApiAssignmentPublic } from "@/services/api-assignments"
+import { ApiAssignmentsService } from "@/services/api-assignments"
 import {
-  ClientsService,
   type AppClientCreate,
-  type AppClientUpdate,
   type AppClientDetail,
+  type AppClientUpdate,
+  ClientsService,
 } from "@/services/clients"
 import { GroupsService } from "@/services/groups"
-import { ApiAssignmentsService } from "@/services/api-assignments"
-
-import type { ApiAssignmentPublic } from "@/services/api-assignments"
-
-import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -112,19 +109,21 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
 
   const { data: apisData } = useQuery({
     queryKey: ["apis-published-for-client"],
-    queryFn: () => ApiAssignmentsService.list({ is_published: true, page: 1, page_size: 100 }),
+    queryFn: () =>
+      ApiAssignmentsService.list({
+        is_published: true,
+        page: 1,
+        page_size: 100,
+      }),
   })
 
   const [groupSearch, setGroupSearch] = useState("")
   const [apiSearch, setApiSearch] = useState("")
 
-  const getApiFullPath = useCallback(
-    (api: ApiAssignmentPublic): string => {
-      const p = (api.path || "").replace(/^\//, "")
-      return `/api/${p}`
-    },
-    [],
-  )
+  const getApiFullPath = useCallback((api: ApiAssignmentPublic): string => {
+    const p = (api.path || "").replace(/^\//, "")
+    return `/api/${p}`
+  }, [])
 
   const filteredGroups = useMemo(() => {
     const list = groupsData?.data ?? []
@@ -139,7 +138,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
     if (!q) return list
     return list.filter((api) => {
       const full = getApiFullPath(api)
-      const s = `${api.name} ${api.http_method} ${api.path} ${full}`.toLowerCase()
+      const s =
+        `${api.name} ${api.http_method} ${api.path} ${full}`.toLowerCase()
       return s.includes(q)
     })
   }, [apisData?.data, apiSearch, getApiFullPath])
@@ -168,9 +168,14 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
         client_id: "", // client_id is fixed after creation; not editable here
         client_secret: "", // Don't populate secret on edit
         description: client.description,
-        rate_limit_per_minute: (client as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
-        max_concurrent: (client as { max_concurrent?: number | null }).max_concurrent ?? null,
-        token_expire_seconds: (client as { token_expire_seconds?: number | null }).token_expire_seconds ?? null,
+        rate_limit_per_minute:
+          (client as { rate_limit_per_minute?: number | null })
+            .rate_limit_per_minute ?? null,
+        max_concurrent:
+          (client as { max_concurrent?: number | null }).max_concurrent ?? null,
+        token_expire_seconds:
+          (client as { token_expire_seconds?: number | null })
+            .token_expire_seconds ?? null,
         is_active: client.is_active,
         group_ids: client.group_ids ?? [],
         api_assignment_ids: client.api_assignment_ids ?? [],
@@ -223,7 +228,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
         name: data.name,
         description: data.description || null,
         rate_limit_per_minute:
-          data.rate_limit_per_minute === "" || data.rate_limit_per_minute == null
+          data.rate_limit_per_minute === "" ||
+          data.rate_limit_per_minute == null
             ? null
             : Number(data.rate_limit_per_minute),
         max_concurrent:
@@ -236,16 +242,21 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
             : Number(data.token_expire_seconds),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : [],
-        api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : [],
+        api_assignment_ids:
+          data.api_assignment_ids.length > 0 ? data.api_assignment_ids : [],
       })
     } else {
       // Allow optional client_id and client_secret in the UI.
       // If they are not provided, generate secure random values on the frontend
       // so the user can see and copy them before the request is sent.
       const generateRandomString = (length: number) => {
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        const chars =
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
         const array = new Uint32Array(length)
-        if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+        if (
+          typeof crypto !== "undefined" &&
+          typeof crypto.getRandomValues === "function"
+        ) {
           crypto.getRandomValues(array)
         } else {
           for (let i = 0; i < length; i++) {
@@ -258,11 +269,15 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
 
       // Trim and validate client_id
       const trimmedClientId = data.client_id?.trim() || ""
-      const finalClientId = trimmedClientId.length > 0 ? trimmedClientId : generateRandomString(16)
-      
+      const finalClientId =
+        trimmedClientId.length > 0 ? trimmedClientId : generateRandomString(16)
+
       // Trim and validate client_secret
       const trimmedClientSecret = data.client_secret?.trim() || ""
-      const finalClientSecret = trimmedClientSecret.length >= 8 ? trimmedClientSecret : generateRandomString(32)
+      const finalClientSecret =
+        trimmedClientSecret.length >= 8
+          ? trimmedClientSecret
+          : generateRandomString(32)
 
       // Update form values so the user can see the generated values (especially secret)
       // Only update if they were empty (to show generated values)
@@ -270,7 +285,9 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
         form.setValue("client_id", finalClientId, { shouldValidate: false })
       }
       if (!trimmedClientSecret || trimmedClientSecret.length < 8) {
-        form.setValue("client_secret", finalClientSecret, { shouldValidate: false })
+        form.setValue("client_secret", finalClientSecret, {
+          shouldValidate: false,
+        })
       }
 
       createMutation.mutate({
@@ -279,7 +296,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
         client_secret: finalClientSecret,
         description: data.description,
         rate_limit_per_minute:
-          data.rate_limit_per_minute === "" || data.rate_limit_per_minute == null
+          data.rate_limit_per_minute === "" ||
+          data.rate_limit_per_minute == null
             ? null
             : Number(data.rate_limit_per_minute),
         max_concurrent:
@@ -292,7 +310,10 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
             : Number(data.token_expire_seconds),
         is_active: data.is_active,
         group_ids: data.group_ids.length > 0 ? data.group_ids : undefined,
-        api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : undefined,
+        api_assignment_ids:
+          data.api_assignment_ids.length > 0
+            ? data.api_assignment_ids
+            : undefined,
       })
     }
   }
@@ -335,7 +356,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Optional. Only letters, numbers, underscores (_), and hyphens (-). Leave empty to auto-generate.
+                      Optional. Only letters, numbers, underscores (_), and
+                      hyphens (-). Leave empty to auto-generate.
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -347,9 +369,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                 name="client_secret"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Client Secret
-                    </FormLabel>
+                    <FormLabel>Client Secret</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
@@ -359,7 +379,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Optional. Minimum 8 characters, maximum 512 characters. Leave empty to auto-generate a secure secret.
+                      Optional. Minimum 8 characters, maximum 512 characters.
+                      Leave empty to auto-generate a secure secret.
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -398,7 +419,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                     min={1}
                     placeholder="No limit"
                     {...field}
-                    value={field.value === null || field.value === undefined ? "" : field.value}
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : field.value
+                    }
                     onChange={(e) => {
                       const v = e.target.value
                       field.onChange(v === "" ? null : Number(v))
@@ -425,7 +450,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                     min={1}
                     placeholder="Use global default"
                     {...field}
-                    value={field.value === null || field.value === undefined ? "" : field.value}
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : field.value
+                    }
                     onChange={(e) => {
                       const v = e.target.value
                       field.onChange(v === "" ? null : Number(v))
@@ -433,7 +462,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                   />
                 </FormControl>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Max requests in flight for this client. Empty = use global default.
+                  Max requests in flight for this client. Empty = use global
+                  default.
                 </p>
                 <FormMessage />
               </FormItem>
@@ -453,7 +483,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                     max={86400}
                     placeholder="Use global default (3600s)"
                     {...field}
-                    value={field.value === null || field.value === undefined ? "" : field.value}
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : field.value
+                    }
                     onChange={(e) => {
                       const v = e.target.value
                       field.onChange(v === "" ? null : Number(v))
@@ -461,7 +495,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                   />
                 </FormControl>
                 <p className="text-xs text-muted-foreground mt-1">
-                  JWT token lifetime in seconds (60–86400). Empty = use global default.
+                  JWT token lifetime in seconds (60–86400). Empty = use global
+                  default.
                 </p>
                 <FormMessage />
               </FormItem>
@@ -497,7 +532,9 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                         <div className="flex flex-wrap gap-1 flex-1">
                           {field.value && field.value.length > 0 ? (
                             field.value.map((groupId) => {
-                              const group = groupsData?.data?.find((g) => g.id === groupId)
+                              const group = groupsData?.data?.find(
+                                (g) => g.id === groupId,
+                              )
                               if (!group) return null
                               return (
                                 <Badge
@@ -506,7 +543,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                                   className="mr-1"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    field.onChange(field.value.filter((id) => id !== groupId))
+                                    field.onChange(
+                                      field.value.filter(
+                                        (id) => id !== groupId,
+                                      ),
+                                    )
                                   }}
                                 >
                                   {group.name}
@@ -520,7 +561,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                                     onClick={(e) => {
                                       e.preventDefault()
                                       e.stopPropagation()
-                                      field.onChange(field.value.filter((id) => id !== groupId))
+                                      field.onChange(
+                                        field.value.filter(
+                                          (id) => id !== groupId,
+                                        ),
+                                      )
                                     }}
                                   >
                                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -529,7 +574,10 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                               )
                             })
                           ) : (
-                            <span className="text-muted-foreground">Select groups (client can call APIs in these groups)...</span>
+                            <span className="text-muted-foreground">
+                              Select groups (client can call APIs in these
+                              groups)...
+                            </span>
                           )}
                         </div>
                         <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
@@ -560,7 +608,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                                 e.preventDefault()
                                 const currentValue = field.value || []
                                 if (currentValue.includes(group.id)) {
-                                  field.onChange(currentValue.filter((id) => id !== group.id))
+                                  field.onChange(
+                                    currentValue.filter(
+                                      (id) => id !== group.id,
+                                    ),
+                                  )
                                 } else {
                                   field.onChange([...currentValue, group.id])
                                 }
@@ -569,7 +621,9 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                               <div className="flex items-center gap-2 w-full">
                                 <input
                                   type="checkbox"
-                                  checked={field.value?.includes(group.id) || false}
+                                  checked={
+                                    field.value?.includes(group.id) || false
+                                  }
                                   onChange={() => {}}
                                   className="h-4 w-4 rounded border-gray-300"
                                 />
@@ -606,7 +660,9 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                         <div className="flex flex-wrap gap-1 flex-1">
                           {field.value && field.value.length > 0 ? (
                             field.value.map((apiId) => {
-                              const api = apisData?.data?.find((a) => a.id === apiId)
+                              const api = apisData?.data?.find(
+                                (a) => a.id === apiId,
+                              )
                               if (!api) return null
                               const fullPath = getApiFullPath(api)
                               return (
@@ -617,7 +673,9 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                                   title={`${api.http_method} ${fullPath}`}
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    field.onChange(field.value.filter((id) => id !== apiId))
+                                    field.onChange(
+                                      field.value.filter((id) => id !== apiId),
+                                    )
                                   }}
                                 >
                                   {api.http_method} {fullPath}
@@ -631,7 +689,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                                     onClick={(e) => {
                                       e.preventDefault()
                                       e.stopPropagation()
-                                      field.onChange(field.value.filter((id) => id !== apiId))
+                                      field.onChange(
+                                        field.value.filter(
+                                          (id) => id !== apiId,
+                                        ),
+                                      )
                                     }}
                                   >
                                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -640,7 +702,10 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                               )
                             })
                           ) : (
-                            <span className="text-muted-foreground">Select direct APIs (client can call even if not in a group)...</span>
+                            <span className="text-muted-foreground">
+                              Select direct APIs (client can call even if not in
+                              a group)...
+                            </span>
                           )}
                         </div>
                         <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
@@ -673,7 +738,11 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                                   e.preventDefault()
                                   const currentValue = field.value || []
                                   if (currentValue.includes(api.id)) {
-                                    field.onChange(currentValue.filter((id) => id !== api.id))
+                                    field.onChange(
+                                      currentValue.filter(
+                                        (id) => id !== api.id,
+                                      ),
+                                    )
                                   } else {
                                     field.onChange([...currentValue, api.id])
                                   }
@@ -682,11 +751,16 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                                 <div className="flex items-center gap-2 w-full min-w-0">
                                   <input
                                     type="checkbox"
-                                    checked={field.value?.includes(api.id) || false}
+                                    checked={
+                                      field.value?.includes(api.id) || false
+                                    }
                                     onChange={() => {}}
                                     className="h-4 w-4 rounded border-gray-300 shrink-0"
                                   />
-                                  <span className="truncate font-mono text-xs" title={`${api.name} — ${api.http_method} ${fullPath}`}>
+                                  <span
+                                    className="truncate font-mono text-xs"
+                                    title={`${api.name} — ${api.http_method} ${fullPath}`}
+                                  >
                                     {api.http_method} {fullPath}
                                   </span>
                                 </div>
@@ -711,11 +785,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
         </div>
 
         <div className="flex justify-end gap-2">
-          <LoadingButton
-            type="submit"
-            loading={isLoading}
-            disabled={isLoading}
-          >
+          <LoadingButton type="submit" loading={isLoading} disabled={isLoading}>
             {isEdit ? "Update" : "Create"}
           </LoadingButton>
         </div>

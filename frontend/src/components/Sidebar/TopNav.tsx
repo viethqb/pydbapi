@@ -1,5 +1,5 @@
-import { Menu, Users } from "lucide-react"
 import { Link as RouterLink, useRouterState } from "@tanstack/react-router"
+import { Menu, Users } from "lucide-react"
 import { useState } from "react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
@@ -14,8 +14,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import useAuth from "@/hooks/useAuth"
 import { useIsMobile } from "@/hooks/useMobile"
-import { baseNavItems, type NavItem } from "./navItems"
 import { MobileNavMenu } from "./MobileNavMenu"
+import { baseNavItems, type NavItem } from "./navItems"
 import { UserDropdownContent } from "./UserDropdownContent"
 
 export function TopNav() {
@@ -41,7 +41,9 @@ export function TopNav() {
 
   const navLinkClass = (path: string) =>
     `px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-accent hover:text-accent-foreground ${
-      currentPath === path ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+      currentPath === path
+        ? "bg-accent text-accent-foreground"
+        : "text-muted-foreground"
     }`
 
   return (
@@ -94,7 +96,9 @@ export function TopNav() {
           <nav className="flex flex-1 items-center gap-1">
             {items.map((item) => {
               if (item.submenu?.length) {
-                const isActive = item.submenu.some((sub) => currentPath === sub.path)
+                const isActive = item.submenu.some(
+                  (sub) => currentPath === sub.path,
+                )
                 return (
                   <DropdownMenu key={item.title}>
                     <DropdownMenuTrigger asChild>

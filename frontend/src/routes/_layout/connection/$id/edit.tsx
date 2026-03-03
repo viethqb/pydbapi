@@ -1,12 +1,20 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { ArrowLeft, Loader2, Play } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Loader2, ArrowLeft, Play } from "lucide-react"
-import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
@@ -17,6 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
   SelectContent,
@@ -24,10 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -35,11 +40,9 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DataSourceService,
-  type DataSourceUpdate,
-} from "@/services/datasource"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { DataSourceService, type DataSourceUpdate } from "@/services/datasource"
 
 const formSchema = z
   .object({
@@ -63,7 +66,10 @@ const formSchema = z
       }
       return true
     },
-    { message: "Password is required for Trino when using SSL/HTTPS", path: ["password"] }
+    {
+      message: "Password is required for Trino when using SSL/HTTPS",
+      path: ["password"],
+    },
   )
 
 type FormValues = z.infer<typeof formSchema>
@@ -116,10 +122,11 @@ function ConnectionEdit() {
   useEffect(() => {
     if (datasource) {
       // Ensure product_type is a string (handle enum objects)
-      const productType = typeof datasource.product_type === 'string' 
-        ? datasource.product_type 
-        : (datasource.product_type as any)?.value || datasource.product_type
-      
+      const productType =
+        typeof datasource.product_type === "string"
+          ? datasource.product_type
+          : (datasource.product_type as any)?.value || datasource.product_type
+
       form.reset({
         name: datasource.name,
         product_type: productType as "postgres" | "mysql" | "trino",
@@ -132,12 +139,13 @@ function ConnectionEdit() {
         use_ssl: !!datasource.use_ssl,
         description: datasource.description || null,
         is_active: datasource.is_active,
-        close_connection_after_execute: datasource.close_connection_after_execute ?? false,
+        close_connection_after_execute:
+          datasource.close_connection_after_execute ?? false,
       })
       setTestConnectionSuccess(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasource])
+  }, [datasource, form.reset])
 
   // Reset test result when form values change
   useEffect(() => {
@@ -191,13 +199,13 @@ function ConnectionEdit() {
     // Require test if password is provided (user wants to change password)
     // If no password is provided, backend will use existing password, so test is not required
     const hasPassword = !!values.password
-    
+
     // Require test if password is provided
     if (hasPassword && !testConnectionSuccess) {
       showErrorToast("Please test connection successfully before saving")
       return
     }
-    
+
     const updateData: DataSourceUpdate = {
       id,
       name: values.name,
@@ -253,8 +261,12 @@ function ConnectionEdit() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Edit Data Source</h1>
-          <p className="text-muted-foreground mt-1">Update database connection settings</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Edit Data Source
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Update database connection settings
+          </p>
         </div>
       </div>
 
@@ -263,7 +275,9 @@ function ConnectionEdit() {
           <Card>
             <CardHeader>
               <CardTitle>Connection Configuration</CardTitle>
-              <CardDescription>Configure the database connection settings</CardDescription>
+              <CardDescription>
+                Configure the database connection settings
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -304,7 +318,9 @@ function ConnectionEdit() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="postgres">PostgreSQL</SelectItem>
+                                <SelectItem value="postgres">
+                                  PostgreSQL
+                                </SelectItem>
                                 <SelectItem value="mysql">MySQL</SelectItem>
                                 <SelectItem value="trino">Trino</SelectItem>
                               </SelectContent>
@@ -369,7 +385,9 @@ function ConnectionEdit() {
                                 type="number"
                                 placeholder="5432"
                                 {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                               />
                             </FormControl>
                             <FormMessage />
@@ -448,7 +466,9 @@ function ConnectionEdit() {
                                 Set password to empty (clear password)
                               </FormLabel>
                               <FormDescription>
-                                Check to update stored password to empty; leave unchecked to keep current or use the value above.
+                                Check to update stored password to empty; leave
+                                unchecked to keep current or use the value
+                                above.
                               </FormDescription>
                             </div>
                           </FormItem>
@@ -469,7 +489,9 @@ function ConnectionEdit() {
                                 placeholder="Optional description"
                                 {...field}
                                 value={field.value || ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
+                                onChange={(e) =>
+                                  field.onChange(e.target.value || null)
+                                }
                                 className="min-h-[80px]"
                               />
                             </FormControl>
@@ -494,7 +516,9 @@ function ConnectionEdit() {
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel>Enable this data source for use</FormLabel>
+                              <FormLabel>
+                                Enable this data source for use
+                              </FormLabel>
                             </div>
                           </FormItem>
                         )}
@@ -502,7 +526,9 @@ function ConnectionEdit() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">Close connection after execute</TableHead>
+                    <TableHead className="w-[180px]">
+                      Close connection after execute
+                    </TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -516,7 +542,10 @@ function ConnectionEdit() {
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel>Close DB connection after each request (e.g. StarRocks impersonation)</FormLabel>
+                              <FormLabel>
+                                Close DB connection after each request (e.g.
+                                StarRocks impersonation)
+                              </FormLabel>
                             </div>
                           </FormItem>
                         )}

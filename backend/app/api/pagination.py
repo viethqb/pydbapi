@@ -10,8 +10,8 @@ import uuid
 from typing import Any, Protocol
 
 from fastapi import HTTPException
-from sqlmodel import Session, select
 from sqlalchemy import func
+from sqlmodel import Session, select
 
 from app.core.permission import get_user_permissions, has_permission
 from app.models import User

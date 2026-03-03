@@ -54,7 +54,8 @@ function CodeExample({ title, description, code }: Example) {
 const EXAMPLES: Example[] = [
   {
     title: "Passthrough",
-    description: "Smallest possible transform: return the executor result as-is. Useful as a template; you can still call macro helpers here.",
+    description:
+      "Smallest possible transform: return the executor result as-is. Useful as a template; you can still call macro helpers here.",
     code:
       "def transform(result, params=None):\n" +
       '    """Transform raw executor result. params = request params dict."""\n' +
@@ -67,16 +68,16 @@ const EXAMPLES: Example[] = [
     code:
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
-      "    limit = int(p.get(\"limit\", 10))\n" +
-      "    offset = int(p.get(\"offset\", 0))\n" +
-      "    d = result.get(\"data\", [])\n" +
+      '    limit = int(p.get("limit", 10))\n' +
+      '    offset = int(p.get("offset", 0))\n' +
+      '    d = result.get("data", [])\n' +
       "    if isinstance(d, list) and len(d) >= 2:\n" +
       "        rows = d[0] if isinstance(d[0], list) else d[0]\n" +
-      "        total_val = d[1][0].get(\"total\", len(rows)) if d[1] else len(rows)\n" +
-      "        result[\"data\"] = rows\n" +
-      "        result[\"total\"] = total_val\n" +
-      "    result[\"offset\"] = offset\n" +
-      "    result[\"limit\"] = limit\n" +
+      '        total_val = d[1][0].get("total", len(rows)) if d[1] else len(rows)\n' +
+      '        result["data"] = rows\n' +
+      '        result["total"] = total_val\n' +
+      '    result["offset"] = offset\n' +
+      '    result["limit"] = limit\n' +
       "    return result\n",
   },
   {
@@ -87,8 +88,8 @@ const EXAMPLES: Example[] = [
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
       "    # safe_int() defined in a Python macro_def\n" +
-      "    result[\"limit\"] = safe_int(p.get(\"limit\"), 10)\n" +
-      "    result[\"offset\"] = safe_int(p.get(\"offset\"), 0)\n" +
+      '    result["limit"] = safe_int(p.get("limit"), 10)\n' +
+      '    result["offset"] = safe_int(p.get("offset"), 0)\n' +
       "    return result\n",
   },
   {
@@ -98,13 +99,13 @@ const EXAMPLES: Example[] = [
     code:
       "def transform(result, params=None):\n" +
       "    p = params or {}\n" +
-      "    limit = int(p.get(\"limit\", 10))\n" +
-      "    offset = int(p.get(\"offset\", 0))\n" +
-      "    d = result.get(\"data\", [])\n" +
+      '    limit = int(p.get("limit", 10))\n' +
+      '    offset = int(p.get("offset", 0))\n' +
+      '    d = result.get("data", [])\n' +
       "    if isinstance(d, list) and len(d) == 1 and isinstance(d[0], list):\n" +
-      "        result[\"data\"] = d[0]\n" +
-      "    result[\"offset\"] = offset\n" +
-      "    result[\"limit\"] = limit\n" +
+      '        result["data"] = d[0]\n' +
+      '    result["offset"] = offset\n' +
+      '    result["limit"] = limit\n' +
       "    return result\n",
   },
   {
@@ -113,9 +114,9 @@ const EXAMPLES: Example[] = [
       "Transform each row to a lighter shape (id, name only). You can move the projection logic into a macro helper like pick_keys for reuse.",
     code:
       "def transform(result, params=None):\n" +
-      "    d = result.get(\"data\", [])\n" +
+      '    d = result.get("data", [])\n' +
       "    rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else (d if isinstance(d, list) else [])\n" +
-      "    result[\"data\"] = [{\"id\": r.get(\"id\"), \"name\": r.get(\"name\")} for r in rows]\n" +
+      '    result["data"] = [{"id": r.get("id"), "name": r.get("name")} for r in rows]\n' +
       "    return result\n",
   },
   {
@@ -124,11 +125,11 @@ const EXAMPLES: Example[] = [
       "Attach a new field derived from existing columns (e.g. full_name from first_name + last_name). This logic is also a good candidate for a macro helper such as build_full_name.",
     code:
       "def transform(result, params=None):\n" +
-      "    d = result.get(\"data\", [])\n" +
+      '    d = result.get("data", [])\n' +
       "    rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else (d if isinstance(d, list) else [])\n" +
       "    for r in rows:\n" +
       "        r['full_name'] = f\"{r.get('first_name', '')} {r.get('last_name', '')}\".strip()\n" +
-      "    result[\"data\"] = rows\n" +
+      '    result["data"] = rows\n' +
       "    return result\n",
   },
   {
@@ -137,9 +138,9 @@ const EXAMPLES: Example[] = [
       "Filter the data returned by the executor (e.g. keep only rows where is_active is true). For complex conditions, extract them into a macro helper like filter_active.",
     code:
       "def transform(result, params=None):\n" +
-      "    d = result.get(\"data\", [])\n" +
+      '    d = result.get("data", [])\n' +
       "    rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else (d if isinstance(d, list) else [])\n" +
-      "    result[\"data\"] = [r for r in rows if r.get(\"is_active\", True)]\n" +
+      '    result["data"] = [r for r in rows if r.get("is_active", True)]\n' +
       "    return result\n",
   },
 ]
@@ -155,9 +156,13 @@ export default function ResultTransformExamples() {
         onClick={() => setOpen((v) => !v)}
       >
         <div>
-          <div className="text-sm font-medium">Result transform (Python) examples</div>
+          <div className="text-sm font-medium">
+            Result transform (Python) examples
+          </div>
           <div className="text-xs text-muted-foreground">
-            transform(result, params=None) → result. Runs after SQL/Jinja or Script execution, before sending the response. You can call functions from Python macro_defs; macro code is auto-prepended.
+            transform(result, params=None) → result. Runs after SQL/Jinja or
+            Script execution, before sending the response. You can call
+            functions from Python macro_defs; macro code is auto-prepended.
           </div>
         </div>
         <ChevronDown

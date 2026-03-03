@@ -5,7 +5,7 @@ Endpoints: list (POST), create, update, delete, get detail, publish, versions.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,14 +19,19 @@ from app.api.deps import (
     require_permission_for_resource,
 )
 from app.api.pagination import get_allowed_ids, paginate
-from app.core.permission import get_user_permissions, has_permission
+from app.core.gateway.config_cache import invalidate_gateway_config
 from app.core.permission_resources import (
     ensure_resource_permissions,
     remove_resource_permissions,
 )
-from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models import Message, User
-from app.models_dbapi import ApiContext, ApiMacroDef, MacroDefVersionCommit
+from app.models_dbapi import (
+    ApiAssignment,
+    ApiContext,
+    ApiMacroDef,
+    MacroDefVersionCommit,
+)
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.schemas_dbapi import (
     ApiMacroDefCreate,
     ApiMacroDefDetail,
@@ -40,8 +45,6 @@ from app.schemas_dbapi import (
     MacroDefVersionCommitListOut,
     MacroDefVersionCommitPublic,
 )
-from app.core.gateway.config_cache import invalidate_gateway_config
-from app.models_dbapi import ApiAssignment
 
 router = APIRouter(prefix="/macro-defs", tags=["macro-defs"])
 
@@ -339,7 +342,7 @@ def publish_macro_def(
         )
     m.is_published = True
     m.published_version_id = body.version_id
-    m.updated_at = datetime.now(timezone.utc)
+    m.updated_at = datetime.now(UTC)
     session.add(m)
     session.commit()
     session.refresh(m)
@@ -368,7 +371,7 @@ def unpublish_macro_def(
     if not m:
         raise HTTPException(status_code=404, detail="ApiMacroDef not found")
     m.is_published = False
-    m.updated_at = datetime.now(timezone.utc)
+    m.updated_at = datetime.now(UTC)
     session.add(m)
     session.commit()
     session.refresh(m)
@@ -557,7 +560,7 @@ def restore_macro_def_version(
             status_code=400, detail="Version does not belong to this macro_def"
         )
     m.content = version.content_snapshot
-    m.updated_at = datetime.now(timezone.utc)
+    m.updated_at = datetime.now(UTC)
     session.add(m)
     session.commit()
     session.refresh(m)
@@ -598,7 +601,7 @@ def revert_macro_def_version_to_draft(
         )
     if m.published_version_id == version_id:
         m.published_version_id = None
-        m.updated_at = datetime.now(timezone.utc)
+        m.updated_at = datetime.now(UTC)
         session.add(m)
         session.commit()
         _invalidate_apis_using_module(m.module_id, session)

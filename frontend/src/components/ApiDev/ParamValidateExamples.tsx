@@ -55,7 +55,8 @@ function CodeExample({ title, description, code }: Example) {
 const PARAM_VALIDATE_EXAMPLES: Example[] = [
   {
     title: "Param validate – Always pass",
-    description: "Minimal example: always returns True. Useful as a starting point; you can call macro helpers from here.",
+    description:
+      "Minimal example: always returns True. Useful as a starting point; you can call macro helpers from here.",
     code:
       "def validate(value, params=None):\n" +
       '    """Return True if valid, otherwise False."""\n' +
@@ -63,7 +64,8 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – Numeric range",
-    description: "Ensure the numeric value is between 0 and 100 (inclusive). You can replace the raw cast with a macro helper such as safe_float.",
+    description:
+      "Ensure the numeric value is between 0 and 100 (inclusive). You can replace the raw cast with a macro helper such as safe_float.",
     code:
       "def validate(value, params=None):\n" +
       "    try:\n" +
@@ -76,7 +78,8 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – String length",
-    description: "Require a non-empty string with reasonable length (1 ≤ len(str(value)) ≤ 255). Good for names, codes, etc.",
+    description:
+      "Require a non-empty string with reasonable length (1 ≤ len(str(value)) ≤ 255). Good for names, codes, etc.",
     code:
       "def validate(value, params=None):\n" +
       "    if value is None:\n" +
@@ -86,17 +89,19 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
   },
   {
     title: "Param validate – Regex pattern",
-    description: "Validate an identifier-like field using regex ^[a-zA-Z0-9_-]+$. Can be combined with a macro helper like is_valid_slug.",
+    description:
+      "Validate an identifier-like field using regex ^[a-zA-Z0-9_-]+$. Can be combined with a macro helper like is_valid_slug.",
     code:
       "import re\n\n" +
       "def validate(value, params=None):\n" +
       "    if value is None or not isinstance(value, str):\n" +
       "        return False\n" +
-      "    return bool(re.match(r\"^[a-zA-Z0-9_-]+$\", value))\n",
+      '    return bool(re.match(r"^[a-zA-Z0-9_-]+$", value))\n',
   },
   {
     title: "Param validate – Use macro helper (is_valid_email)",
-    description: "Show how to call is_valid_email defined in a Python macro_def. Macro code is auto-prepended before validate() runs.",
+    description:
+      "Show how to call is_valid_email defined in a Python macro_def. Macro code is auto-prepended before validate() runs.",
     code:
       "def validate(value, params=None):\n" +
       "    # is_valid_email() defined in a Python macro_def\n" +
@@ -110,8 +115,8 @@ const PARAM_VALIDATE_EXAMPLES: Example[] = [
       "def validate(value, params=None):\n" +
       "    if value is None or params is None:\n" +
       "        return False\n" +
-      "    start = params.get(\"start\")\n" +
-      "    end = params.get(\"end\")\n" +
+      '    start = params.get("start")\n' +
+      '    end = params.get("end")\n' +
       "    try:\n" +
       "        v = float(value)\n" +
       "        if start is not None: v = max(v, float(start))\n" +
@@ -135,7 +140,9 @@ export default function ParamValidateExamples() {
         <div>
           <div className="text-sm font-medium">Validation examples</div>
           <div className="text-xs text-muted-foreground">
-            validate(value, params=None) → True/False. Called per-parameter before executing SQL/Python. You can call functions from Python macro_defs; macro code is auto-prepended.
+            validate(value, params=None) → True/False. Called per-parameter
+            before executing SQL/Python. You can call functions from Python
+            macro_defs; macro code is auto-prepended.
           </div>
         </div>
         <ChevronDown

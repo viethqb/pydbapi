@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute } from "@tanstack/react-router"
 import { useEffect, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -30,17 +30,17 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { ApiAssignmentsService } from "@/services/api-assignments"
+import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   AccessLogsService,
   type AccessRecordDetail,
   type AccessRecordPublic,
 } from "@/services/access-logs"
+import { ApiAssignmentsService } from "@/services/api-assignments"
 import { ClientsService } from "@/services/clients"
 import { GroupsService } from "@/services/groups"
 import { ModulesService } from "@/services/modules"
-import { usePermissions } from "@/hooks/usePermissions"
-import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/system/access-logs")({
   component: AccessLogsPage,
@@ -54,7 +54,9 @@ function formatDateTime(iso: string) {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
 }
 
-function methodVariant(method: string): "default" | "secondary" | "destructive" | "outline" {
+function methodVariant(
+  method: string,
+): "default" | "secondary" | "destructive" | "outline" {
   if (method === "GET") return "secondary"
   if (method === "POST") return "default"
   if (method === "PUT" || method === "PATCH") return "outline"
@@ -62,7 +64,9 @@ function methodVariant(method: string): "default" | "secondary" | "destructive" 
   return "outline"
 }
 
-function statusVariant(status: number): "default" | "secondary" | "destructive" | "outline" {
+function statusVariant(
+  status: number,
+): "default" | "secondary" | "destructive" | "outline" {
   if (status >= 500) return "destructive"
   if (status >= 400) return "destructive"
   if (status >= 300) return "secondary"
@@ -77,7 +81,11 @@ function formatFullPath(path: string | null | undefined): string {
 
 type FullContentPayload =
   | { title: string; value: string }
-  | { title: string; logId: string; field: "request_body" | "request_headers" | "request_params" }
+  | {
+      title: string
+      logId: string
+      field: "request_body" | "request_headers" | "request_params"
+    }
 
 function AccessLogsPage() {
   const queryClient = useQueryClient()
@@ -88,7 +96,8 @@ function AccessLogsPage() {
 
   const [configDsId, setConfigDsId] = useState<string | null>("__main__")
   const [useStarrocksAudit, setUseStarrocksAudit] = useState(false)
-  const [fullContentDialog, setFullContentDialog] = useState<FullContentPayload | null>(null)
+  const [fullContentDialog, setFullContentDialog] =
+    useState<FullContentPayload | null>(null)
   const [filters, setFilters] = useState({
     module_id: null as string | null,
     group_id: null as string | null,
@@ -159,9 +168,7 @@ function AccessLogsPage() {
     time_from: filters.time_from
       ? new Date(filters.time_from).toISOString()
       : null,
-    time_to: filters.time_to
-      ? new Date(filters.time_to).toISOString()
-      : null,
+    time_to: filters.time_to ? new Date(filters.time_to).toISOString() : null,
     status: filters.status === "all" ? null : filters.status,
     page: filters.page,
     page_size: filters.page_size,
@@ -172,7 +179,12 @@ function AccessLogsPage() {
     const p = (api.path || "").replace(/^\/+|\/+$/g, "")
     return `/api/${p}`
   }
-  const formatApiLabel = (api: { http_method: string; name: string; module_id: string; path: string }) => {
+  const formatApiLabel = (api: {
+    http_method: string
+    name: string
+    module_id: string
+    path: string
+  }) => {
     const modName = moduleById.get(api.module_id)?.name ?? "Unknown module"
     return `[${api.http_method}] [${modName}] [${api.name}] ${formatApiFullPath(api)}`
   }
@@ -211,8 +223,11 @@ function AccessLogsPage() {
   })
 
   const needDetail =
-    fullContentDialog != null && "logId" in fullContentDialog && fullContentDialog.logId != null
-  const detailLogId = needDetail && fullContentDialog ? fullContentDialog.logId : null
+    fullContentDialog != null &&
+    "logId" in fullContentDialog &&
+    fullContentDialog.logId != null
+  const detailLogId =
+    needDetail && fullContentDialog ? fullContentDialog.logId : null
   const { data: detailRecord, isLoading: detailLoading } = useQuery({
     queryKey: ["access-log-detail", detailLogId],
     queryFn: ({ queryKey }) =>
@@ -245,7 +260,9 @@ function AccessLogsPage() {
 
   const currentConfigDsId = config?.datasource_id ?? null
   const effectiveConfigDsId = configDsId === "__main__" ? null : configDsId
-  const selectedDsOption = datasourceOptions?.data?.find((d) => d.id === configDsId)
+  const selectedDsOption = datasourceOptions?.data?.find(
+    (d) => d.id === configDsId,
+  )
   const isMySQL = selectedDsOption?.product_type === "mysql"
 
   const handleSaveConfig = () => {
@@ -298,7 +315,8 @@ function AccessLogsPage() {
         <CardHeader>
           <CardTitle>Access log storage</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Use main database or an external DataSource (e.g. StarRocks) for better performance
+            Use main database or an external DataSource (e.g. StarRocks) for
+            better performance
           </p>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-4">
@@ -306,7 +324,9 @@ function AccessLogsPage() {
             <Label>Storage</Label>
             <Select
               value={configDsId ?? "__main__"}
-              onValueChange={(v) => setConfigDsId(v === "__main__" ? "__main__" : v)}
+              onValueChange={(v) =>
+                setConfigDsId(v === "__main__" ? "__main__" : v)
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select storage" />
@@ -372,7 +392,9 @@ function AccessLogsPage() {
           <Table>
             <TableBody>
               <TableRow>
-                <TableCell className="w-[120px] font-medium text-muted-foreground">Module</TableCell>
+                <TableCell className="w-[120px] font-medium text-muted-foreground">
+                  Module
+                </TableCell>
                 <TableCell className="w-[240px]">
                   <Select
                     value={filters.module_id ?? "__all__"}
@@ -405,7 +427,9 @@ function AccessLogsPage() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="w-[120px] font-medium text-muted-foreground">Group</TableCell>
+                <TableCell className="w-[120px] font-medium text-muted-foreground">
+                  Group
+                </TableCell>
                 <TableCell className="w-[240px]">
                   <Select
                     value={filters.group_id ?? "__all__"}
@@ -439,7 +463,9 @@ function AccessLogsPage() {
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="w-[120px] font-medium text-muted-foreground">API</TableCell>
+                <TableCell className="w-[120px] font-medium text-muted-foreground">
+                  API
+                </TableCell>
                 <TableCell className="w-[240px]">
                   <Select
                     value={filters.api_assignment_id ?? "__all__"}
@@ -464,7 +490,11 @@ function AccessLogsPage() {
                       </div>
                       <SelectItem value="__all__">All APIs</SelectItem>
                       {apisFiltered
-                        .filter((a) => !filters.module_id || a.module_id === filters.module_id)
+                        .filter(
+                          (a) =>
+                            !filters.module_id ||
+                            a.module_id === filters.module_id,
+                        )
                         .map((api) => (
                           <SelectItem key={api.id} value={api.id}>
                             {formatApiLabel({
@@ -478,7 +508,9 @@ function AccessLogsPage() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="w-[120px] font-medium text-muted-foreground">Client</TableCell>
+                <TableCell className="w-[120px] font-medium text-muted-foreground">
+                  Client
+                </TableCell>
                 <TableCell className="w-[240px]">
                   <Select
                     value={filters.app_client_id ?? "__all__"}
@@ -512,18 +544,26 @@ function AccessLogsPage() {
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium text-muted-foreground">Path (contains)</TableCell>
+                <TableCell className="font-medium text-muted-foreground">
+                  Path (contains)
+                </TableCell>
                 <TableCell>
                   <Input
                     placeholder="e.g. /report"
                     className="w-full max-w-[220px]"
                     value={filters.path__ilike}
                     onChange={(e) =>
-                      setFilters((f) => ({ ...f, path__ilike: e.target.value, page: 1 }))
+                      setFilters((f) => ({
+                        ...f,
+                        path__ilike: e.target.value,
+                        page: 1,
+                      }))
                     }
                   />
                 </TableCell>
-                <TableCell className="font-medium text-muted-foreground">HTTP method</TableCell>
+                <TableCell className="font-medium text-muted-foreground">
+                  HTTP method
+                </TableCell>
                 <TableCell>
                   <Select
                     value={filters.http_method || "__all__"}
@@ -550,31 +590,45 @@ function AccessLogsPage() {
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium text-muted-foreground">Time from</TableCell>
+                <TableCell className="font-medium text-muted-foreground">
+                  Time from
+                </TableCell>
                 <TableCell>
                   <Input
                     type="datetime-local"
                     className="w-full max-w-[220px]"
                     value={filters.time_from}
                     onChange={(e) =>
-                      setFilters((f) => ({ ...f, time_from: e.target.value, page: 1 }))
+                      setFilters((f) => ({
+                        ...f,
+                        time_from: e.target.value,
+                        page: 1,
+                      }))
                     }
                   />
                 </TableCell>
-                <TableCell className="font-medium text-muted-foreground">Time to</TableCell>
+                <TableCell className="font-medium text-muted-foreground">
+                  Time to
+                </TableCell>
                 <TableCell>
                   <Input
                     type="datetime-local"
                     className="w-full max-w-[220px]"
                     value={filters.time_to}
                     onChange={(e) =>
-                      setFilters((f) => ({ ...f, time_to: e.target.value, page: 1 }))
+                      setFilters((f) => ({
+                        ...f,
+                        time_to: e.target.value,
+                        page: 1,
+                      }))
                     }
                   />
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium text-muted-foreground">Status</TableCell>
+                <TableCell className="font-medium text-muted-foreground">
+                  Status
+                </TableCell>
                 <TableCell colSpan={3}>
                   <Select
                     value={filters.status}
@@ -609,7 +663,9 @@ function AccessLogsPage() {
           {isLoading ? (
             <p className="text-muted-foreground">Loading…</p>
           ) : rows.length === 0 ? (
-            <p className="text-muted-foreground">No access records match the filters.</p>
+            <p className="text-muted-foreground">
+              No access records match the filters.
+            </p>
           ) : (
             <>
               <Table>
@@ -653,25 +709,45 @@ function AccessLogsPage() {
                       <TableCell className="tabular-nums">
                         {r.duration_ms != null ? `${r.duration_ms} ms` : "—"}
                       </TableCell>
-                      <TableCell className="max-w-[120px] truncate">{r.ip_address}</TableCell>
+                      <TableCell className="max-w-[120px] truncate">
+                        {r.ip_address}
+                      </TableCell>
                       <TableCell
                         className="max-w-[140px] truncate font-mono text-xs cursor-pointer hover:bg-muted/50"
                         title="Click to view full"
-                        onClick={() => showFullContentFromDetail("Request body", r.id, "request_body")}
+                        onClick={() =>
+                          showFullContentFromDetail(
+                            "Request body",
+                            r.id,
+                            "request_body",
+                          )
+                        }
                       >
                         {r.request_body ?? "—"}
                       </TableCell>
                       <TableCell
                         className="max-w-[140px] truncate font-mono text-xs cursor-pointer hover:bg-muted/50"
                         title="Click to view full"
-                        onClick={() => showFullContentFromDetail("Request headers", r.id, "request_headers")}
+                        onClick={() =>
+                          showFullContentFromDetail(
+                            "Request headers",
+                            r.id,
+                            "request_headers",
+                          )
+                        }
                       >
                         {r.request_headers ?? "—"}
                       </TableCell>
                       <TableCell
                         className="max-w-[140px] truncate font-mono text-xs cursor-pointer hover:bg-muted/50"
                         title="Click to view full"
-                        onClick={() => showFullContentFromDetail("Request params", r.id, "request_params")}
+                        onClick={() =>
+                          showFullContentFromDetail(
+                            "Request params",
+                            r.id,
+                            "request_params",
+                          )
+                        }
                       >
                         {r.request_params ?? "—"}
                       </TableCell>
@@ -690,7 +766,10 @@ function AccessLogsPage() {
                     size="sm"
                     disabled={filters.page <= 1}
                     onClick={() =>
-                      setFilters((f) => ({ ...f, page: Math.max(1, f.page - 1) }))
+                      setFilters((f) => ({
+                        ...f,
+                        page: Math.max(1, f.page - 1),
+                      }))
                     }
                   >
                     Previous
@@ -712,36 +791,36 @@ function AccessLogsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!fullContentDialog} onOpenChange={(open) => !open && setFullContentDialog(null)}>
+      <Dialog
+        open={!!fullContentDialog}
+        onOpenChange={(open) => !open && setFullContentDialog(null)}
+      >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{fullContentDialog?.title}</DialogTitle>
           </DialogHeader>
-          {fullContentDialog && (
-            <>
-              {"value" in fullContentDialog ? (
-                <Textarea
-                  readOnly
-                  className="min-h-[200px] font-mono text-xs"
-                  value={fullContentDialog.value}
-                />
-              ) : detailLoading ? (
-                <p className="text-muted-foreground py-4">Loading…</p>
-              ) : detailRecord ? (
-                <Textarea
-                  readOnly
-                  className="min-h-[200px] font-mono text-xs"
-                  value={
-                    (detailRecord as AccessRecordDetail)[fullContentDialog.field] ??
-                    ""
-                  }
-                />
-              ) : null}
-            </>
-          )}
+          {fullContentDialog &&
+            ("value" in fullContentDialog ? (
+              <Textarea
+                readOnly
+                className="min-h-[200px] font-mono text-xs"
+                value={fullContentDialog.value}
+              />
+            ) : detailLoading ? (
+              <p className="text-muted-foreground py-4">Loading…</p>
+            ) : detailRecord ? (
+              <Textarea
+                readOnly
+                className="min-h-[200px] font-mono text-xs"
+                value={
+                  (detailRecord as AccessRecordDetail)[
+                    fullContentDialog.field
+                  ] ?? ""
+                }
+              />
+            ) : null)}
         </DialogContent>
       </Dialog>
     </div>
   )
 }
-

@@ -1,6 +1,6 @@
-import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "@tanstack/react-router"
-import { MoreHorizontal, Trash2, Eye, Pencil } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -44,9 +44,7 @@ export const macroDefColumns: ColumnDef<MacroDefTableData>[] = [
     cell: ({ row }) => {
       const t = row.original.macro_type as MacroTypeEnum
       return (
-        <Badge variant={t === "JINJA" ? "secondary" : "outline"}>
-          {t}
-        </Badge>
+        <Badge variant={t === "JINJA" ? "secondary" : "outline"}>{t}</Badge>
       )
     },
   },
@@ -65,7 +63,7 @@ export const macroDefColumns: ColumnDef<MacroDefTableData>[] = [
     cell: ({ row }) => (
       <span className="text-muted-foreground text-sm">
         {row.original.module_id
-          ? (row.original as MacroDefTableData).moduleName ?? "Module"
+          ? ((row.original as MacroDefTableData).moduleName ?? "Module")
           : "Global"}
       </span>
     ),

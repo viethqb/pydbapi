@@ -44,8 +44,11 @@ export const GroupsService = {
     const requestBody: ApiGroupListIn = {
       page: body.page ?? 1,
       page_size: body.page_size ?? 20,
-      ...(body.name__ilike !== undefined && body.name__ilike !== null && body.name__ilike !== "" && { name__ilike: body.name__ilike }),
-      ...(body.is_active !== undefined && body.is_active !== null && { is_active: body.is_active }),
+      ...(body.name__ilike !== undefined &&
+        body.name__ilike !== null &&
+        body.name__ilike !== "" && { name__ilike: body.name__ilike }),
+      ...(body.is_active !== undefined &&
+        body.is_active !== null && { is_active: body.is_active }),
     }
     return request<ApiGroupListOut>("/api/v1/groups/list", {
       method: "POST",

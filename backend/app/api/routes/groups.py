@@ -8,7 +8,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import func, select
+from sqlmodel import select
 
 from app.api.deps import (
     CurrentUser,
@@ -18,14 +18,13 @@ from app.api.deps import (
     require_permission_for_resource,
 )
 from app.api.pagination import get_allowed_ids, paginate
-from app.core.permission import get_user_permissions, has_permission
 from app.core.permission_resources import (
     ensure_resource_permissions,
     remove_resource_permissions,
 )
-from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.models import Message, User
 from app.models_dbapi import ApiAssignmentGroupLink, ApiGroup
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.schemas_dbapi import (
     ApiGroupCreate,
     ApiGroupDetail,

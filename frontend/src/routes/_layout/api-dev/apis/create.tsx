@@ -1,12 +1,41 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import {
+  Braces,
+  ChevronDown,
+  Loader2,
+  Play,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Braces, Loader2, Play, Plus, Trash2, X, ChevronDown } from "lucide-react"
-import { useState, useEffect, useRef, useCallback } from "react"
-
+import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
+import {
+  RESULT_TRANSFORM_PLACEHOLDER,
+  SCRIPT_CONTENT_PLACEHOLDER,
+  SQL_CONTENT_PLACEHOLDER,
+} from "@/components/ApiDev/apiContentPlaceholders"
+import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -17,6 +46,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
   SelectContent,
@@ -24,10 +54,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -35,30 +61,17 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import useCustomToast from "@/hooks/useCustomToast"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  ApiAssignmentsService,
   type ApiAssignmentCreate,
+  ApiAssignmentsService,
 } from "@/services/api-assignments"
-import { ModulesService } from "@/services/modules"
-import { MacroDefsService } from "@/services/macro-defs"
 import { DataSourceService } from "@/services/datasource"
 import { GroupsService } from "@/services/groups"
-import useCustomToast from "@/hooks/useCustomToast"
-import { Checkbox } from "@/components/ui/checkbox"
-import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
-import {
-  RESULT_TRANSFORM_PLACEHOLDER,
-  SCRIPT_CONTENT_PLACEHOLDER,
-  SQL_CONTENT_PLACEHOLDER,
-} from "@/components/ApiDev/apiContentPlaceholders"
-import SqlStatementsEditor from "@/components/ApiDev/SqlStatementsEditor"
+import { MacroDefsService } from "@/services/macro-defs"
+import { ModulesService } from "@/services/modules"
 
 const paramSchema = z.object({
   name: z.string().min(1, "Parameter name is required"),
@@ -106,7 +119,7 @@ type FormValues = z.infer<typeof formSchema>
 
 function parseFormValueToParam(
   raw: string,
-  dataType: string | null | undefined
+  dataType: string | null | undefined,
 ): string | number | boolean | unknown[] | Record<string, unknown> | null {
   const s = (raw ?? "").trim()
   if (s === "") return null
@@ -160,7 +173,9 @@ function ApiCreate() {
   const [mainTab, setMainTab] = useState("basic")
   const [debugParams, setDebugParams] = useState("{}")
   const [debugInputMode, setDebugInputMode] = useState<"json" | "form">("form")
-  const [debugFormValues, setDebugFormValues] = useState<Record<string, string>>({})
+  const [debugFormValues, setDebugFormValues] = useState<
+    Record<string, string>
+  >({})
   const [debugResult, setDebugResult] = useState<unknown>(null)
   const [debugLoading, setDebugLoading] = useState(false)
   const paramsRef = useRef<string>("")
@@ -201,10 +216,11 @@ function ApiCreate() {
 
   const { data: datasourcesData } = useQuery({
     queryKey: ["datasources-simple"],
-    queryFn: () => DataSourceService.list({ 
-      page: 1, 
-      page_size: 100,
-    }),
+    queryFn: () =>
+      DataSourceService.list({
+        page: 1,
+        page_size: 100,
+      }),
   })
 
   const { data: groupsData } = useQuery({
@@ -220,7 +236,8 @@ function ApiCreate() {
   const macroDefsForEditor = macroDefsData ?? []
 
   const createMutation = useMutation({
-    mutationFn: (data: ApiAssignmentCreate) => ApiAssignmentsService.create(data),
+    mutationFn: (data: ApiAssignmentCreate) =>
+      ApiAssignmentsService.create(data),
     onSuccess: (data) => {
       showSuccessToast("API created successfully")
       navigate({ to: "/api-dev/apis/$id", params: { id: data.id } })
@@ -243,45 +260,54 @@ function ApiCreate() {
     return out
   }
 
-  const fillDefaultValues = useCallback((force = false) => {
-    const paramsDef = form.getValues().params ?? []
-    const paramsKey = JSON.stringify(
-      paramsDef.map((p) => ({ name: p?.name, default_value: p?.default_value }))
-    )
-    if (!force && paramsRef.current === paramsKey) return
-    paramsRef.current = paramsKey
+  const fillDefaultValues = useCallback(
+    (force = false) => {
+      const paramsDef = form.getValues().params ?? []
+      const paramsKey = JSON.stringify(
+        paramsDef.map((p) => ({
+          name: p?.name,
+          default_value: p?.default_value,
+        })),
+      )
+      if (!force && paramsRef.current === paramsKey) return
+      paramsRef.current = paramsKey
 
-    const newFormValues: Record<string, string> = {}
-    const jsonParams: Record<string, unknown> = {}
+      const newFormValues: Record<string, string> = {}
+      const jsonParams: Record<string, unknown> = {}
 
-    for (const p of paramsDef) {
-      const name = p?.name?.trim()
-      if (!name) continue
-      const defaultValue = p?.default_value
-      if (defaultValue) {
-        newFormValues[name] = defaultValue
-        const dataType = (p?.data_type ?? "string").toLowerCase()
-        const parsed = parseFormValueToParam(defaultValue, dataType)
-        if (parsed !== null && parsed !== "") {
-          jsonParams[name] = parsed
+      for (const p of paramsDef) {
+        const name = p?.name?.trim()
+        if (!name) continue
+        const defaultValue = p?.default_value
+        if (defaultValue) {
+          newFormValues[name] = defaultValue
+          const dataType = (p?.data_type ?? "string").toLowerCase()
+          const parsed = parseFormValueToParam(defaultValue, dataType)
+          if (parsed !== null && parsed !== "") {
+            jsonParams[name] = parsed
+          }
         }
       }
-    }
 
-    setDebugFormValues((prev) => ({ ...newFormValues, ...prev }))
+      setDebugFormValues((prev) => ({ ...newFormValues, ...prev }))
 
-    if (Object.keys(jsonParams).length > 0) {
-      setDebugParams((prev) => {
-        try {
-          const currentJson = JSON.parse(prev || "{}") as Record<string, unknown>
-          const merged = { ...jsonParams, ...currentJson }
-          return JSON.stringify(merged, null, 2)
-        } catch {
-          return JSON.stringify(jsonParams, null, 2)
-        }
-      })
-    }
-  }, [form])
+      if (Object.keys(jsonParams).length > 0) {
+        setDebugParams((prev) => {
+          try {
+            const currentJson = JSON.parse(prev || "{}") as Record<
+              string,
+              unknown
+            >
+            const merged = { ...jsonParams, ...currentJson }
+            return JSON.stringify(merged, null, 2)
+          } catch {
+            return JSON.stringify(jsonParams, null, 2)
+          }
+        })
+      }
+    },
+    [form],
+  )
 
   useEffect(() => {
     const subscription = form.watch((_value, { name }) => {
@@ -324,13 +350,19 @@ function ApiCreate() {
       })
 
       setDebugResult(result)
-      if (result && typeof result === "object" && "error" in result && result.error) {
+      if (
+        result &&
+        typeof result === "object" &&
+        "error" in result &&
+        result.error
+      ) {
         showErrorToast(String(result.error))
       } else {
         showSuccessToast("Debug executed successfully")
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       showErrorToast(errorMessage)
       setDebugResult({ error: errorMessage })
     } finally {
@@ -349,15 +381,18 @@ function ApiCreate() {
       description: values.description || null,
       access_type: values.access_type,
       rate_limit_per_minute:
-        values.rate_limit_per_minute === "" || values.rate_limit_per_minute == null
+        values.rate_limit_per_minute === "" ||
+        values.rate_limit_per_minute == null
           ? null
           : Number(values.rate_limit_per_minute),
-      close_connection_after_execute: values.close_connection_after_execute ?? false,
+      close_connection_after_execute:
+        values.close_connection_after_execute ?? false,
       content: values.content || null,
       result_transform: values.result_transform || null,
       group_ids: values.group_ids,
       params: values.params.length > 0 ? values.params : undefined,
-      param_validates: values.param_validates.length > 0 ? values.param_validates : undefined,
+      param_validates:
+        values.param_validates.length > 0 ? values.param_validates : undefined,
     })
   }
 
@@ -365,7 +400,9 @@ function ApiCreate() {
     <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Create API</h1>
-        <p className="text-muted-foreground mt-1">Create a new API assignment</p>
+        <p className="text-muted-foreground mt-1">
+          Create a new API assignment
+        </p>
       </div>
 
       <Form {...form}>
@@ -373,7 +410,9 @@ function ApiCreate() {
           <Card>
             <CardHeader>
               <CardTitle>API Configuration</CardTitle>
-              <CardDescription>Configure the basic settings for your API</CardDescription>
+              <CardDescription>
+                Configure the basic settings for your API
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs
@@ -412,11 +451,15 @@ function ApiCreate() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {Array.isArray(modulesData) && modulesData.map((m) => (
-                                      <SelectItem key={m.id} value={String(m.id)}>
-                                        {m.name}
-                                      </SelectItem>
-                                    ))}
+                                    {Array.isArray(modulesData) &&
+                                      modulesData.map((m) => (
+                                        <SelectItem
+                                          key={m.id}
+                                          value={String(m.id)}
+                                        >
+                                          {m.name}
+                                        </SelectItem>
+                                      ))}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -451,7 +494,10 @@ function ApiCreate() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input placeholder="users or users/{id}" {...field} />
+                                  <Input
+                                    placeholder="users or users/{id}"
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormDescription className="mt-1">
                                   {`Path within module (e.g., "users" or "users/{id}")`}
@@ -463,7 +509,9 @@ function ApiCreate() {
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableHead className="w-[180px]">HTTP Method *</TableHead>
+                        <TableHead className="w-[180px]">
+                          HTTP Method *
+                        </TableHead>
                         <TableCell>
                           <FormField
                             control={form.control}
@@ -483,7 +531,9 @@ function ApiCreate() {
                                     <SelectItem value="GET">GET</SelectItem>
                                     <SelectItem value="POST">POST</SelectItem>
                                     <SelectItem value="PUT">PUT</SelectItem>
-                                    <SelectItem value="DELETE">DELETE</SelectItem>
+                                    <SelectItem value="DELETE">
+                                      DELETE
+                                    </SelectItem>
                                     <SelectItem value="PATCH">PATCH</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -494,7 +544,9 @@ function ApiCreate() {
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableHead className="w-[180px]">Access Type *</TableHead>
+                        <TableHead className="w-[180px]">
+                          Access Type *
+                        </TableHead>
                         <TableCell>
                           <FormField
                             control={form.control}
@@ -512,12 +564,18 @@ function ApiCreate() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="public">Public (No auth required)</SelectItem>
-                                    <SelectItem value="private">Private (Token required)</SelectItem>
+                                    <SelectItem value="public">
+                                      Public (No auth required)
+                                    </SelectItem>
+                                    <SelectItem value="private">
+                                      Private (Token required)
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormDescription className="mt-1">
-                                  Public APIs can be accessed without authentication. Private APIs require a token from /api/token/generate.
+                                  Public APIs can be accessed without
+                                  authentication. Private APIs require a token
+                                  from /api/token/generate.
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -526,7 +584,9 @@ function ApiCreate() {
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableHead className="w-[180px]">Rate limit (req/min)</TableHead>
+                        <TableHead className="w-[180px]">
+                          Rate limit (req/min)
+                        </TableHead>
                         <TableCell>
                           <FormField
                             control={form.control}
@@ -539,15 +599,23 @@ function ApiCreate() {
                                     min={1}
                                     placeholder="No limit"
                                     {...field}
-                                    value={field.value === null || field.value === undefined ? "" : field.value}
+                                    value={
+                                      field.value === null ||
+                                      field.value === undefined
+                                        ? ""
+                                        : field.value
+                                    }
                                     onChange={(e) => {
                                       const v = e.target.value
-                                      field.onChange(v === "" ? null : Number(v))
+                                      field.onChange(
+                                        v === "" ? null : Number(v),
+                                      )
                                     }}
                                   />
                                 </FormControl>
                                 <FormDescription className="mt-1">
-                                  Max requests per minute for this API. Empty = no limit (call freely).
+                                  Max requests per minute for this API. Empty =
+                                  no limit (call freely).
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -556,7 +624,9 @@ function ApiCreate() {
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableHead className="w-[180px]">Close connection after execute</TableHead>
+                        <TableHead className="w-[180px]">
+                          Close connection after execute
+                        </TableHead>
                         <TableCell>
                           <FormField
                             control={form.control}
@@ -570,7 +640,10 @@ function ApiCreate() {
                                   />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
-                                  <FormLabel>Close DB connection after each request (e.g. StarRocks impersonation)</FormLabel>
+                                  <FormLabel>
+                                    Close DB connection after each request (e.g.
+                                    StarRocks impersonation)
+                                  </FormLabel>
                                 </div>
                               </FormItem>
                             )}
@@ -590,7 +663,9 @@ function ApiCreate() {
                                     placeholder="Optional description"
                                     {...field}
                                     value={field.value || ""}
-                                    onChange={(e) => field.onChange(e.target.value || null)}
+                                    onChange={(e) =>
+                                      field.onChange(e.target.value || null)
+                                    }
                                     className="min-h-[80px]"
                                   />
                                 </FormControl>
@@ -613,9 +688,13 @@ function ApiCreate() {
                                     <DropdownMenuTrigger asChild>
                                       <div className="flex min-h-[40px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer">
                                         <div className="flex flex-wrap gap-1 flex-1">
-                                          {field.value && field.value.length > 0 ? (
+                                          {field.value &&
+                                          field.value.length > 0 ? (
                                             field.value.map((groupId) => {
-                                              const group = groupsData?.data?.find((g) => g.id === groupId)
+                                              const group =
+                                                groupsData?.data?.find(
+                                                  (g) => g.id === groupId,
+                                                )
                                               if (!group) return null
                                               return (
                                                 <Badge
@@ -624,7 +703,11 @@ function ApiCreate() {
                                                   className="mr-1"
                                                   onClick={(e) => {
                                                     e.stopPropagation()
-                                                    field.onChange(field.value.filter((id) => id !== groupId))
+                                                    field.onChange(
+                                                      field.value.filter(
+                                                        (id) => id !== groupId,
+                                                      ),
+                                                    )
                                                   }}
                                                 >
                                                   {group.name}
@@ -633,7 +716,12 @@ function ApiCreate() {
                                                     className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                                     onKeyDown={(e) => {
                                                       if (e.key === "Enter") {
-                                                        field.onChange(field.value.filter((id) => id !== groupId))
+                                                        field.onChange(
+                                                          field.value.filter(
+                                                            (id) =>
+                                                              id !== groupId,
+                                                          ),
+                                                        )
                                                       }
                                                     }}
                                                     onMouseDown={(e) => {
@@ -643,7 +731,12 @@ function ApiCreate() {
                                                     onClick={(e) => {
                                                       e.preventDefault()
                                                       e.stopPropagation()
-                                                      field.onChange(field.value.filter((id) => id !== groupId))
+                                                      field.onChange(
+                                                        field.value.filter(
+                                                          (id) =>
+                                                            id !== groupId,
+                                                        ),
+                                                      )
                                                     }}
                                                   >
                                                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -652,31 +745,48 @@ function ApiCreate() {
                                               )
                                             })
                                           ) : (
-                                            <span className="text-muted-foreground">Select groups...</span>
+                                            <span className="text-muted-foreground">
+                                              Select groups...
+                                            </span>
                                           )}
                                         </div>
                                         <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                                       </div>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px] overflow-auto">
-                                      {Array.isArray(groupsData?.data) && groupsData.data.length > 0 ? (
+                                      {Array.isArray(groupsData?.data) &&
+                                      groupsData.data.length > 0 ? (
                                         groupsData.data.map((group) => (
                                           <DropdownMenuItem
                                             key={group.id}
                                             onSelect={(e) => {
                                               e.preventDefault()
-                                              const currentValue = field.value || []
-                                              if (currentValue.includes(group.id)) {
-                                                field.onChange(currentValue.filter((id) => id !== group.id))
+                                              const currentValue =
+                                                field.value || []
+                                              if (
+                                                currentValue.includes(group.id)
+                                              ) {
+                                                field.onChange(
+                                                  currentValue.filter(
+                                                    (id) => id !== group.id,
+                                                  ),
+                                                )
                                               } else {
-                                                field.onChange([...currentValue, group.id])
+                                                field.onChange([
+                                                  ...currentValue,
+                                                  group.id,
+                                                ])
                                               }
                                             }}
                                           >
                                             <div className="flex items-center gap-2 w-full">
                                               <input
                                                 type="checkbox"
-                                                checked={field.value?.includes(group.id) || false}
+                                                checked={
+                                                  field.value?.includes(
+                                                    group.id,
+                                                  ) || false
+                                                }
                                                 onChange={() => {}}
                                                 className="h-4 w-4 rounded border-gray-300"
                                               />
@@ -685,7 +795,9 @@ function ApiCreate() {
                                           </DropdownMenuItem>
                                         ))
                                       ) : (
-                                        <DropdownMenuItem disabled>No groups available</DropdownMenuItem>
+                                        <DropdownMenuItem disabled>
+                                          No groups available
+                                        </DropdownMenuItem>
                                       )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
@@ -705,11 +817,12 @@ function ApiCreate() {
                       name="params"
                       render={({ field }) => (
                         <FormItem>
-                            <div className="mb-4 flex items-center justify-between">
+                          <div className="mb-4 flex items-center justify-between">
                             <div>
                               <FormLabel>Parameters</FormLabel>
                               <FormDescription>
-                                Define API parameters (query, header, body). Set data type for validation.
+                                Define API parameters (query, header, body). Set
+                                data type for validation.
                               </FormDescription>
                             </div>
                             <Button
@@ -719,7 +832,14 @@ function ApiCreate() {
                               onClick={() => {
                                 field.onChange([
                                   ...field.value,
-                                  { name: "", location: "query" as const, data_type: null, is_required: false, default_value: null, description: null },
+                                  {
+                                    name: "",
+                                    location: "query" as const,
+                                    data_type: null,
+                                    is_required: false,
+                                    default_value: null,
+                                    description: null,
+                                  },
                                 ])
                               }}
                             >
@@ -732,170 +852,239 @@ function ApiCreate() {
                               <Table>
                                 <TableBody>
                                   <TableRow>
-                                    <TableHead className="w-[160px]">Name</TableHead>
-                                    <TableHead className="w-[100px]">Location</TableHead>
-                                    <TableHead className="w-[110px]">Data Type</TableHead>
-                                    <TableHead className="w-[80px]">Required</TableHead>
-                                    <TableHead className="w-[120px]">Default</TableHead>
-                                    <TableHead className="min-w-[160px]">Description</TableHead>
-                                    <TableHead className="w-[80px]">Actions</TableHead>
+                                    <TableHead className="w-[160px]">
+                                      Name
+                                    </TableHead>
+                                    <TableHead className="w-[100px]">
+                                      Location
+                                    </TableHead>
+                                    <TableHead className="w-[110px]">
+                                      Data Type
+                                    </TableHead>
+                                    <TableHead className="w-[80px]">
+                                      Required
+                                    </TableHead>
+                                    <TableHead className="w-[120px]">
+                                      Default
+                                    </TableHead>
+                                    <TableHead className="min-w-[160px]">
+                                      Description
+                                    </TableHead>
+                                    <TableHead className="w-[80px]">
+                                      Actions
+                                    </TableHead>
                                   </TableRow>
                                   {field.value.map((param, index) => {
-                                    const paramName = (param as { name?: string }).name || ""
+                                    const paramName =
+                                      (param as { name?: string }).name || ""
                                     return (
-                                    <TableRow key={`param-${index}-${paramName}`}>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.name`}
-                                          render={({ field: paramField }) => (
-                                            <FormItem>
-                                              <FormControl>
-                                                <Input
-                                                  placeholder="e.g., id, limit"
-                                                  {...paramField}
-                                                  className="h-9"
-                                                />
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.location`}
-                                          render={({ field: locationField }) => (
-                                            <FormItem>
-                                              <Select
-                                                onValueChange={locationField.onChange}
-                                                value={locationField.value}
-                                              >
+                                      <TableRow
+                                        key={`param-${index}-${paramName}`}
+                                      >
+                                        <TableCell>
+                                          <FormField
+                                            control={form.control}
+                                            name={`params.${index}.name`}
+                                            render={({ field: paramField }) => (
+                                              <FormItem>
                                                 <FormControl>
-                                                  <SelectTrigger className="h-9">
-                                                    <SelectValue />
-                                                  </SelectTrigger>
+                                                  <Input
+                                                    placeholder="e.g., id, limit"
+                                                    {...paramField}
+                                                    className="h-9"
+                                                  />
                                                 </FormControl>
-                                                <SelectContent>
-                                                  <SelectItem value="query">Query</SelectItem>
-                                                  <SelectItem value="header">Header</SelectItem>
-                                                  <SelectItem value="body">Body</SelectItem>
-                                                </SelectContent>
-                                              </Select>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.data_type`}
-                                          render={({ field: dataTypeField }) => (
-                                            <FormItem>
-                                              <Select
-                                                onValueChange={(value) => dataTypeField.onChange(value === "none" ? null : value)}
-                                                value={dataTypeField.value || "none"}
-                                              >
-                                                <FormControl>
-                                                  <SelectTrigger className="h-9">
-                                                    <SelectValue />
-                                                  </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                  <SelectItem value="none">None</SelectItem>
-                                                  <SelectItem value="string">String</SelectItem>
-                                                  <SelectItem value="number">Number</SelectItem>
-                                                  <SelectItem value="integer">Integer</SelectItem>
-                                                  <SelectItem value="boolean">Boolean</SelectItem>
-                                                  <SelectItem value="array">Array</SelectItem>
-                                                  <SelectItem value="object">Object</SelectItem>
-                                                </SelectContent>
-                                              </Select>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.is_required`}
-                                          render={({ field: isRequiredField }) => (
-                                            <FormItem>
-                                              <FormControl>
-                                                <Checkbox
-                                                  checked={isRequiredField.value}
-                                                  onCheckedChange={isRequiredField.onChange}
-                                                />
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.default_value`}
-                                          render={({ field: defaultValueField }) => (
-                                            <FormItem>
-                                              <FormControl>
-                                                <Input
-                                                  placeholder="Default"
-                                                  {...defaultValueField}
-                                                  value={defaultValueField.value || ""}
-                                                  onChange={(e) =>
-                                                    defaultValueField.onChange(
-                                                      e.target.value || null
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <FormField
+                                            control={form.control}
+                                            name={`params.${index}.location`}
+                                            render={({
+                                              field: locationField,
+                                            }) => (
+                                              <FormItem>
+                                                <Select
+                                                  onValueChange={
+                                                    locationField.onChange
+                                                  }
+                                                  value={locationField.value}
+                                                >
+                                                  <FormControl>
+                                                    <SelectTrigger className="h-9">
+                                                      <SelectValue />
+                                                    </SelectTrigger>
+                                                  </FormControl>
+                                                  <SelectContent>
+                                                    <SelectItem value="query">
+                                                      Query
+                                                    </SelectItem>
+                                                    <SelectItem value="header">
+                                                      Header
+                                                    </SelectItem>
+                                                    <SelectItem value="body">
+                                                      Body
+                                                    </SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <FormField
+                                            control={form.control}
+                                            name={`params.${index}.data_type`}
+                                            render={({
+                                              field: dataTypeField,
+                                            }) => (
+                                              <FormItem>
+                                                <Select
+                                                  onValueChange={(value) =>
+                                                    dataTypeField.onChange(
+                                                      value === "none"
+                                                        ? null
+                                                        : value,
                                                     )
                                                   }
-                                                  className="h-9"
-                                                />
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <FormField
-                                          control={form.control}
-                                          name={`params.${index}.description`}
-                                          render={({ field: descField }) => (
-                                            <FormItem>
-                                              <FormControl>
-                                                <Input
-                                                  placeholder="Describe what this param is for"
-                                                  {...descField}
-                                                  value={descField.value || ""}
-                                                  onChange={(e) =>
-                                                    descField.onChange(e.target.value || null)
+                                                  value={
+                                                    dataTypeField.value ||
+                                                    "none"
                                                   }
-                                                  className="h-9"
-                                                />
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
-                                          )}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => {
-                                            field.onChange(
-                                              field.value.filter((_, i) => i !== index)
-                                            )
-                                          }}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
+                                                >
+                                                  <FormControl>
+                                                    <SelectTrigger className="h-9">
+                                                      <SelectValue />
+                                                    </SelectTrigger>
+                                                  </FormControl>
+                                                  <SelectContent>
+                                                    <SelectItem value="none">
+                                                      None
+                                                    </SelectItem>
+                                                    <SelectItem value="string">
+                                                      String
+                                                    </SelectItem>
+                                                    <SelectItem value="number">
+                                                      Number
+                                                    </SelectItem>
+                                                    <SelectItem value="integer">
+                                                      Integer
+                                                    </SelectItem>
+                                                    <SelectItem value="boolean">
+                                                      Boolean
+                                                    </SelectItem>
+                                                    <SelectItem value="array">
+                                                      Array
+                                                    </SelectItem>
+                                                    <SelectItem value="object">
+                                                      Object
+                                                    </SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <FormField
+                                            control={form.control}
+                                            name={`params.${index}.is_required`}
+                                            render={({
+                                              field: isRequiredField,
+                                            }) => (
+                                              <FormItem>
+                                                <FormControl>
+                                                  <Checkbox
+                                                    checked={
+                                                      isRequiredField.value
+                                                    }
+                                                    onCheckedChange={
+                                                      isRequiredField.onChange
+                                                    }
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <FormField
+                                            control={form.control}
+                                            name={`params.${index}.default_value`}
+                                            render={({
+                                              field: defaultValueField,
+                                            }) => (
+                                              <FormItem>
+                                                <FormControl>
+                                                  <Input
+                                                    placeholder="Default"
+                                                    {...defaultValueField}
+                                                    value={
+                                                      defaultValueField.value ||
+                                                      ""
+                                                    }
+                                                    onChange={(e) =>
+                                                      defaultValueField.onChange(
+                                                        e.target.value || null,
+                                                      )
+                                                    }
+                                                    className="h-9"
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <FormField
+                                            control={form.control}
+                                            name={`params.${index}.description`}
+                                            render={({ field: descField }) => (
+                                              <FormItem>
+                                                <FormControl>
+                                                  <Input
+                                                    placeholder="Describe what this param is for"
+                                                    {...descField}
+                                                    value={
+                                                      descField.value || ""
+                                                    }
+                                                    onChange={(e) =>
+                                                      descField.onChange(
+                                                        e.target.value || null,
+                                                      )
+                                                    }
+                                                    className="h-9"
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                              field.onChange(
+                                                field.value.filter(
+                                                  (_, i) => i !== index,
+                                                ),
+                                              )
+                                            }}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
                                     )
                                   })}
                                 </TableBody>
@@ -903,7 +1092,8 @@ function ApiCreate() {
                             </div>
                           ) : (
                             <div className="text-sm text-muted-foreground text-center py-4 border rounded-md">
-                              No parameters defined. Click "Add Parameter" to add one.
+                              No parameters defined. Click "Add Parameter" to
+                              add one.
                             </div>
                           )}
                           <FormMessage />
@@ -917,7 +1107,9 @@ function ApiCreate() {
                   <Table>
                     <TableBody>
                       <TableRow>
-                        <TableHead className="w-[180px]">Execute Engine *</TableHead>
+                        <TableHead className="w-[180px]">
+                          Execute Engine *
+                        </TableHead>
                         <TableCell>
                           <FormField
                             control={form.control}
@@ -930,7 +1122,10 @@ function ApiCreate() {
                                     if (value === "SCRIPT") {
                                       const content = form.getValues("content")
                                       if (!content?.trim()) {
-                                        form.setValue("content", SCRIPT_CONTENT_PLACEHOLDER)
+                                        form.setValue(
+                                          "content",
+                                          SCRIPT_CONTENT_PLACEHOLDER,
+                                        )
                                       }
                                     }
                                   }}
@@ -943,7 +1138,9 @@ function ApiCreate() {
                                   </FormControl>
                                   <SelectContent>
                                     <SelectItem value="SQL">SQL</SelectItem>
-                                    <SelectItem value="SCRIPT">SCRIPT</SelectItem>
+                                    <SelectItem value="SCRIPT">
+                                      SCRIPT
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -953,17 +1150,25 @@ function ApiCreate() {
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableHead className="w-[180px]">Data Source *</TableHead>
+                        <TableHead className="w-[180px]">
+                          Data Source *
+                        </TableHead>
                         <TableCell>
                           <FormField
                             control={form.control}
                             name="datasource_id"
                             render={({ field }) => {
-                              const fieldValue = field.value ? String(field.value) : "none"
+                              const fieldValue = field.value
+                                ? String(field.value)
+                                : "none"
                               return (
                                 <FormItem>
                                   <Select
-                                    onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                                    onValueChange={(value) =>
+                                      field.onChange(
+                                        value === "none" ? null : value,
+                                      )
+                                    }
                                     value={fieldValue}
                                     key={fieldValue}
                                   >
@@ -973,8 +1178,11 @@ function ApiCreate() {
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="none">— Select datasource —</SelectItem>
-                                      {Array.isArray(datasourcesData?.data) && datasourcesData.data.length > 0 ? (
+                                      <SelectItem value="none">
+                                        — Select datasource —
+                                      </SelectItem>
+                                      {Array.isArray(datasourcesData?.data) &&
+                                      datasourcesData.data.length > 0 ? (
                                         datasourcesData.data.map((ds) => {
                                           const dsId = String(ds.id)
                                           return (
@@ -991,7 +1199,8 @@ function ApiCreate() {
                                     </SelectContent>
                                   </Select>
                                   <FormDescription className="mt-1">
-                                    Required. Select the database connection for this API.
+                                    Required. Select the database connection for
+                                    this API.
                                   </FormDescription>
                                   <FormMessage />
                                 </FormItem>
@@ -1006,7 +1215,9 @@ function ApiCreate() {
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-semibold">
-                        {executeEngine === "SQL" ? "SQL (Jinja2)" : "Python Script"}
+                        {executeEngine === "SQL"
+                          ? "SQL (Jinja2)"
+                          : "Python Script"}
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {executeEngine === "SQL"
@@ -1051,9 +1262,12 @@ function ApiCreate() {
 
                     <div className="border-t pt-6 mt-6">
                       <div className="mb-2">
-                        <h3 className="text-lg font-semibold">Result transform (Python)</h3>
+                        <h3 className="text-lg font-semibold">
+                          Result transform (Python)
+                        </h3>
                         <p className="text-sm text-muted-foreground">
-                          Python script to transform the raw executor result before returning
+                          Python script to transform the raw executor result
+                          before returning
                         </p>
                       </div>
                       <FormField
@@ -1086,7 +1300,9 @@ function ApiCreate() {
                 <TabsContent value="debug" className="space-y-4">
                   <Tabs
                     value={debugInputMode}
-                    onValueChange={(v) => setDebugInputMode(v as "json" | "form")}
+                    onValueChange={(v) =>
+                      setDebugInputMode(v as "json" | "form")
+                    }
                     className="w-full"
                   >
                     <TabsList className="grid w-full max-w-[200px] grid-cols-2">
@@ -1130,130 +1346,134 @@ function ApiCreate() {
                       </div>
                     </TabsContent>
                     <TabsContent value="form" className="mt-4 space-y-4">
-                          {(() => {
-                            const paramsDef = form.watch("params") ?? []
-                            const withName = paramsDef.filter(
-                              (p) => typeof p?.name === "string" && p.name.trim() !== ""
-                            )
-                            if (withName.length === 0) {
+                      {(() => {
+                        const paramsDef = form.watch("params") ?? []
+                        const withName = paramsDef.filter(
+                          (p) =>
+                            typeof p?.name === "string" && p.name.trim() !== "",
+                        )
+                        if (withName.length === 0) {
+                          return (
+                            <p className="text-sm text-muted-foreground">
+                              No parameters defined. Add parameters in Basic
+                              Info → Parameters, then use this form to fill
+                              values.
+                            </p>
+                          )
+                        }
+                        return (
+                          <div className="space-y-4">
+                            {withName.map((p, idx) => {
+                              const name = (p?.name ?? "").trim()
+                              const dataType = (
+                                p?.data_type ?? "string"
+                              ).toLowerCase()
+                              const isRequired = Boolean(p?.is_required)
+                              const location = p?.location ?? "query"
                               return (
-                                <p className="text-sm text-muted-foreground">
-                                  No parameters defined. Add parameters in Basic Info
-                                  → Parameters, then use this form to fill values.
-                                </p>
-                              )
-                            }
-                            return (
-                              <div className="space-y-4">
-                                {withName.map((p, idx) => {
-                                  const name = (p?.name ?? "").trim()
-                                  const dataType = (p?.data_type ?? "string").toLowerCase()
-                                  const isRequired = Boolean(p?.is_required)
-                                  const location = p?.location ?? "query"
-                                  return (
-                                    <div
-                                      key={`${idx}-${name}`}
-                                      className="space-y-2"
-                                    >
-                                      <label
-                                        htmlFor={`debug-param-${name}`}
-                                        className="text-sm font-medium"
-                                      >
-                                        {name}
-                                        {isRequired && (
-                                          <span className="text-destructive ml-1">
-                                            *
-                                          </span>
-                                        )}
-                                        <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                          ({location})
-                                        </span>
-                                      </label>
-                                      {dataType === "boolean" ? (
-                                        <div className="flex items-center gap-2">
-                                          <Checkbox
-                                            id={`debug-param-${name}`}
-                                            checked={
-                                              (debugFormValues[name] ??
-                                                p?.default_value ??
-                                                "") === "true" ||
-                                              (debugFormValues[name] ??
-                                                p?.default_value ??
-                                                "") === "1"
-                                            }
-                                            onCheckedChange={(checked) =>
-                                              setDebugFormValues((prev) => ({
-                                                ...prev,
-                                                [name]: checked ? "true" : "false",
-                                              }))
-                                            }
-                                          />
-                                          <span className="text-sm text-muted-foreground">
-                                            {(debugFormValues[name] ??
-                                              p?.default_value ??
-                                              "") === "true" ||
-                                              (debugFormValues[name] ??
-                                                p?.default_value ??
-                                                "") === "1"
-                                                ? "true"
-                                                : "false"}
-                                          </span>
-                                        </div>
-                                      ) : dataType === "array" ||
-                                        dataType === "object" ? (
-                                        <Textarea
-                                          id={`debug-param-${name}`}
-                                          placeholder={
-                                            dataType === "array"
-                                              ? '[1, 2, 3] or "a, b, c"'
-                                              : '{"key": "value"}'
-                                          }
-                                          className="font-mono min-h-[80px]"
-                                          value={
-                                            debugFormValues[name] ??
+                                <div
+                                  key={`${idx}-${name}`}
+                                  className="space-y-2"
+                                >
+                                  <label
+                                    htmlFor={`debug-param-${name}`}
+                                    className="text-sm font-medium"
+                                  >
+                                    {name}
+                                    {isRequired && (
+                                      <span className="text-destructive ml-1">
+                                        *
+                                      </span>
+                                    )}
+                                    <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                      ({location})
+                                    </span>
+                                  </label>
+                                  {dataType === "boolean" ? (
+                                    <div className="flex items-center gap-2">
+                                      <Checkbox
+                                        id={`debug-param-${name}`}
+                                        checked={
+                                          (debugFormValues[name] ??
                                             p?.default_value ??
-                                            ""
-                                          }
-                                          onChange={(e) =>
-                                            setDebugFormValues((prev) => ({
-                                              ...prev,
-                                              [name]: e.target.value,
-                                            }))
-                                          }
-                                        />
-                                      ) : (
-                                        <Input
-                                          id={`debug-param-${name}`}
-                                          type={
-                                            dataType === "number" ||
-                                            dataType === "integer"
-                                              ? "number"
-                                              : "text"
-                                          }
-                                          placeholder={
-                                            isRequired
-                                              ? `Required (${dataType})`
-                                              : `Optional (${dataType})`
-                                          }
-                                          value={
-                                            debugFormValues[name] ??
+                                            "") === "true" ||
+                                          (debugFormValues[name] ??
                                             p?.default_value ??
-                                            ""
-                                          }
-                                          onChange={(e) =>
-                                            setDebugFormValues((prev) => ({
-                                              ...prev,
-                                              [name]: e.target.value,
-                                            }))
-                                          }
-                                        />
-                                      )}
+                                            "") === "1"
+                                        }
+                                        onCheckedChange={(checked) =>
+                                          setDebugFormValues((prev) => ({
+                                            ...prev,
+                                            [name]: checked ? "true" : "false",
+                                          }))
+                                        }
+                                      />
+                                      <span className="text-sm text-muted-foreground">
+                                        {(debugFormValues[name] ??
+                                          p?.default_value ??
+                                          "") === "true" ||
+                                        (debugFormValues[name] ??
+                                          p?.default_value ??
+                                          "") === "1"
+                                          ? "true"
+                                          : "false"}
+                                      </span>
                                     </div>
-                                  )
-                                })}
-                              </div>
-                            )
-                          })()}
+                                  ) : dataType === "array" ||
+                                    dataType === "object" ? (
+                                    <Textarea
+                                      id={`debug-param-${name}`}
+                                      placeholder={
+                                        dataType === "array"
+                                          ? '[1, 2, 3] or "a, b, c"'
+                                          : '{"key": "value"}'
+                                      }
+                                      className="font-mono min-h-[80px]"
+                                      value={
+                                        debugFormValues[name] ??
+                                        p?.default_value ??
+                                        ""
+                                      }
+                                      onChange={(e) =>
+                                        setDebugFormValues((prev) => ({
+                                          ...prev,
+                                          [name]: e.target.value,
+                                        }))
+                                      }
+                                    />
+                                  ) : (
+                                    <Input
+                                      id={`debug-param-${name}`}
+                                      type={
+                                        dataType === "number" ||
+                                        dataType === "integer"
+                                          ? "number"
+                                          : "text"
+                                      }
+                                      placeholder={
+                                        isRequired
+                                          ? `Required (${dataType})`
+                                          : `Optional (${dataType})`
+                                      }
+                                      value={
+                                        debugFormValues[name] ??
+                                        p?.default_value ??
+                                        ""
+                                      }
+                                      onChange={(e) =>
+                                        setDebugFormValues((prev) => ({
+                                          ...prev,
+                                          [name]: e.target.value,
+                                        }))
+                                      }
+                                    />
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
                     </TabsContent>
                   </Tabs>
                   <Button

@@ -1,19 +1,25 @@
-import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Pencil, Trash2, Key, Copy, Check, ChevronDown, ChevronUp } from "lucide-react"
-import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from "@/components/ui/table"
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router"
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Key,
+  Pencil,
+  Trash2,
+} from "lucide-react"
+import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -22,16 +28,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table"
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
+import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
+import { cn } from "@/lib/utils"
+import type { ApiAssignmentPublic } from "@/services/api-assignments"
+import { ApiAssignmentsService } from "@/services/api-assignments"
 import { ClientsService } from "@/services/clients"
 import { GroupsService } from "@/services/groups"
-import { ApiAssignmentsService } from "@/services/api-assignments"
 import { ModulesService } from "@/services/modules"
-import { cn } from "@/lib/utils"
-import useCustomToast from "@/hooks/useCustomToast"
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
-import { usePermissions } from "@/hooks/usePermissions"
-
-import type { ApiAssignmentPublic } from "@/services/api-assignments"
 
 type ApiWithMeta = ApiAssignmentPublic & {
   moduleName: string
@@ -178,9 +191,10 @@ function ClientDetailPage() {
     }
   }
 
-  const assignedGroups = client?.group_ids && groupsData?.data
-    ? groupsData.data.filter((g) => client.group_ids.includes(g.id))
-    : []
+  const assignedGroups =
+    client?.group_ids && groupsData?.data
+      ? groupsData.data.filter((g) => client.group_ids.includes(g.id))
+      : []
 
   if (isLoading) {
     return (
@@ -219,13 +233,19 @@ function ClientDetailPage() {
           {canUpdate && (
             <Button
               variant="outline"
-              onClick={() => navigate({ to: "/system/clients/$id/edit", params: { id } })}
+              onClick={() =>
+                navigate({ to: "/system/clients/$id/edit", params: { id } })
+              }
             >
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </Button>
           )}
-          <Button variant="outline" onClick={handleRegenerateSecret} disabled={regenerateSecretMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={handleRegenerateSecret}
+            disabled={regenerateSecretMutation.isPending}
+          >
             <Key className="mr-2 h-4 w-4" />
             Regenerate Secret
           </Button>
@@ -317,7 +337,10 @@ function ClientDetailPage() {
                           to="/system/groups/$id"
                           params={{ id: group.id }}
                         >
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                          <Badge
+                            variant="secondary"
+                            className="cursor-pointer hover:bg-secondary/80"
+                          >
                             {group.name}
                           </Badge>
                         </Link>
@@ -330,7 +353,9 @@ function ClientDetailPage() {
                 <TableHead className="w-[180px]">APIs Accessible</TableHead>
                 <TableCell>
                   {apisLoading ? (
-                    <span className="text-sm text-muted-foreground">Loading APIs...</span>
+                    <span className="text-sm text-muted-foreground">
+                      Loading APIs...
+                    </span>
                   ) : !apis?.length ? (
                     <span className="text-sm text-muted-foreground">
                       No APIs accessible by this client
@@ -338,27 +363,39 @@ function ClientDetailPage() {
                   ) : (
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        {apis.length} API{apis.length !== 1 ? "s" : ""} accessible
+                        {apis.length} API{apis.length !== 1 ? "s" : ""}{" "}
+                        accessible
                         {(() => {
                           const parts: string[] = []
                           if (client.group_ids?.length) {
-                            parts.push(`${client.group_ids.length} group${client.group_ids.length !== 1 ? "s" : ""}`)
+                            parts.push(
+                              `${client.group_ids.length} group${client.group_ids.length !== 1 ? "s" : ""}`,
+                            )
                           }
                           if (client.api_assignment_ids?.length) {
-                            parts.push(`${client.api_assignment_ids.length} direct`)
+                            parts.push(
+                              `${client.api_assignment_ids.length} direct`,
+                            )
                           }
-                          return parts.length ? ` (via ${parts.join(" + ")})` : ""
+                          return parts.length
+                            ? ` (via ${parts.join(" + ")})`
+                            : ""
                         })()}
                       </p>
                       {(() => {
                         const API_PREVIEW_LIMIT = 5
-                        const visibleApis = apisExpanded ? apis : apis.slice(0, API_PREVIEW_LIMIT)
+                        const visibleApis = apisExpanded
+                          ? apis
+                          : apis.slice(0, API_PREVIEW_LIMIT)
                         const hasMore = apis.length > API_PREVIEW_LIMIT
                         return (
                           <>
                             <div className="space-y-1">
                               {visibleApis.map((api) => (
-                                <div key={api.id} className="text-sm flex items-center gap-2">
+                                <div
+                                  key={api.id}
+                                  className="text-sm flex items-center gap-2"
+                                >
                                   <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted border">
                                     [{api.http_method}]
                                   </span>
@@ -422,11 +459,7 @@ function ClientDetailPage() {
                 readOnly
                 className="font-mono"
               />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleCopySecret}
-              >
+              <Button variant="outline" size="icon" onClick={handleCopySecret}>
                 {copiedText === regeneratedSecret?.secret ? (
                   <Check className="h-4 w-4" />
                 ) : (

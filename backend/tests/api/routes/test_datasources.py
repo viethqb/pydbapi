@@ -17,9 +17,7 @@ def _base() -> str:
 # --- types ---
 
 
-def test_get_types(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
+def test_get_types(client: TestClient, superuser_token_headers: dict[str, str]) -> None:
     response = client.get(f"{_base()}/types", headers=superuser_token_headers)
     assert response.status_code == 200
     data = response.json()
@@ -55,9 +53,7 @@ def test_get_drivers_mysql(
 def test_get_drivers_invalid_type(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    response = client.get(
-        f"{_base()}/oracle/drivers", headers=superuser_token_headers
-    )
+    response = client.get(f"{_base()}/oracle/drivers", headers=superuser_token_headers)
     assert response.status_code == 422
 
 
@@ -254,7 +250,10 @@ def test_test_datasource_ok(
     assert isinstance(data["ok"], bool)
     # When app's Postgres is available (CI), ok is True
     if data["ok"]:
-        assert "successful" in data["message"].lower() or data["message"] == "Connection successful"
+        assert (
+            "successful" in data["message"].lower()
+            or data["message"] == "Connection successful"
+        )
 
 
 def test_test_datasource_not_found(
@@ -293,7 +292,10 @@ def test_pre_test_datasource_ok(
     assert "ok" in data
     assert "message" in data
     if data["ok"]:
-        assert "successful" in data["message"].lower() or data["message"] == "Connection successful"
+        assert (
+            "successful" in data["message"].lower()
+            or data["message"] == "Connection successful"
+        )
 
 
 def test_pre_test_datasource_fail(

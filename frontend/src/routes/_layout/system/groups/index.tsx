@@ -1,30 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
 import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/Common/DataTable"
-import {
-  groupsColumns,
-  type GroupTableData,
-} from "@/components/System/groups-columns"
 import { GroupFormDialog } from "@/components/System/GroupFormDialog"
 import {
-  GroupsService,
-  type ApiGroupListIn,
-  type ApiGroupPublic,
-} from "@/services/groups"
-import useCustomToast from "@/hooks/useCustomToast"
-import { usePermissions } from "@/hooks/usePermissions"
+  type GroupTableData,
+  groupsColumns,
+} from "@/components/System/groups-columns"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -33,6 +17,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
+import {
+  type ApiGroupListIn,
+  type ApiGroupPublic,
+  GroupsService,
+} from "@/services/groups"
 
 export const Route = createFileRoute("/_layout/system/groups/")({
   component: GroupsPage,
@@ -62,9 +61,7 @@ function GroupsPage() {
 
   // Form dialog state
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingGroup, setEditingGroup] = useState<ApiGroupPublic | null>(
-    null,
-  )
+  const [editingGroup, setEditingGroup] = useState<ApiGroupPublic | null>(null)
 
   // Query for list
   const { data, isLoading } = useQuery({
@@ -198,8 +195,7 @@ function GroupsPage() {
           onValueChange={(value) =>
             setFilters({
               ...filters,
-              is_active:
-                value === "all" ? null : value === "active" ? true : false,
+              is_active: value === "all" ? null : value === "active",
               page: 1,
             })
           }
@@ -217,9 +213,7 @@ function GroupsPage() {
 
       {/* DataTable */}
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading...
-        </div>
+        <div className="text-center py-8 text-muted-foreground">Loading...</div>
       ) : (
         <DataTable columns={groupsColumns} data={tableData} />
       )}
@@ -228,9 +222,13 @@ function GroupsPage() {
       {data && data.total > 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {((filters.page || 1) - 1) * (filters.page_size || 20) + 1} to{" "}
-            {Math.min((filters.page || 1) * (filters.page_size || 20), data.total)} of{" "}
-            {data.total} entries
+            Showing {((filters.page || 1) - 1) * (filters.page_size || 20) + 1}{" "}
+            to{" "}
+            {Math.min(
+              (filters.page || 1) * (filters.page_size || 20),
+              data.total,
+            )}{" "}
+            of {data.total} entries
           </div>
           <div className="flex gap-2">
             <Button
@@ -246,7 +244,9 @@ function GroupsPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={(filters.page || 1) * (filters.page_size || 20) >= data.total}
+              disabled={
+                (filters.page || 1) * (filters.page_size || 20) >= data.total
+              }
               onClick={() =>
                 setFilters({ ...filters, page: (filters.page || 1) + 1 })
               }

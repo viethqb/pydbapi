@@ -16,9 +16,9 @@ from app.models_dbapi import (
     ApiAssignment,
     ApiGroup,
     ApiMacroDef,
+    ApiModule,
     AppClient,
     DataSource,
-    ApiModule,
 )
 from app.models_permission import Permission
 

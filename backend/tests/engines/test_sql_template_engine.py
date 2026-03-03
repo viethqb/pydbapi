@@ -1,6 +1,5 @@
 """Unit tests for engines.sql.template_engine (Phase 3, Task 3.2)."""
 
-
 from app.engines.sql import SQLTemplateEngine, parse_parameters
 
 
@@ -56,7 +55,10 @@ class TestSQLTemplateEngineAutoEscape:
 
     def test_bool_rendered(self):
         e = SQLTemplateEngine()
-        assert e.render("WHERE active = {{ flag }}", {"flag": True}) == "WHERE active = TRUE"
+        assert (
+            e.render("WHERE active = {{ flag }}", {"flag": True})
+            == "WHERE active = TRUE"
+        )
 
     def test_none_renders_null(self):
         e = SQLTemplateEngine()

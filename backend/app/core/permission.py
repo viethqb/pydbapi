@@ -7,6 +7,7 @@ has_permission(user, resource_type, action, resource_id?), get_user_permissions.
 from __future__ import annotations
 
 import uuid
+
 from sqlmodel import Session, select
 
 from app.models import User

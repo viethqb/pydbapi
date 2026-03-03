@@ -39,7 +39,7 @@ def do_request(
             timeout=30,
         )
         return (index, r.status_code)
-    except Exception as e:
+    except Exception:
         return (index, -1)  # -1 = error
 
 

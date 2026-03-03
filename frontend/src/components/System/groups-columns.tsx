@@ -1,6 +1,6 @@
-import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "@tanstack/react-router"
-import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -67,9 +67,7 @@ export const groupsColumns: ColumnDef<GroupTableData>[] = [
                 group.is_active ? "bg-green-500" : "bg-gray-400",
               )}
             />
-            <span
-              className={group.is_active ? "" : "text-muted-foreground"}
-            >
+            <span className={group.is_active ? "" : "text-muted-foreground"}>
               {group.is_active ? "Active" : "Inactive"}
             </span>
           </div>

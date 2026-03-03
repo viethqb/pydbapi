@@ -1,4 +1,4 @@
-import { request, type RequestOptions } from "@/lib/api-request"
+import { type RequestOptions, request } from "@/lib/api-request"
 
 // Types matching backend schemas
 export type HttpMethodEnum = "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
@@ -190,9 +190,12 @@ export const ApiAssignmentsService = {
   },
 
   delete: async (id: string): Promise<{ message: string }> => {
-    return request<{ message: string }>(`/api/v1/api-assignments/delete/${id}`, {
-      method: "DELETE",
-    })
+    return request<{ message: string }>(
+      `/api/v1/api-assignments/delete/${id}`,
+      {
+        method: "DELETE",
+      },
+    )
   },
 
   get: async (
@@ -205,7 +208,9 @@ export const ApiAssignmentsService = {
     })
   },
 
-  publish: async (body: ApiAssignmentPublishIn): Promise<ApiAssignmentPublic> => {
+  publish: async (
+    body: ApiAssignmentPublishIn,
+  ): Promise<ApiAssignmentPublic> => {
     return request<ApiAssignmentPublic>("/api/v1/api-assignments/publish", {
       method: "POST",
       body: JSON.stringify(body),
@@ -226,42 +231,62 @@ export const ApiAssignmentsService = {
     })
   },
 
-  createVersion: async (id: string, body: VersionCommitCreate): Promise<VersionCommitDetail> => {
-    return request<VersionCommitDetail>(`/api/v1/api-assignments/${id}/versions/create`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    })
+  createVersion: async (
+    id: string,
+    body: VersionCommitCreate,
+  ): Promise<VersionCommitDetail> => {
+    return request<VersionCommitDetail>(
+      `/api/v1/api-assignments/${id}/versions/create`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    )
   },
 
   listVersions: async (id: string): Promise<VersionCommitListOut> => {
-    return request<VersionCommitListOut>(`/api/v1/api-assignments/${id}/versions`, {
-      method: "GET",
-    })
+    return request<VersionCommitListOut>(
+      `/api/v1/api-assignments/${id}/versions`,
+      {
+        method: "GET",
+      },
+    )
   },
 
   getVersion: async (versionId: string): Promise<VersionCommitDetail> => {
-    return request<VersionCommitDetail>(`/api/v1/api-assignments/versions/${versionId}`, {
-      method: "GET",
-    })
+    return request<VersionCommitDetail>(
+      `/api/v1/api-assignments/versions/${versionId}`,
+      {
+        method: "GET",
+      },
+    )
   },
 
-  restoreVersion: async (id: string, versionId: string): Promise<ApiAssignmentDetail> => {
+  restoreVersion: async (
+    id: string,
+    versionId: string,
+  ): Promise<ApiAssignmentDetail> => {
     return request<ApiAssignmentDetail>(
       `/api/v1/api-assignments/${id}/versions/${versionId}/restore`,
-      { method: "POST" }
+      { method: "POST" },
     )
   },
 
   deleteVersion: async (versionId: string): Promise<{ message: string }> => {
-    return request<{ message: string }>(`/api/v1/api-assignments/versions/${versionId}`, {
-      method: "DELETE",
-    })
+    return request<{ message: string }>(
+      `/api/v1/api-assignments/versions/${versionId}`,
+      {
+        method: "DELETE",
+      },
+    )
   },
 
-  revertVersionToDraft: async (versionId: string): Promise<{ message: string }> => {
+  revertVersionToDraft: async (
+    versionId: string,
+  ): Promise<{ message: string }> => {
     return request<{ message: string }>(
       `/api/v1/api-assignments/versions/${versionId}/revert-to-draft`,
-      { method: "POST" }
+      { method: "POST" },
     )
   },
 }

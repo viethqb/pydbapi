@@ -15,16 +15,19 @@ import {
 } from "@/components/ui/dialog"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { LoadingButton } from "@/components/ui/loading-button"
+import useCustomToast from "@/hooks/useCustomToast"
 import { RolesService } from "@/services/roles"
 import { UserPermissionsService } from "@/services/user-permissions"
-import useCustomToast from "@/hooks/useCustomToast"
 
 interface AssignRolesDialogProps {
   user: UserPublic
   onSuccess: () => void
 }
 
-export default function AssignRolesDialog({ user, onSuccess }: AssignRolesDialogProps) {
+export default function AssignRolesDialog({
+  user,
+  onSuccess,
+}: AssignRolesDialogProps) {
   const [open, setOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const queryClient = useQueryClient()
@@ -84,7 +87,10 @@ export default function AssignRolesDialog({ user, onSuccess }: AssignRolesDialog
 
   return (
     <>
-      <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={openDialog}>
+      <DropdownMenuItem
+        onSelect={(e) => e.preventDefault()}
+        onClick={openDialog}
+      >
         <Shield className="mr-2 h-4 w-4" />
         Assign roles
       </DropdownMenuItem>
@@ -118,7 +124,9 @@ export default function AssignRolesDialog({ user, onSuccess }: AssignRolesDialog
               </div>
             ))}
             {roles.length === 0 && (
-              <p className="text-sm text-muted-foreground">No roles available</p>
+              <p className="text-sm text-muted-foreground">
+                No roles available
+              </p>
             )}
           </div>
           <DialogFooter>

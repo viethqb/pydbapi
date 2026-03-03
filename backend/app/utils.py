@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -102,11 +102,16 @@ def generate_new_account_email(
 
 def generate_password_reset_token(email: str) -> str:
     delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expires = now + delta
     exp = expires.timestamp()
     encoded_jwt = jwt.encode(
-        {"exp": exp, "nbf": now, "sub": email, "type": security.TOKEN_TYPE_PASSWORD_RESET},
+        {
+            "exp": exp,
+            "nbf": now,
+            "sub": email,
+            "type": security.TOKEN_TYPE_PASSWORD_RESET,
+        },
         settings.SECRET_KEY,
         algorithm=security.ALGORITHM,
     )

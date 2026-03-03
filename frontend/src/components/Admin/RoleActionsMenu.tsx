@@ -1,22 +1,21 @@
 import { useQuery } from "@tanstack/react-query"
 import { EllipsisVertical, Users } from "lucide-react"
 import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
 import { Can } from "@/components/Common/Can"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { RolesService, type RolePublic } from "@/services/roles"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { type RolePublic, RolesService } from "@/services/roles"
 import { EditRolePermissions } from "./EditRolePermissions"
 
 interface RoleActionsMenuProps {
@@ -70,7 +69,10 @@ export function RoleActionsMenu({ role }: RoleActionsMenuProps) {
                 {usersData.data.map((u) => (
                   <li key={u.id}>
                     <span className="font-medium">{u.full_name || "—"}</span>
-                    <span className="text-muted-foreground"> ({u.username})</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      ({u.username})
+                    </span>
                   </li>
                 ))}
               </ul>

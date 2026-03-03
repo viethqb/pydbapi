@@ -68,8 +68,11 @@ export const ClientsService = {
     const requestBody: AppClientListIn = {
       page: body.page ?? 1,
       page_size: body.page_size ?? 20,
-      ...(body.name__ilike !== undefined && body.name__ilike !== null && body.name__ilike !== "" && { name__ilike: body.name__ilike }),
-      ...(body.is_active !== undefined && body.is_active !== null && { is_active: body.is_active }),
+      ...(body.name__ilike !== undefined &&
+        body.name__ilike !== null &&
+        body.name__ilike !== "" && { name__ilike: body.name__ilike }),
+      ...(body.is_active !== undefined &&
+        body.is_active !== null && { is_active: body.is_active }),
     }
     return request<AppClientListOut>("/api/v1/clients/list", {
       method: "POST",
@@ -103,9 +106,14 @@ export const ClientsService = {
     })
   },
 
-  regenerateSecret: async (id: string): Promise<AppClientRegenerateSecretOut> => {
-    return request<AppClientRegenerateSecretOut>(`/api/v1/clients/${id}/regenerate-secret`, {
-      method: "POST",
-    })
+  regenerateSecret: async (
+    id: string,
+  ): Promise<AppClientRegenerateSecretOut> => {
+    return request<AppClientRegenerateSecretOut>(
+      `/api/v1/clients/${id}/regenerate-secret`,
+      {
+        method: "POST",
+      },
+    )
   },
 }

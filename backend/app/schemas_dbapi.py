@@ -774,7 +774,9 @@ class AccessRecordPublic(SQLModel):
     path: str
     status_code: int
     created_at: datetime
-    duration_ms: int | None = Field(default=None, description="Request duration in milliseconds")
+    duration_ms: int | None = Field(
+        default=None, description="Request duration in milliseconds"
+    )
     request_body: str | None = Field(default=None, description="Truncated for list")
     request_headers: str | None = Field(default=None, description="Truncated for list")
     request_params: str | None = Field(default=None, description="Truncated for list")
@@ -935,8 +937,12 @@ class AccessRecordDetail(SQLModel):
     request_headers: str | None = None
     request_params: str | None = None
     created_at: datetime
-    duration_ms: int | None = Field(default=None, description="Request duration in milliseconds")
-    api_display: str | None = Field(default=None, description="e.g. GET /module/path or API name")
+    duration_ms: int | None = Field(
+        default=None, description="Request duration in milliseconds"
+    )
+    api_display: str | None = Field(
+        default=None, description="e.g. GET /module/path or API name"
+    )
     app_client_display: str | None = Field(default=None, description="Client name")
 
 

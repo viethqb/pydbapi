@@ -171,7 +171,12 @@ def test_update_api_assignment(
     response = client.post(
         f"{_base()}/update",
         headers=superuser_token_headers,
-        json={"id": str(a.id), "name": "after", "path": new_path, "description": "updated"},
+        json={
+            "id": str(a.id),
+            "name": "after",
+            "path": new_path,
+            "description": "updated",
+        },
     )
     assert response.status_code == 200
     data = response.json()
@@ -317,7 +322,10 @@ def test_debug_api_assignment_missing_content_or_id_returns_400(
     response = client.post(
         f"{_base()}/debug",
         headers=superuser_token_headers,
-        json={"execute_engine": "SQL", "datasource_id": "00000000-0000-0000-0000-000000000001"},
+        json={
+            "execute_engine": "SQL",
+            "datasource_id": "00000000-0000-0000-0000-000000000001",
+        },
     )
     assert response.status_code == 400
     assert "id or content" in response.json()["message"]

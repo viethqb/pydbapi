@@ -1,5 +1,5 @@
-import { request } from "@/lib/api-request"
 import type { DataSourcePublic } from "@/components/DataSource/columns"
+import { request } from "@/lib/api-request"
 
 // Types matching backend schemas
 export type ProductTypeEnum = "postgres" | "mysql" | "trino"
@@ -68,9 +68,13 @@ export const DataSourceService = {
     const requestBody: DataSourceListIn = {
       page: body.page ?? 1,
       page_size: body.page_size ?? 20,
-      ...(body.product_type !== undefined && body.product_type !== null && { product_type: body.product_type }),
-      ...(body.is_active !== undefined && body.is_active !== null && { is_active: body.is_active }),
-      ...(body.name__ilike !== undefined && body.name__ilike !== null && body.name__ilike !== "" && { name__ilike: body.name__ilike }),
+      ...(body.product_type !== undefined &&
+        body.product_type !== null && { product_type: body.product_type }),
+      ...(body.is_active !== undefined &&
+        body.is_active !== null && { is_active: body.is_active }),
+      ...(body.name__ilike !== undefined &&
+        body.name__ilike !== null &&
+        body.name__ilike !== "" && { name__ilike: body.name__ilike }),
     }
     return request<DataSourceListOut>("/api/v1/datasources/list", {
       method: "POST",

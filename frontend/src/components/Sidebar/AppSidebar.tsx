@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
 import { usePermissions } from "@/hooks/usePermissions"
-import { baseNavItems, securityNavItem } from "./navItems"
 import { type Item, Main } from "./Main"
+import { baseNavItems, securityNavItem } from "./navItems"
 import { User } from "./User"
 
 function toMainItem(
@@ -40,7 +40,9 @@ export function AppSidebar() {
 
   const items: Item[] = (() => {
     const canAccessLogs = hasPermission("access_log", "read")
-    const filter = (item: (typeof baseNavItems)[number] | typeof securityNavItem) =>
+    const filter = (
+      item: (typeof baseNavItems)[number] | typeof securityNavItem,
+    ) =>
       toMainItem(item, (sub) => {
         if (sub.path === "/system/access-logs") return canAccessLogs
         return true

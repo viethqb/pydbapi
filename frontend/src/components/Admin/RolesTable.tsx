@@ -1,9 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { Suspense } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingUsers from "@/components/Pending/PendingUsers"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { RolesService } from "@/services/roles"
 import { roleColumns } from "./roleColumns"
 

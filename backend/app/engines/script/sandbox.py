@@ -79,7 +79,19 @@ def build_restricted_globals(context_dict: dict[str, Any]) -> dict[str, Any]:
     # and attribute access; these are standard container/utility types.
     import builtins  # local import to avoid polluting globals
 
-    for name in ("list", "dict", "set", "tuple", "len", "range", "min", "max", "sum", "abs", "sorted"):
+    for name in (
+        "list",
+        "dict",
+        "set",
+        "tuple",
+        "len",
+        "range",
+        "min",
+        "max",
+        "sum",
+        "abs",
+        "sorted",
+    ):
         obj = safe.get(name, getattr(builtins, name, None))
         if obj is not None:
             g[name] = obj

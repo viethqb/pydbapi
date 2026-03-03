@@ -12,10 +12,8 @@ from app.api.deps import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.core.permission import has_permission
-from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.core.config import settings
-from app.core.permission import get_my_permissions_flat
+from app.core.permission import get_my_permissions_flat, has_permission
 from app.core.security import get_password_hash, verify_password
 from app.models import (
     Message,
@@ -28,7 +26,12 @@ from app.models import (
     UserUpdate,
     UserUpdateMe,
 )
-from app.models_permission import Role, UserRoleLink
+from app.models_permission import (
+    PermissionActionEnum,
+    ResourceTypeEnum,
+    Role,
+    UserRoleLink,
+)
 from app.utils import generate_new_account_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -110,7 +113,9 @@ def update_user_me(
     """
 
     if user_in.username:
-        existing_user = crud.get_user_by_username(session=session, username=user_in.username)
+        existing_user = crud.get_user_by_username(
+            session=session, username=user_in.username
+        )
         if existing_user and existing_user.id != current_user.id:
             raise HTTPException(
                 status_code=409, detail="User with this username already exists"
@@ -245,7 +250,9 @@ def update_user(
             detail="The user with this id does not exist in the system",
         )
     if user_in.username:
-        existing_user = crud.get_user_by_username(session=session, username=user_in.username)
+        existing_user = crud.get_user_by_username(
+            session=session, username=user_in.username
+        )
         if existing_user and existing_user.id != user_id:
             raise HTTPException(
                 status_code=409, detail="User with this username already exists"

@@ -1,28 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, Copy, Check } from "lucide-react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Check, Copy, Plus, Search } from "lucide-react"
 import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/Common/DataTable"
 import {
-  clientsColumns,
   type ClientTableData,
+  clientsColumns,
 } from "@/components/System/clients-columns"
-import {
-  ClientsService,
-  type AppClientListIn,
-} from "@/services/clients"
-import useCustomToast from "@/hooks/useCustomToast"
-import { usePermissions } from "@/hooks/usePermissions"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -31,7 +16,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
+import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
+import { type AppClientListIn, ClientsService } from "@/services/clients"
 
 export const Route = createFileRoute("/_layout/system/clients/")({
   component: ClientsPage,
@@ -225,8 +221,7 @@ function ClientsPage() {
           onValueChange={(value) =>
             setFilters({
               ...filters,
-              is_active:
-                value === "all" ? null : value === "active" ? true : false,
+              is_active: value === "all" ? null : value === "active",
               page: 1,
             })
           }
@@ -244,9 +239,7 @@ function ClientsPage() {
 
       {/* DataTable */}
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading...
-        </div>
+        <div className="text-center py-8 text-muted-foreground">Loading...</div>
       ) : (
         <DataTable columns={clientsColumns} data={tableData} />
       )}
@@ -255,9 +248,13 @@ function ClientsPage() {
       {data && data.total > 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {((filters.page || 1) - 1) * (filters.page_size || 20) + 1} to{" "}
-            {Math.min((filters.page || 1) * (filters.page_size || 20), data.total)} of{" "}
-            {data.total} entries
+            Showing {((filters.page || 1) - 1) * (filters.page_size || 20) + 1}{" "}
+            to{" "}
+            {Math.min(
+              (filters.page || 1) * (filters.page_size || 20),
+              data.total,
+            )}{" "}
+            of {data.total} entries
           </div>
           <div className="flex gap-2">
             <Button
@@ -273,7 +270,9 @@ function ClientsPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={(filters.page || 1) * (filters.page_size || 20) >= data.total}
+              disabled={
+                (filters.page || 1) * (filters.page_size || 20) >= data.total
+              }
               onClick={() =>
                 setFilters({ ...filters, page: (filters.page || 1) + 1 })
               }
@@ -303,11 +302,7 @@ function ClientsPage() {
                 readOnly
                 className="font-mono"
               />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleCopySecret}
-              >
+              <Button variant="outline" size="icon" onClick={handleCopySecret}>
                 {copiedText === regeneratedSecret?.secret ? (
                   <Check className="h-4 w-4" />
                 ) : (

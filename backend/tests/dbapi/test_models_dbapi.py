@@ -40,7 +40,9 @@ def test_models_dbapi_import():
 def test_datasource_crud(db: Session):
     """Create and read DataSource. Skipped if DBAPI migrations not applied."""
     if "datasource" not in inspect(db.get_bind()).get_table_names():
-        pytest.skip("datasource table not found; run: make migrate or make integration-test")
+        pytest.skip(
+            "datasource table not found; run: make migrate or make integration-test"
+        )
     ds = DataSource(
         name="test-ds-dbapi",
         product_type=ProductTypeEnum.POSTGRES,

@@ -145,7 +145,9 @@ def test_script_executor_completes_before_timeout(mock_settings: MagicMock) -> N
 
 
 @patch("app.engines.script.executor.settings")
-def test_script_executor_exception_propagates_with_timeout(mock_settings: MagicMock) -> None:
+def test_script_executor_exception_propagates_with_timeout(
+    mock_settings: MagicMock,
+) -> None:
     """Script errors propagate correctly through the thread boundary."""
     mock_settings.SCRIPT_EXEC_TIMEOUT = 5
     mock_settings.SCRIPT_EXTRA_MODULES = ""

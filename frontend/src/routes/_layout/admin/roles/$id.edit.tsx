@@ -1,9 +1,14 @@
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router"
 import { ChevronDown, Plus, Save, UserMinus, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { UsersService, type UserPublic as ClientUserPublic } from "@/client"
+import { type UserPublic as ClientUserPublic, UsersService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,7 +46,10 @@ import {
 } from "@/components/ui/table"
 import useCustomToast from "@/hooks/useCustomToast"
 import { PermissionsService } from "@/services/permissions"
-import { RolesService, type UserPublic as RoleUserPublic } from "@/services/roles"
+import {
+  RolesService,
+  type UserPublic as RoleUserPublic,
+} from "@/services/roles"
 import { UserPermissionsService } from "@/services/user-permissions"
 
 const ROLES_BASE = "/admin/roles"
@@ -179,17 +187,31 @@ function RoleEditPage() {
       const key = normId(resourceId)
       switch (resourceType) {
         case "module":
-          return moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "datasource":
-          return datasourceNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            datasourceNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "group":
-          return groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "api_assignment":
-          return apiAssignmentNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            apiAssignmentNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "macro_def":
-          return macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "client":
-          return clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         default:
           return `ID:${String(resourceId).slice(0, 8)}…`
       }
@@ -236,7 +258,9 @@ function RoleEditPage() {
     }
     return order
       .filter((t) => byType.has(t))
-      .map((t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const)
+      .map(
+        (t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const,
+      )
   }, [permissionRows])
 
   const updateMutation = useMutation({
@@ -359,8 +383,8 @@ function RoleEditPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Permissions</CardTitle>
           <p className="text-sm text-muted-foreground font-normal mt-0.5">
-            Select permissions by group (Datasource, Module, …). When closed, only selected
-            permissions are shown.
+            Select permissions by group (Datasource, Module, …). When closed,
+            only selected permissions are shown.
           </p>
         </CardHeader>
         <CardContent className="pt-0">
@@ -441,7 +465,10 @@ function RoleEditPage() {
                                 readOnly
                                 className="h-4 w-4 rounded border-gray-300"
                               />
-                              <span className="font-mono text-xs truncate" title={row.label}>
+                              <span
+                                className="font-mono text-xs truncate"
+                                title={row.label}
+                              >
                                 {row.label}
                               </span>
                             </div>
@@ -501,7 +528,9 @@ function RoleEditPage() {
                     user={u}
                     roleId={id}
                     onRemoved={() => {
-                      queryClient.invalidateQueries({ queryKey: ["roleUsers", id] })
+                      queryClient.invalidateQueries({
+                        queryKey: ["roleUsers", id],
+                      })
                       queryClient.invalidateQueries({ queryKey: ["role", id] })
                       queryClient.invalidateQueries({ queryKey: ["roles"] })
                     }}
@@ -612,7 +641,10 @@ function AddUserToRoleDialog({
     mutationFn: async (userId: string) => {
       const { role_ids } = await UserPermissionsService.getUserRoles(userId)
       if (role_ids.includes(roleId)) return
-      return UserPermissionsService.updateUserRoles(userId, [...role_ids, roleId])
+      return UserPermissionsService.updateUserRoles(userId, [
+        ...role_ids,
+        roleId,
+      ])
     },
     onSuccess: () => {
       showSuccess("User added to role")
@@ -672,4 +704,3 @@ function AddUserToRoleDialog({
     </Dialog>
   )
 }
-

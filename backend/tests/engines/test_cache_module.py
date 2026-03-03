@@ -4,7 +4,7 @@ Runs without database/Redis:
     uv run pytest tests/engines/test_cache_module.py -v --noconftest
 """
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 from app.engines.script.modules.cache import make_cache_module
 

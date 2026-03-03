@@ -1,12 +1,26 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { ArrowLeft, ChevronDown, Search, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { useEffect, useMemo, useState, useCallback } from "react"
-import { ArrowLeft, ChevronDown, Search, X } from "lucide-react"
-
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -17,11 +31,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { LoadingButton } from "@/components/ui/loading-button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -29,22 +39,12 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  ClientsService,
-  type AppClientUpdate,
-} from "@/services/clients"
-import { GroupsService } from "@/services/groups"
-import { ApiAssignmentsService } from "@/services/api-assignments"
-
-import type { ApiAssignmentPublic } from "@/services/api-assignments"
-
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import type { ApiAssignmentPublic } from "@/services/api-assignments"
+import { ApiAssignmentsService } from "@/services/api-assignments"
+import { type AppClientUpdate, ClientsService } from "@/services/clients"
+import { GroupsService } from "@/services/groups"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -100,19 +100,21 @@ function EditClientPage() {
 
   const { data: apisData } = useQuery({
     queryKey: ["apis-published-for-client"],
-    queryFn: () => ApiAssignmentsService.list({ is_published: true, page: 1, page_size: 100 }),
+    queryFn: () =>
+      ApiAssignmentsService.list({
+        is_published: true,
+        page: 1,
+        page_size: 100,
+      }),
   })
 
   const [groupSearch, setGroupSearch] = useState("")
   const [apiSearch, setApiSearch] = useState("")
 
-  const getApiFullPath = useCallback(
-    (api: ApiAssignmentPublic): string => {
-      const p = (api.path || "").replace(/^\//, "")
-      return `/api/${p}`
-    },
-    [],
-  )
+  const getApiFullPath = useCallback((api: ApiAssignmentPublic): string => {
+    const p = (api.path || "").replace(/^\//, "")
+    return `/api/${p}`
+  }, [])
 
   const filteredGroups = useMemo(() => {
     const list = groupsData?.data ?? []
@@ -127,7 +129,8 @@ function EditClientPage() {
     if (!q) return list
     return list.filter((api) => {
       const full = getApiFullPath(api)
-      const s = `${api.name} ${api.http_method} ${api.path} ${full}`.toLowerCase()
+      const s =
+        `${api.name} ${api.http_method} ${api.path} ${full}`.toLowerCase()
       return s.includes(q)
     })
   }, [apisData?.data, apiSearch, getApiFullPath])
@@ -151,9 +154,14 @@ function EditClientPage() {
       form.reset({
         name: client.name,
         description: client.description,
-        rate_limit_per_minute: (client as { rate_limit_per_minute?: number | null }).rate_limit_per_minute ?? null,
-        max_concurrent: (client as { max_concurrent?: number | null }).max_concurrent ?? null,
-        token_expire_seconds: (client as { token_expire_seconds?: number | null }).token_expire_seconds ?? null,
+        rate_limit_per_minute:
+          (client as { rate_limit_per_minute?: number | null })
+            .rate_limit_per_minute ?? null,
+        max_concurrent:
+          (client as { max_concurrent?: number | null }).max_concurrent ?? null,
+        token_expire_seconds:
+          (client as { token_expire_seconds?: number | null })
+            .token_expire_seconds ?? null,
         is_active: client.is_active,
         group_ids: client.group_ids ?? [],
         api_assignment_ids: client.api_assignment_ids ?? [],
@@ -180,7 +188,8 @@ function EditClientPage() {
       name: values.name,
       description: values.description || null,
       rate_limit_per_minute:
-        values.rate_limit_per_minute === "" || values.rate_limit_per_minute == null
+        values.rate_limit_per_minute === "" ||
+        values.rate_limit_per_minute == null
           ? null
           : Number(values.rate_limit_per_minute),
       max_concurrent:
@@ -188,12 +197,14 @@ function EditClientPage() {
           ? null
           : Number(values.max_concurrent),
       token_expire_seconds:
-        values.token_expire_seconds === "" || values.token_expire_seconds == null
+        values.token_expire_seconds === "" ||
+        values.token_expire_seconds == null
           ? null
           : Number(values.token_expire_seconds),
       is_active: values.is_active,
       group_ids: values.group_ids.length > 0 ? values.group_ids : [],
-      api_assignment_ids: values.api_assignment_ids.length > 0 ? values.api_assignment_ids : [],
+      api_assignment_ids:
+        values.api_assignment_ids.length > 0 ? values.api_assignment_ids : [],
     })
   }
 
@@ -227,7 +238,9 @@ function EditClientPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Client</h1>
-          <p className="text-muted-foreground mt-1">Update client settings and permissions</p>
+          <p className="text-muted-foreground mt-1">
+            Update client settings and permissions
+          </p>
         </div>
       </div>
 
@@ -261,7 +274,11 @@ function EditClientPage() {
                   <TableRow>
                     <TableHead className="w-[180px]">Client ID</TableHead>
                     <TableCell>
-                      <Input value={client.client_id} readOnly className="font-mono bg-muted" />
+                      <Input
+                        value={client.client_id}
+                        readOnly
+                        className="font-mono bg-muted"
+                      />
                       <FormDescription className="mt-1">
                         Client ID cannot be changed after creation
                       </FormDescription>
@@ -280,7 +297,9 @@ function EditClientPage() {
                                 placeholder="Optional description"
                                 {...field}
                                 value={field.value || ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
+                                onChange={(e) =>
+                                  field.onChange(e.target.value || null)
+                                }
                                 className="min-h-[80px]"
                               />
                             </FormControl>
@@ -291,7 +310,9 @@ function EditClientPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">Rate Limit (req/min)</TableHead>
+                    <TableHead className="w-[180px]">
+                      Rate Limit (req/min)
+                    </TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -304,7 +325,12 @@ function EditClientPage() {
                                 min={1}
                                 placeholder="No limit"
                                 {...field}
-                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                value={
+                                  field.value === null ||
+                                  field.value === undefined
+                                    ? ""
+                                    : field.value
+                                }
                                 onChange={(e) => {
                                   const v = e.target.value
                                   field.onChange(v === "" ? null : Number(v))
@@ -334,7 +360,12 @@ function EditClientPage() {
                                 min={1}
                                 placeholder="Use global default"
                                 {...field}
-                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                value={
+                                  field.value === null ||
+                                  field.value === undefined
+                                    ? ""
+                                    : field.value
+                                }
                                 onChange={(e) => {
                                   const v = e.target.value
                                   field.onChange(v === "" ? null : Number(v))
@@ -342,7 +373,8 @@ function EditClientPage() {
                               />
                             </FormControl>
                             <FormDescription>
-                              Max concurrent requests. Empty = use global default.
+                              Max concurrent requests. Empty = use global
+                              default.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -351,7 +383,9 @@ function EditClientPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">Token Expiration</TableHead>
+                    <TableHead className="w-[180px]">
+                      Token Expiration
+                    </TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -365,7 +399,12 @@ function EditClientPage() {
                                 max={86400}
                                 placeholder="Use global default (3600s)"
                                 {...field}
-                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                value={
+                                  field.value === null ||
+                                  field.value === undefined
+                                    ? ""
+                                    : field.value
+                                }
                                 onChange={(e) => {
                                   const v = e.target.value
                                   field.onChange(v === "" ? null : Number(v))
@@ -373,7 +412,8 @@ function EditClientPage() {
                               />
                             </FormControl>
                             <FormDescription>
-                              JWT token lifetime in seconds (60–86400). Empty = use global default.
+                              JWT token lifetime in seconds (60–86400). Empty =
+                              use global default.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -418,7 +458,9 @@ function EditClientPage() {
                                     <div className="flex flex-wrap gap-1 flex-1">
                                       {field.value && field.value.length > 0 ? (
                                         field.value.map((groupId) => {
-                                          const group = groupsData?.data?.find((g) => g.id === groupId)
+                                          const group = groupsData?.data?.find(
+                                            (g) => g.id === groupId,
+                                          )
                                           if (!group) return null
                                           return (
                                             <Badge
@@ -427,7 +469,11 @@ function EditClientPage() {
                                               className="mr-1"
                                               onClick={(e) => {
                                                 e.stopPropagation()
-                                                field.onChange(field.value.filter((id) => id !== groupId))
+                                                field.onChange(
+                                                  field.value.filter(
+                                                    (id) => id !== groupId,
+                                                  ),
+                                                )
                                               }}
                                             >
                                               {group.name}
@@ -441,7 +487,11 @@ function EditClientPage() {
                                                 onClick={(e) => {
                                                   e.preventDefault()
                                                   e.stopPropagation()
-                                                  field.onChange(field.value.filter((id) => id !== groupId))
+                                                  field.onChange(
+                                                    field.value.filter(
+                                                      (id) => id !== groupId,
+                                                    ),
+                                                  )
                                                 }}
                                               >
                                                 <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -450,7 +500,9 @@ function EditClientPage() {
                                           )
                                         })
                                       ) : (
-                                        <span className="text-muted-foreground">Select groups...</span>
+                                        <span className="text-muted-foreground">
+                                          Select groups...
+                                        </span>
                                       )}
                                     </div>
                                     <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
@@ -466,7 +518,9 @@ function EditClientPage() {
                                       <Input
                                         placeholder="Search groups..."
                                         value={groupSearch}
-                                        onChange={(e) => setGroupSearch(e.target.value)}
+                                        onChange={(e) =>
+                                          setGroupSearch(e.target.value)
+                                        }
                                         onKeyDown={(e) => e.stopPropagation()}
                                         className="pl-7 h-8"
                                       />
@@ -479,18 +533,32 @@ function EditClientPage() {
                                           key={group.id}
                                           onSelect={(e) => {
                                             e.preventDefault()
-                                            const currentValue = field.value || []
-                                            if (currentValue.includes(group.id)) {
-                                              field.onChange(currentValue.filter((id) => id !== group.id))
+                                            const currentValue =
+                                              field.value || []
+                                            if (
+                                              currentValue.includes(group.id)
+                                            ) {
+                                              field.onChange(
+                                                currentValue.filter(
+                                                  (id) => id !== group.id,
+                                                ),
+                                              )
                                             } else {
-                                              field.onChange([...currentValue, group.id])
+                                              field.onChange([
+                                                ...currentValue,
+                                                group.id,
+                                              ])
                                             }
                                           }}
                                         >
                                           <div className="flex items-center gap-2 w-full">
                                             <input
                                               type="checkbox"
-                                              checked={field.value?.includes(group.id) || false}
+                                              checked={
+                                                field.value?.includes(
+                                                  group.id,
+                                                ) || false
+                                              }
                                               onChange={() => {}}
                                               className="h-4 w-4 rounded border-gray-300"
                                             />
@@ -533,7 +601,9 @@ function EditClientPage() {
                                     <div className="flex flex-wrap gap-1 flex-1">
                                       {field.value && field.value.length > 0 ? (
                                         field.value.map((apiId) => {
-                                          const api = apisData?.data?.find((a) => a.id === apiId)
+                                          const api = apisData?.data?.find(
+                                            (a) => a.id === apiId,
+                                          )
                                           if (!api) return null
                                           const fullPath = getApiFullPath(api)
                                           return (
@@ -544,7 +614,11 @@ function EditClientPage() {
                                               title={`${api.http_method} ${fullPath}`}
                                               onClick={(e) => {
                                                 e.stopPropagation()
-                                                field.onChange(field.value.filter((id) => id !== apiId))
+                                                field.onChange(
+                                                  field.value.filter(
+                                                    (id) => id !== apiId,
+                                                  ),
+                                                )
                                               }}
                                             >
                                               {api.http_method} {fullPath}
@@ -558,7 +632,11 @@ function EditClientPage() {
                                                 onClick={(e) => {
                                                   e.preventDefault()
                                                   e.stopPropagation()
-                                                  field.onChange(field.value.filter((id) => id !== apiId))
+                                                  field.onChange(
+                                                    field.value.filter(
+                                                      (id) => id !== apiId,
+                                                    ),
+                                                  )
                                                 }}
                                               >
                                                 <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -567,7 +645,9 @@ function EditClientPage() {
                                           )
                                         })
                                       ) : (
-                                        <span className="text-muted-foreground">Select direct APIs...</span>
+                                        <span className="text-muted-foreground">
+                                          Select direct APIs...
+                                        </span>
                                       )}
                                     </div>
                                     <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
@@ -583,7 +663,9 @@ function EditClientPage() {
                                       <Input
                                         placeholder="Search by name, path, method..."
                                         value={apiSearch}
-                                        onChange={(e) => setApiSearch(e.target.value)}
+                                        onChange={(e) =>
+                                          setApiSearch(e.target.value)
+                                        }
                                         onKeyDown={(e) => e.stopPropagation()}
                                         className="pl-7 h-8"
                                       />
@@ -598,22 +680,39 @@ function EditClientPage() {
                                             key={api.id}
                                             onSelect={(e) => {
                                               e.preventDefault()
-                                              const currentValue = field.value || []
-                                              if (currentValue.includes(api.id)) {
-                                                field.onChange(currentValue.filter((id) => id !== api.id))
+                                              const currentValue =
+                                                field.value || []
+                                              if (
+                                                currentValue.includes(api.id)
+                                              ) {
+                                                field.onChange(
+                                                  currentValue.filter(
+                                                    (id) => id !== api.id,
+                                                  ),
+                                                )
                                               } else {
-                                                field.onChange([...currentValue, api.id])
+                                                field.onChange([
+                                                  ...currentValue,
+                                                  api.id,
+                                                ])
                                               }
                                             }}
                                           >
                                             <div className="flex items-center gap-2 w-full min-w-0">
                                               <input
                                                 type="checkbox"
-                                                checked={field.value?.includes(api.id) || false}
+                                                checked={
+                                                  field.value?.includes(
+                                                    api.id,
+                                                  ) || false
+                                                }
                                                 onChange={() => {}}
                                                 className="h-4 w-4 rounded border-gray-300 shrink-0"
                                               />
-                                              <span className="truncate font-mono text-xs" title={`${api.name} — ${api.http_method} ${fullPath}`}>
+                                              <span
+                                                className="truncate font-mono text-xs"
+                                                title={`${api.name} — ${api.http_method} ${fullPath}`}
+                                              >
                                                 {api.http_method} {fullPath}
                                               </span>
                                             </div>
@@ -646,10 +745,7 @@ function EditClientPage() {
           </Card>
 
           <div className="flex items-center justify-end gap-4">
-            <LoadingButton
-              type="submit"
-              loading={updateMutation.isPending}
-            >
+            <LoadingButton type="submit" loading={updateMutation.isPending}>
               Update Client
             </LoadingButton>
           </div>

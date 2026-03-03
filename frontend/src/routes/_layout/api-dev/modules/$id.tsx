@@ -1,14 +1,24 @@
-import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, ArrowLeft } from "lucide-react"
-import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/Common/DataTable"
 import {
-  apiColumns,
-  type ApiTableData,
-} from "@/components/ApiDev/api-columns"
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router"
+import { ArrowLeft, Plus } from "lucide-react"
+import { useState } from "react"
+import { type ApiTableData, apiColumns } from "@/components/ApiDev/api-columns"
+import { DataTable } from "@/components/Common/DataTable"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogClose,
@@ -19,12 +29,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { LoadingButton } from "@/components/ui/loading-button"
-import { ModulesService } from "@/services/modules"
-import { ApiAssignmentsService } from "@/services/api-assignments"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
+import { ApiAssignmentsService } from "@/services/api-assignments"
+import { ModulesService } from "@/services/modules"
 
 export const Route = createFileRoute("/_layout/api-dev/modules/$id")({
   component: ModuleDetail,
@@ -47,7 +55,7 @@ function ModuleDetail() {
   const canCreateApi = hasPermission("api_assignment", "create")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteApiId, setDeleteApiId] = useState<string | null>(null)
-  
+
   // Check if we're on the edit route
   const isEditRoute = matchRoute({ to: "/api-dev/modules/$id/edit" })
 
@@ -60,11 +68,12 @@ function ModuleDetail() {
   // Fetch APIs in this module
   const { data: apisData, isLoading: apisLoading } = useQuery({
     queryKey: ["api-assignments", { module_id: id }],
-    queryFn: () => ApiAssignmentsService.list({
-      module_id: id,
-      page: 1,
-      page_size: 100,
-    }),
+    queryFn: () =>
+      ApiAssignmentsService.list({
+        module_id: id,
+        page: 1,
+        page_size: 100,
+      }),
     enabled: !isEditRoute, // Don't fetch APIs when on edit route
   })
 
@@ -86,7 +95,9 @@ function ModuleDetail() {
     mutationFn: (apiId: string) => ApiAssignmentsService.delete(apiId),
     onSuccess: () => {
       showSuccessToast("API deleted successfully")
-      queryClient.invalidateQueries({ queryKey: ["api-assignments", { module_id: id }] })
+      queryClient.invalidateQueries({
+        queryKey: ["api-assignments", { module_id: id }],
+      })
       queryClient.invalidateQueries({ queryKey: ["api-assignments"] })
       setDeleteApiId(null)
     },
@@ -101,7 +112,9 @@ function ModuleDetail() {
     mutationFn: (apiId: string) => ApiAssignmentsService.publish({ id: apiId }),
     onSuccess: () => {
       showSuccessToast("API published successfully")
-      queryClient.invalidateQueries({ queryKey: ["api-assignments", { module_id: id }] })
+      queryClient.invalidateQueries({
+        queryKey: ["api-assignments", { module_id: id }],
+      })
       queryClient.invalidateQueries({ queryKey: ["api-assignments"] })
     },
     onError: (error: Error) => {
@@ -115,11 +128,17 @@ function ModuleDetail() {
   }
 
   if (moduleLoading) {
-    return <div className="text-center py-8 text-muted-foreground">Loading...</div>
+    return (
+      <div className="text-center py-8 text-muted-foreground">Loading...</div>
+    )
   }
 
   if (!module) {
-    return <div className="text-center py-8 text-muted-foreground">Module not found</div>
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Module not found
+      </div>
+    )
   }
 
   const handleDelete = () => {
@@ -140,15 +159,16 @@ function ModuleDetail() {
     }
   }
 
-  const tableData: ApiTableData[] =
-    (Array.isArray(apisData?.data) ? apisData.data : []).map((api) => ({
-      ...api,
-      module_name: module.name,
-      onDelete: handleDeleteApi,
-      onPublish: handlePublishApi,
-      canUpdate: hasPermission("api_assignment", "update", api.id),
-      canDelete: hasPermission("api_assignment", "delete", api.id),
-    }))
+  const tableData: ApiTableData[] = (
+    Array.isArray(apisData?.data) ? apisData.data : []
+  ).map((api) => ({
+    ...api,
+    module_name: module.name,
+    onDelete: handleDeleteApi,
+    onPublish: handlePublishApi,
+    canUpdate: hasPermission("api_assignment", "update", api.id),
+    canDelete: hasPermission("api_assignment", "delete", api.id),
+  }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -186,17 +206,23 @@ function ModuleDetail() {
         <CardContent>
           <div className="flex items-center gap-12 flex-wrap">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Path Prefix</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Path Prefix
+              </p>
               <p className="font-mono text-sm">{module.path_prefix}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Status</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Status
+              </p>
               <Badge variant={module.is_active ? "default" : "outline"}>
                 {module.is_active ? "Active" : "Inactive"}
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Updated</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Updated
+              </p>
               <p className="text-sm text-muted-foreground">
                 {new Date(module.updated_at).toLocaleString()}
               </p>
@@ -223,12 +249,18 @@ function ModuleDetail() {
       {/* Delete Module Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <form onSubmit={(e) => { e.preventDefault(); handleDelete(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleDelete()
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Delete Module</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete <strong>{module.name}</strong>? 
-                This action cannot be undone. All APIs in this module will also be deleted.
+                Are you sure you want to delete <strong>{module.name}</strong>?
+                This action cannot be undone. All APIs in this module will also
+                be deleted.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
@@ -250,19 +282,30 @@ function ModuleDetail() {
       </Dialog>
 
       {/* Delete API Confirmation Dialog */}
-      <Dialog open={deleteApiId !== null} onOpenChange={(open) => !open && setDeleteApiId(null)}>
+      <Dialog
+        open={deleteApiId !== null}
+        onOpenChange={(open) => !open && setDeleteApiId(null)}
+      >
         <DialogContent className="sm:max-w-md">
-          <form onSubmit={(e) => { e.preventDefault(); confirmDeleteApi() }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              confirmDeleteApi()
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Delete API</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this API? 
-                This action cannot be undone. All associated data will be permanently deleted.
+                Are you sure you want to delete this API? This action cannot be
+                undone. All associated data will be permanently deleted.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
               <DialogClose asChild>
-                <Button variant="outline" disabled={deleteApiMutation.isPending}>
+                <Button
+                  variant="outline"
+                  disabled={deleteApiMutation.isPending}
+                >
                   Cancel
                 </Button>
               </DialogClose>

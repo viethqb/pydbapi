@@ -1,18 +1,22 @@
-import { createFileRoute, Link, useNavigate, Outlet, useMatchRoute } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Edit, Play, Trash2, ArrowLeft } from "lucide-react"
-import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from "@/components/ui/table"
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router"
+import { ArrowLeft, Edit, Play, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -21,10 +25,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { DataSourceService } from "@/services/datasource"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table"
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
 import { cn } from "@/lib/utils"
+import { DataSourceService } from "@/services/datasource"
 
 export const Route = createFileRoute("/_layout/connection/$id")({
   component: ConnectionDetail,
@@ -48,7 +59,7 @@ function ConnectionDetail() {
   const canExecute = hasPermission("datasource", "execute", id)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const matchRoute = useMatchRoute()
-  
+
   // Check if we're on the edit route
   const isEditRoute = matchRoute({ to: "/connection/$id/edit" })
 
@@ -139,7 +150,9 @@ function ConnectionDetail() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{datasource.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {datasource.name}
+            </h1>
             <p className="text-muted-foreground mt-1">Data Source Details</p>
           </div>
         </div>
@@ -163,10 +176,7 @@ function ConnectionDetail() {
             </Button>
           )}
           {canDelete && (
-            <Button
-              variant="destructive"
-              onClick={() => setDeleteOpen(true)}
-            >
+            <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
@@ -204,11 +214,15 @@ function ConnectionDetail() {
               </TableRow>
               <TableRow>
                 <TableHead className="w-[180px]">Database</TableHead>
-                <TableCell className="font-mono">{datasource.database}</TableCell>
+                <TableCell className="font-mono">
+                  {datasource.database}
+                </TableCell>
               </TableRow>
               <TableRow>
                 <TableHead className="w-[180px]">Username</TableHead>
-                <TableCell className="font-mono">{datasource.username}</TableCell>
+                <TableCell className="font-mono">
+                  {datasource.username}
+                </TableCell>
               </TableRow>
               <TableRow>
                 <TableHead className="w-[180px]">Password</TableHead>
@@ -229,9 +243,7 @@ function ConnectionDetail() {
                       <span
                         className={cn(
                           "size-2 rounded-full",
-                          datasource.is_active
-                            ? "bg-green-500"
-                            : "bg-gray-400",
+                          datasource.is_active ? "bg-green-500" : "bg-gray-400",
                         )}
                       />
                       <span

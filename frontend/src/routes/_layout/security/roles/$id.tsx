@@ -1,9 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft, Plus, Save, Search, UserMinus } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { UsersService, type UserPublic as ClientUserPublic } from "@/client"
+import { type UserPublic as ClientUserPublic, UsersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
   SelectContent,
@@ -24,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Table,
   TableBody,
@@ -33,10 +33,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { PermissionsService } from "@/services/permissions"
-import { RolesService, type UserPublic as RoleUserPublic } from "@/services/roles"
-import { UserPermissionsService } from "@/services/user-permissions"
 import useCustomToast from "@/hooks/useCustomToast"
+import { PermissionsService } from "@/services/permissions"
+import {
+  RolesService,
+  type UserPublic as RoleUserPublic,
+} from "@/services/roles"
+import { UserPermissionsService } from "@/services/user-permissions"
 
 const ROLES_BASE = "/security/roles"
 const ROLES_LIST = `${ROLES_BASE}/`
@@ -112,7 +115,7 @@ function RoleDetailPage() {
       map.set(normId(m.id), m.name)
     }
     return map
-  }, [resourceNames])
+  }, [resourceNames, normId])
 
   const datasourceNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -120,7 +123,7 @@ function RoleDetailPage() {
       map.set(normId(ds.id), ds.name)
     }
     return map
-  }, [resourceNames])
+  }, [resourceNames, normId])
 
   const groupNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -128,7 +131,7 @@ function RoleDetailPage() {
       map.set(normId(g.id), g.name)
     }
     return map
-  }, [resourceNames])
+  }, [resourceNames, normId])
 
   const apiAssignmentNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -136,7 +139,7 @@ function RoleDetailPage() {
       map.set(normId(a.id), a.name)
     }
     return map
-  }, [resourceNames])
+  }, [resourceNames, normId])
 
   const macroDefNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -144,7 +147,7 @@ function RoleDetailPage() {
       map.set(normId(m.id), m.name)
     }
     return map
-  }, [resourceNames])
+  }, [resourceNames, normId])
 
   const clientNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -152,7 +155,7 @@ function RoleDetailPage() {
       map.set(normId(c.id), c.name)
     }
     return map
-  }, [resourceNames])
+  }, [resourceNames, normId])
 
   const [name, setName] = useState("")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -187,8 +190,7 @@ function RoleDetailPage() {
     const q = permSearch.trim().toLowerCase()
     return entries.filter(([groupKey]) => {
       const [resourceType, scopePart] = groupKey.split(":", 2)
-      const scope =
-        scopePart === "all" ? "all" : scopePart
+      const scope = scopePart === "all" ? "all" : scopePart
       const label = `${resourceType} ${scope}`.toLowerCase()
       return label.includes(q)
     })
@@ -378,17 +380,23 @@ function RoleDetailPage() {
                   scopePart === "all"
                     ? "All"
                     : resourceType === "module"
-                      ? moduleNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
+                      ? (moduleNameById.get(key) ??
+                        `ID: ${String(scopePart).slice(0, 8)}…`)
                       : resourceType === "datasource"
-                        ? datasourceNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
+                        ? (datasourceNameById.get(key) ??
+                          `ID: ${String(scopePart).slice(0, 8)}…`)
                         : resourceType === "group"
-                          ? groupNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
+                          ? (groupNameById.get(key) ??
+                            `ID: ${String(scopePart).slice(0, 8)}…`)
                           : resourceType === "api_assignment"
-                            ? apiAssignmentNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
+                            ? (apiAssignmentNameById.get(key) ??
+                              `ID: ${String(scopePart).slice(0, 8)}…`)
                             : resourceType === "macro_def"
-                              ? macroDefNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
+                              ? (macroDefNameById.get(key) ??
+                                `ID: ${String(scopePart).slice(0, 8)}…`)
                               : resourceType === "client"
-                                ? clientNameById.get(key) ?? `ID: ${String(scopePart).slice(0, 8)}…`
+                                ? (clientNameById.get(key) ??
+                                  `ID: ${String(scopePart).slice(0, 8)}…`)
                                 : `ID: ${scopePart.slice(0, 8)}…`
                 const label = `${resourceType.replace(/_/g, " ")} · ${scope}`
                 return (
@@ -413,10 +421,7 @@ function RoleDetailPage() {
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 pl-6">
                       {perms.map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center gap-1.5"
-                        >
+                        <div key={p.id} className="flex items-center gap-1.5">
                           <Checkbox
                             id={p.id}
                             checked={selectedIds.has(p.id)}
@@ -486,7 +491,9 @@ function RoleDetailPage() {
                     user={u}
                     roleId={id}
                     onRemoved={() => {
-                      queryClient.invalidateQueries({ queryKey: ["roleUsers", id] })
+                      queryClient.invalidateQueries({
+                        queryKey: ["roleUsers", id],
+                      })
                       queryClient.invalidateQueries({ queryKey: ["role", id] })
                       queryClient.invalidateQueries({ queryKey: ["roles"] })
                     }}
@@ -597,7 +604,10 @@ function AddUserToRoleDialog({
     mutationFn: async (userId: string) => {
       const { role_ids } = await UserPermissionsService.getUserRoles(userId)
       if (role_ids.includes(roleId)) return
-      return UserPermissionsService.updateUserRoles(userId, [...role_ids, roleId])
+      return UserPermissionsService.updateUserRoles(userId, [
+        ...role_ids,
+        roleId,
+      ])
     },
     onSuccess: () => {
       showSuccess("User added to role")

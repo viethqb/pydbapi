@@ -1,4 +1,9 @@
-import { createFileRoute, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const Route = createFileRoute("/_layout/admin")({
@@ -31,12 +36,14 @@ function AdminLayout() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">Admin</h1>
-        <p className="text-muted-foreground">
-          Manage users and roles
-        </p>
+        <p className="text-muted-foreground">Manage users and roles</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="roles">Roles</TabsTrigger>

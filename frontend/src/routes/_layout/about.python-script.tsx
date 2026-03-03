@@ -1,10 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Code, Copy, Check } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Check, Code, Copy } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 import useCustomToast from "@/hooks/useCustomToast"
-import { Button } from "@/components/ui/button"
 
 export const Route = createFileRoute("/_layout/about/python-script")({
   component: PythonScriptGuide,
@@ -61,21 +67,41 @@ function PythonScriptGuide() {
             Python Script Engine
           </CardTitle>
           <CardDescription>
-            Write Python scripts in a secure RestrictedPython sandbox with built-in helpers for database, HTTP, cache, and more
+            Write Python scripts in a secure RestrictedPython sandbox with
+            built-in helpers for database, HTTP, cache, and more
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold mb-3">Overview</h3>
             <p className="text-muted-foreground">
-              The Script engine executes your Python code inside a RestrictedPython sandbox.
-              You cannot use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">import</code> —
-              instead, all functionality is provided through injected context objects
-              (<code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">db</code>,{" "}
-              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">http</code>,{" "}
-              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">cache</code>, etc.)
-              and safe built-ins (<code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">json</code>,{" "}
-              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">datetime</code>, etc.).
+              The Script engine executes your Python code inside a
+              RestrictedPython sandbox. You cannot use{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                import
+              </code>{" "}
+              — instead, all functionality is provided through injected context
+              objects (
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                db
+              </code>
+              ,{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                http
+              </code>
+              ,{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                cache
+              </code>
+              , etc.) and safe built-ins (
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                json
+              </code>
+              ,{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                datetime
+              </code>
+              , etc.).
             </p>
           </div>
 
@@ -83,33 +109,55 @@ function PythonScriptGuide() {
             <h3 className="text-lg font-semibold mb-3">Returning Data</h3>
             <div className="p-4 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-md">
               <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-2">
-                Your script must return data via one of two patterns (checked in this order):
+                Your script must return data via one of two patterns (checked in
+                this order):
               </p>
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                    Option 1 (preferred): <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">def execute(params=None)</code> function
+                    Option 1 (preferred):{" "}
+                    <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">
+                      def execute(params=None)
+                    </code>{" "}
+                    function
                   </p>
                   <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                    Define a function that receives params dict and returns the result.
-                    The gateway wraps the return value in <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">{`{"success": true, "data": <return_value>}`}</code>.
-                    If your function returns <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">{`{"success": ..., "data": ..., "message": ...}`}</code>,
-                    those keys are promoted to the top-level envelope.
+                    Define a function that receives params dict and returns the
+                    result. The gateway wraps the return value in{" "}
+                    <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">{`{"success": true, "data": <return_value>}`}</code>
+                    . If your function returns{" "}
+                    <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">{`{"success": ..., "data": ..., "message": ...}`}</code>
+                    , those keys are promoted to the top-level envelope.
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                    Option 2: Global <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">result</code> variable
+                    Option 2: Global{" "}
+                    <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">
+                      result
+                    </code>{" "}
+                    variable
                   </p>
                   <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                    Assign data to the global <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">result</code> variable directly.
-                    Useful for simple scripts without function definitions.
+                    Assign data to the global{" "}
+                    <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">
+                      result
+                    </code>{" "}
+                    variable directly. Useful for simple scripts without
+                    function definitions.
                   </p>
                 </div>
               </div>
               <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
-                If neither is set, the API returns <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">null</code>.
-                The executor checks for <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">execute()</code> first — if both exist, the function takes priority.
+                If neither is set, the API returns{" "}
+                <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">
+                  null
+                </code>
+                . The executor checks for{" "}
+                <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900 rounded text-xs font-mono">
+                  execute()
+                </code>{" "}
+                first — if both exist, the function takes priority.
               </p>
             </div>
           </div>
@@ -123,16 +171,19 @@ function PythonScriptGuide() {
                   Request Parameters
                 </h4>
                 <p className="text-sm text-muted-foreground mb-2">
-                  A dict containing all merged parameters (path, query, body, header):
+                  A dict containing all merged parameters (path, query, body,
+                  header):
                 </p>
-                <CodeBlock code={`# Access individual params
+                <CodeBlock
+                  code={`# Access individual params
 user_id = req.get("user_id")
 name = req.get("name", "default")
 page = req.get("page", 1)
 
 # req is a regular dict
 for key, value in req.items():
-    log.info(f"{key} = {value}")`} />
+    log.info(f"{key} = {value}")`}
+                />
               </div>
 
               <div>
@@ -141,24 +192,44 @@ for key, value in req.items():
                   Database Operations
                 </h4>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Execute SQL against the configured data source. Use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">%s</code> placeholders for safe parameterized queries:
+                  Execute SQL against the configured data source. Use{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    %s
+                  </code>{" "}
+                  placeholders for safe parameterized queries:
                 </p>
                 <div className="space-y-1 mb-3">
                   <div>
-                    <code className="text-xs font-mono text-foreground">db.query(sql, params?)</code>
-                    <span className="text-xs text-muted-foreground ml-2">Returns list[dict] — multiple rows</span>
+                    <code className="text-xs font-mono text-foreground">
+                      db.query(sql, params?)
+                    </code>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      Returns list[dict] — multiple rows
+                    </span>
                   </div>
                   <div>
-                    <code className="text-xs font-mono text-foreground">db.query_one(sql, params?)</code>
-                    <span className="text-xs text-muted-foreground ml-2">Returns dict | None — first row only</span>
+                    <code className="text-xs font-mono text-foreground">
+                      db.query_one(sql, params?)
+                    </code>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      Returns dict | None — first row only
+                    </span>
                   </div>
                   <div>
-                    <code className="text-xs font-mono text-foreground">db.execute(sql, params?)</code>
-                    <span className="text-xs text-muted-foreground ml-2">Returns int — affected row count (INSERT/UPDATE/DELETE)</span>
+                    <code className="text-xs font-mono text-foreground">
+                      db.execute(sql, params?)
+                    </code>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      Returns int — affected row count (INSERT/UPDATE/DELETE)
+                    </span>
                   </div>
                   <div>
-                    <code className="text-xs font-mono text-foreground">db.insert / db.update / db.delete</code>
-                    <span className="text-xs text-muted-foreground ml-2">Aliases for db.execute()</span>
+                    <code className="text-xs font-mono text-foreground">
+                      db.insert / db.update / db.delete
+                    </code>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      Aliases for db.execute()
+                    </span>
                   </div>
                 </div>
                 <CodeBlock
@@ -237,8 +308,12 @@ resp = http.get(url, headers={"X-API-Key": "abc"}, cookies={"session": "xyz"})
                   Cache (Redis)
                 </h4>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Read and write cached data with optional TTL. Keys are auto-prefixed with{" "}
-                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">script:</code>:
+                  Read and write cached data with optional TTL. Keys are
+                  auto-prefixed with{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    script:
+                  </code>
+                  :
                 </p>
                 <CodeBlock
                   code={`# Get (returns None if not found)
@@ -291,7 +366,8 @@ log.debug("Debug details")
                   Environment Variables
                 </h4>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Access whitelisted environment variables (prevents leaking secrets):
+                  Access whitelisted environment variables (prevents leaking
+                  secrets):
                 </p>
                 <CodeBlock
                   code={`api_key = env.get("EXTERNAL_API_KEY", default=None)
@@ -334,7 +410,8 @@ name = ds["name"]`}
               <div className="p-3 border rounded-md">
                 <p className="text-sm font-medium">Utilities</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  len, min, max, sum, abs, round, sorted, enumerate, zip, map, filter
+                  len, min, max, sum, abs, round, sorted, enumerate, zip, map,
+                  filter
                 </p>
               </div>
               <div className="p-3 border rounded-md">
@@ -356,10 +433,16 @@ name = ds["name"]`}
             <h3 className="text-lg font-semibold mb-3">Extra Libraries</h3>
             <p className="text-sm text-muted-foreground mb-2">
               Admins can whitelist additional modules via{" "}
-              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">SCRIPT_EXTRA_MODULES</code>{" "}
-              (e.g. <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">pandas,numpy</code>).
-              Whitelisted modules are injected as globals — use them directly, no import needed.
-              The module must be installed in the backend environment.
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                SCRIPT_EXTRA_MODULES
+              </code>{" "}
+              (e.g.{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                pandas,numpy
+              </code>
+              ). Whitelisted modules are injected as globals — use them
+              directly, no import needed. The module must be installed in the
+              backend environment.
             </p>
             <CodeBlock
               code={`# When SCRIPT_EXTRA_MODULES includes "pandas":
@@ -477,19 +560,75 @@ else:
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-3">Security and Limitations</h3>
+            <h3 className="text-lg font-semibold mb-3">
+              Security and Limitations
+            </h3>
             <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md space-y-2">
               <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                 Sandboxed Execution (RestrictedPython)
               </p>
               <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-4 list-disc">
-                <li>No file system access — <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">open()</code>, <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">os</code>, <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">subprocess</code> are blocked</li>
-                <li>No arbitrary imports — only context objects and whitelisted modules via <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">SCRIPT_EXTRA_MODULES</code></li>
-                <li>No dangerous builtins — <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">exec</code>, <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">eval</code>, <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">compile</code>, <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">__import__</code> are blocked</li>
-                <li>Attribute and item access are guarded by RestrictedPython</li>
-                <li>Optional timeout via <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">SCRIPT_EXEC_TIMEOUT</code> (seconds) — aborts long-running scripts</li>
-                <li>HTTP calls can be restricted to specific hosts via <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">SCRIPT_HTTP_ALLOWED_HOSTS</code></li>
-                <li>Python macros from Macro Definitions are auto-prepended to your script</li>
+                <li>
+                  No file system access —{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    open()
+                  </code>
+                  ,{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    os
+                  </code>
+                  ,{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    subprocess
+                  </code>{" "}
+                  are blocked
+                </li>
+                <li>
+                  No arbitrary imports — only context objects and whitelisted
+                  modules via{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    SCRIPT_EXTRA_MODULES
+                  </code>
+                </li>
+                <li>
+                  No dangerous builtins —{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    exec
+                  </code>
+                  ,{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    eval
+                  </code>
+                  ,{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    compile
+                  </code>
+                  ,{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    __import__
+                  </code>{" "}
+                  are blocked
+                </li>
+                <li>
+                  Attribute and item access are guarded by RestrictedPython
+                </li>
+                <li>
+                  Optional timeout via{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    SCRIPT_EXEC_TIMEOUT
+                  </code>{" "}
+                  (seconds) — aborts long-running scripts
+                </li>
+                <li>
+                  HTTP calls can be restricted to specific hosts via{" "}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs font-mono">
+                    SCRIPT_HTTP_ALLOWED_HOSTS
+                  </code>
+                </li>
+                <li>
+                  Python macros from Macro Definitions are auto-prepended to
+                  your script
+                </li>
               </ul>
             </div>
           </div>
@@ -499,27 +638,84 @@ else:
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5 shrink-0">1.</span>
-                <span><strong className="text-foreground">Return data</strong> — use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">def execute(params)</code> or assign to <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">result</code>. If neither is set, the API returns null.</span>
+                <span>
+                  <strong className="text-foreground">Return data</strong> — use{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    def execute(params)
+                  </code>{" "}
+                  or assign to{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    result
+                  </code>
+                  . If neither is set, the API returns null.
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5 shrink-0">2.</span>
-                <span><strong className="text-foreground">Use parameterized queries</strong> — always use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">%s</code> placeholders with <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">db.query(sql, params)</code> instead of string formatting.</span>
+                <span>
+                  <strong className="text-foreground">
+                    Use parameterized queries
+                  </strong>{" "}
+                  — always use{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    %s
+                  </code>{" "}
+                  placeholders with{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    db.query(sql, params)
+                  </code>{" "}
+                  instead of string formatting.
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5 shrink-0">3.</span>
-                <span><strong className="text-foreground">Handle errors</strong> — use try/except and return meaningful error messages.</span>
+                <span>
+                  <strong className="text-foreground">Handle errors</strong> —
+                  use try/except and return meaningful error messages.
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5 shrink-0">4.</span>
-                <span><strong className="text-foreground">Use transactions</strong> — wrap multi-step DB operations in <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">tx.begin()</code> / <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">tx.commit()</code> for atomicity.</span>
+                <span>
+                  <strong className="text-foreground">Use transactions</strong>{" "}
+                  — wrap multi-step DB operations in{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    tx.begin()
+                  </code>{" "}
+                  /{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    tx.commit()
+                  </code>{" "}
+                  for atomicity.
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5 shrink-0">5.</span>
-                <span><strong className="text-foreground">Cache expensive operations</strong> — use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">cache</code> to avoid repeated DB or HTTP calls.</span>
+                <span>
+                  <strong className="text-foreground">
+                    Cache expensive operations
+                  </strong>{" "}
+                  — use{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    cache
+                  </code>{" "}
+                  to avoid repeated DB or HTTP calls.
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5 shrink-0">6.</span>
-                <span><strong className="text-foreground">Log for debugging</strong> — use <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">log.info()</code> / <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">log.error()</code> to trace execution in backend logs.</span>
+                <span>
+                  <strong className="text-foreground">Log for debugging</strong>{" "}
+                  — use{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    log.info()
+                  </code>{" "}
+                  /{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    log.error()
+                  </code>{" "}
+                  to trace execution in backend logs.
+                </span>
               </li>
             </ul>
           </div>

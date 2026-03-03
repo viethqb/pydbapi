@@ -28,7 +28,7 @@ _PING_IDLE_THRESHOLD = 30.0  # only ping connections idle longer than this (seco
 class _PoolEntry(NamedTuple):
     conn: Any
     created_at: float  # time.monotonic() when the connection was opened
-    last_used: float   # time.monotonic() when last returned to pool
+    last_used: float  # time.monotonic() when last returned to pool
 
 
 class PoolManager:

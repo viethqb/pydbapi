@@ -1,5 +1,11 @@
-import { createFileRoute, Link, useNavigate, Outlet, useMatchRoute } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router"
 import { ArrowRight, Pencil } from "lucide-react"
 import { useMemo } from "react"
 
@@ -95,7 +101,8 @@ function RoleDetailViewPage() {
 
   const datasourceNameById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const ds of resourceNames?.datasources ?? []) map.set(normId(ds.id), ds.name)
+    for (const ds of resourceNames?.datasources ?? [])
+      map.set(normId(ds.id), ds.name)
     return map
   }, [resourceNames])
 
@@ -107,13 +114,15 @@ function RoleDetailViewPage() {
 
   const apiAssignmentNameById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const a of resourceNames?.api_assignments ?? []) map.set(normId(a.id), a.name)
+    for (const a of resourceNames?.api_assignments ?? [])
+      map.set(normId(a.id), a.name)
     return map
   }, [resourceNames])
 
   const macroDefNameById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const m of resourceNames?.macro_defs ?? []) map.set(normId(m.id), m.name)
+    for (const m of resourceNames?.macro_defs ?? [])
+      map.set(normId(m.id), m.name)
     return map
   }, [resourceNames])
 
@@ -129,17 +138,31 @@ function RoleDetailViewPage() {
       const key = normId(resourceId)
       switch (resourceType) {
         case "module":
-          return moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "datasource":
-          return datasourceNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            datasourceNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "group":
-          return groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "api_assignment":
-          return apiAssignmentNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            apiAssignmentNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "macro_def":
-          return macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "client":
-          return clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         default:
           return `ID:${String(resourceId).slice(0, 8)}…`
       }
@@ -178,7 +201,9 @@ function RoleDetailViewPage() {
 
     return order
       .filter((t) => (byType.get(t)?.length ?? 0) > 0)
-      .map((t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const)
+      .map(
+        (t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const,
+      )
   }, [permsData, selectedIdSet, getResourceName])
 
   // When URL is /admin/roles/:id/edit, render the edit child (Outlet), not the detail view
@@ -260,7 +285,9 @@ function RoleDetailViewPage() {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="max-w-md space-y-1.5">
-            <Label className="text-sm font-normal text-muted-foreground">Name</Label>
+            <Label className="text-sm font-normal text-muted-foreground">
+              Name
+            </Label>
             <div className="text-sm font-medium">{role.name}</div>
             <Label className="text-sm font-normal text-muted-foreground pt-2">
               Description
@@ -329,7 +356,9 @@ function RoleDetailViewPage() {
         </CardHeader>
         <CardContent className="pt-0">
           {usersLoading ? (
-            <div className="text-sm text-muted-foreground py-4">Loading users…</div>
+            <div className="text-sm text-muted-foreground py-4">
+              Loading users…
+            </div>
           ) : roleUsers.length === 0 ? (
             <div className="text-sm text-muted-foreground py-4 border rounded-md bg-muted/20 text-center">
               No users assigned. Go to edit to assign users.
@@ -365,4 +394,3 @@ function RoleDetailViewPage() {
     </div>
   )
 }
-

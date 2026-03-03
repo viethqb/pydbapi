@@ -1,24 +1,26 @@
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, ChevronDown, Search, X } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
 import { Badge } from "@/components/ui/badge"
-import { LoadingButton } from "@/components/ui/loading-button"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Form,
   FormControl,
@@ -28,17 +30,21 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Input } from "@/components/ui/input"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
-  ClientsService,
-  type AppClientCreate,
-} from "@/services/clients"
-import { GroupsService } from "@/services/groups"
-import { ApiAssignmentsService } from "@/services/api-assignments"
-
-import type { ApiAssignmentPublic } from "@/services/api-assignments"
-
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import type { ApiAssignmentPublic } from "@/services/api-assignments"
+import { ApiAssignmentsService } from "@/services/api-assignments"
+import { type AppClientCreate, ClientsService } from "@/services/clients"
+import { GroupsService } from "@/services/groups"
 import { handleError } from "@/utils"
 
 const createFormSchema = z.object({
@@ -121,19 +127,21 @@ function CreateClientPage() {
 
   const { data: apisData } = useQuery({
     queryKey: ["apis-published-for-client"],
-    queryFn: () => ApiAssignmentsService.list({ is_published: true, page: 1, page_size: 100 }),
+    queryFn: () =>
+      ApiAssignmentsService.list({
+        is_published: true,
+        page: 1,
+        page_size: 100,
+      }),
   })
 
   const [groupSearch, setGroupSearch] = useState("")
   const [apiSearch, setApiSearch] = useState("")
 
-  const getApiFullPath = useCallback(
-    (api: ApiAssignmentPublic): string => {
-      const p = (api.path || "").replace(/^\//, "")
-      return `/api/${p}`
-    },
-    [],
-  )
+  const getApiFullPath = useCallback((api: ApiAssignmentPublic): string => {
+    const p = (api.path || "").replace(/^\//, "")
+    return `/api/${p}`
+  }, [])
 
   const filteredGroups = useMemo(() => {
     const list = groupsData?.data ?? []
@@ -148,7 +156,8 @@ function CreateClientPage() {
     if (!q) return list
     return list.filter((api) => {
       const full = getApiFullPath(api)
-      const s = `${api.name} ${api.http_method} ${api.path} ${full}`.toLowerCase()
+      const s =
+        `${api.name} ${api.http_method} ${api.path} ${full}`.toLowerCase()
       return s.includes(q)
     })
   }, [apisData?.data, apiSearch, getApiFullPath])
@@ -183,9 +192,13 @@ function CreateClientPage() {
 
   const onSubmit = (data: CreateFormValues) => {
     const generateRandomString = (length: number) => {
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+      const chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
       const array = new Uint32Array(length)
-      if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+      if (
+        typeof crypto !== "undefined" &&
+        typeof crypto.getRandomValues === "function"
+      ) {
         crypto.getRandomValues(array)
       } else {
         for (let i = 0; i < length; i++) {
@@ -196,11 +209,14 @@ function CreateClientPage() {
     }
 
     const trimmedClientId = data.client_id?.trim() || ""
-    const finalClientId = trimmedClientId.length > 0 ? trimmedClientId : generateRandomString(16)
+    const finalClientId =
+      trimmedClientId.length > 0 ? trimmedClientId : generateRandomString(16)
 
     const trimmedClientSecret = data.client_secret?.trim() || ""
     const finalClientSecret =
-      trimmedClientSecret.length >= 8 ? trimmedClientSecret : generateRandomString(32)
+      trimmedClientSecret.length >= 8
+        ? trimmedClientSecret
+        : generateRandomString(32)
 
     createMutation.mutate({
       name: data.name,
@@ -221,7 +237,10 @@ function CreateClientPage() {
           : Number(data.token_expire_seconds),
       is_active: data.is_active,
       group_ids: data.group_ids.length > 0 ? data.group_ids : undefined,
-      api_assignment_ids: data.api_assignment_ids.length > 0 ? data.api_assignment_ids : undefined,
+      api_assignment_ids:
+        data.api_assignment_ids.length > 0
+          ? data.api_assignment_ids
+          : undefined,
     })
   }
 
@@ -247,8 +266,8 @@ function CreateClientPage() {
             <CardHeader>
               <CardTitle>Client Configuration</CardTitle>
               <CardDescription>
-                Fill in the table below to create a new client. Client ID and Secret can be customized or left
-                empty to auto-generate.
+                Fill in the table below to create a new client. Client ID and
+                Secret can be customized or left empty to auto-generate.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -287,7 +306,8 @@ function CreateClientPage() {
                               />
                             </FormControl>
                             <FormDescription>
-                              Optional. Only letters, numbers, underscores (_), and hyphens (-). Leave empty to auto-generate.
+                              Optional. Only letters, numbers, underscores (_),
+                              and hyphens (-). Leave empty to auto-generate.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -312,7 +332,9 @@ function CreateClientPage() {
                               />
                             </FormControl>
                             <FormDescription>
-                              Optional. Minimum 8 characters, maximum 512 characters. Leave empty to auto-generate a secure secret.
+                              Optional. Minimum 8 characters, maximum 512
+                              characters. Leave empty to auto-generate a secure
+                              secret.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -342,7 +364,9 @@ function CreateClientPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">Rate Limit (req/min)</TableHead>
+                    <TableHead className="w-[180px]">
+                      Rate Limit (req/min)
+                    </TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -355,7 +379,12 @@ function CreateClientPage() {
                                 min={1}
                                 placeholder="No limit"
                                 {...field}
-                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                value={
+                                  field.value === null ||
+                                  field.value === undefined
+                                    ? ""
+                                    : field.value
+                                }
                                 onChange={(e) => {
                                   const v = e.target.value
                                   field.onChange(v === "" ? null : Number(v))
@@ -385,7 +414,12 @@ function CreateClientPage() {
                                 min={1}
                                 placeholder="Use global default"
                                 {...field}
-                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                value={
+                                  field.value === null ||
+                                  field.value === undefined
+                                    ? ""
+                                    : field.value
+                                }
                                 onChange={(e) => {
                                   const v = e.target.value
                                   field.onChange(v === "" ? null : Number(v))
@@ -393,7 +427,8 @@ function CreateClientPage() {
                               />
                             </FormControl>
                             <FormDescription>
-                              Max concurrent requests. Empty = use global default.
+                              Max concurrent requests. Empty = use global
+                              default.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -402,7 +437,9 @@ function CreateClientPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">Token Expiration</TableHead>
+                    <TableHead className="w-[180px]">
+                      Token Expiration
+                    </TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -416,7 +453,12 @@ function CreateClientPage() {
                                 max={86400}
                                 placeholder="Use global default (3600s)"
                                 {...field}
-                                value={field.value === null || field.value === undefined ? "" : field.value}
+                                value={
+                                  field.value === null ||
+                                  field.value === undefined
+                                    ? ""
+                                    : field.value
+                                }
                                 onChange={(e) => {
                                   const v = e.target.value
                                   field.onChange(v === "" ? null : Number(v))
@@ -424,7 +466,8 @@ function CreateClientPage() {
                               />
                             </FormControl>
                             <FormDescription>
-                              JWT token lifetime in seconds (60–86400). Empty = use global default.
+                              JWT token lifetime in seconds (60–86400). Empty =
+                              use global default.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -469,7 +512,9 @@ function CreateClientPage() {
                                     <div className="flex flex-wrap gap-1 flex-1">
                                       {field.value && field.value.length > 0 ? (
                                         field.value.map((groupId) => {
-                                          const group = groupsData?.data?.find((g) => g.id === groupId)
+                                          const group = groupsData?.data?.find(
+                                            (g) => g.id === groupId,
+                                          )
                                           if (!group) return null
                                           return (
                                             <Badge
@@ -478,7 +523,11 @@ function CreateClientPage() {
                                               className="mr-1"
                                               onClick={(e) => {
                                                 e.stopPropagation()
-                                                field.onChange(field.value.filter((id) => id !== groupId))
+                                                field.onChange(
+                                                  field.value.filter(
+                                                    (id) => id !== groupId,
+                                                  ),
+                                                )
                                               }}
                                             >
                                               {group.name}
@@ -492,7 +541,11 @@ function CreateClientPage() {
                                                 onClick={(e) => {
                                                   e.preventDefault()
                                                   e.stopPropagation()
-                                                  field.onChange(field.value.filter((id) => id !== groupId))
+                                                  field.onChange(
+                                                    field.value.filter(
+                                                      (id) => id !== groupId,
+                                                    ),
+                                                  )
                                                 }}
                                               >
                                                 <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -501,7 +554,9 @@ function CreateClientPage() {
                                           )
                                         })
                                       ) : (
-                                        <span className="text-muted-foreground">Select groups...</span>
+                                        <span className="text-muted-foreground">
+                                          Select groups...
+                                        </span>
                                       )}
                                     </div>
                                     <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
@@ -517,7 +572,9 @@ function CreateClientPage() {
                                       <Input
                                         placeholder="Search groups..."
                                         value={groupSearch}
-                                        onChange={(e) => setGroupSearch(e.target.value)}
+                                        onChange={(e) =>
+                                          setGroupSearch(e.target.value)
+                                        }
                                         onKeyDown={(e) => e.stopPropagation()}
                                         className="pl-7 h-8"
                                       />
@@ -530,18 +587,32 @@ function CreateClientPage() {
                                           key={group.id}
                                           onSelect={(e) => {
                                             e.preventDefault()
-                                            const currentValue = field.value || []
-                                            if (currentValue.includes(group.id)) {
-                                              field.onChange(currentValue.filter((id) => id !== group.id))
+                                            const currentValue =
+                                              field.value || []
+                                            if (
+                                              currentValue.includes(group.id)
+                                            ) {
+                                              field.onChange(
+                                                currentValue.filter(
+                                                  (id) => id !== group.id,
+                                                ),
+                                              )
                                             } else {
-                                              field.onChange([...currentValue, group.id])
+                                              field.onChange([
+                                                ...currentValue,
+                                                group.id,
+                                              ])
                                             }
                                           }}
                                         >
                                           <div className="flex items-center gap-2 w-full">
                                             <input
                                               type="checkbox"
-                                              checked={field.value?.includes(group.id) || false}
+                                              checked={
+                                                field.value?.includes(
+                                                  group.id,
+                                                ) || false
+                                              }
                                               onChange={() => {}}
                                               className="h-4 w-4 rounded border-gray-300"
                                             />
@@ -584,7 +655,9 @@ function CreateClientPage() {
                                     <div className="flex flex-wrap gap-1 flex-1">
                                       {field.value && field.value.length > 0 ? (
                                         field.value.map((apiId) => {
-                                          const api = apisData?.data?.find((a) => a.id === apiId)
+                                          const api = apisData?.data?.find(
+                                            (a) => a.id === apiId,
+                                          )
                                           if (!api) return null
                                           const fullPath = getApiFullPath(api)
                                           return (
@@ -595,7 +668,11 @@ function CreateClientPage() {
                                               title={`${api.http_method} ${fullPath}`}
                                               onClick={(e) => {
                                                 e.stopPropagation()
-                                                field.onChange(field.value.filter((id) => id !== apiId))
+                                                field.onChange(
+                                                  field.value.filter(
+                                                    (id) => id !== apiId,
+                                                  ),
+                                                )
                                               }}
                                             >
                                               {api.http_method} {fullPath}
@@ -609,7 +686,11 @@ function CreateClientPage() {
                                                 onClick={(e) => {
                                                   e.preventDefault()
                                                   e.stopPropagation()
-                                                  field.onChange(field.value.filter((id) => id !== apiId))
+                                                  field.onChange(
+                                                    field.value.filter(
+                                                      (id) => id !== apiId,
+                                                    ),
+                                                  )
                                                 }}
                                               >
                                                 <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -618,7 +699,9 @@ function CreateClientPage() {
                                           )
                                         })
                                       ) : (
-                                        <span className="text-muted-foreground">Select direct APIs...</span>
+                                        <span className="text-muted-foreground">
+                                          Select direct APIs...
+                                        </span>
                                       )}
                                     </div>
                                     <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
@@ -634,7 +717,9 @@ function CreateClientPage() {
                                       <Input
                                         placeholder="Search by name, path, method..."
                                         value={apiSearch}
-                                        onChange={(e) => setApiSearch(e.target.value)}
+                                        onChange={(e) =>
+                                          setApiSearch(e.target.value)
+                                        }
                                         onKeyDown={(e) => e.stopPropagation()}
                                         className="pl-7 h-8"
                                       />
@@ -649,22 +734,39 @@ function CreateClientPage() {
                                             key={api.id}
                                             onSelect={(e) => {
                                               e.preventDefault()
-                                              const currentValue = field.value || []
-                                              if (currentValue.includes(api.id)) {
-                                                field.onChange(currentValue.filter((id) => id !== api.id))
+                                              const currentValue =
+                                                field.value || []
+                                              if (
+                                                currentValue.includes(api.id)
+                                              ) {
+                                                field.onChange(
+                                                  currentValue.filter(
+                                                    (id) => id !== api.id,
+                                                  ),
+                                                )
                                               } else {
-                                                field.onChange([...currentValue, api.id])
+                                                field.onChange([
+                                                  ...currentValue,
+                                                  api.id,
+                                                ])
                                               }
                                             }}
                                           >
                                             <div className="flex items-center gap-2 w-full min-w-0">
                                               <input
                                                 type="checkbox"
-                                                checked={field.value?.includes(api.id) || false}
+                                                checked={
+                                                  field.value?.includes(
+                                                    api.id,
+                                                  ) || false
+                                                }
                                                 onChange={() => {}}
                                                 className="h-4 w-4 rounded border-gray-300 shrink-0"
                                               />
-                                              <span className="truncate font-mono text-xs" title={`${api.name} — ${api.http_method} ${fullPath}`}>
+                                              <span
+                                                className="truncate font-mono text-xs"
+                                                title={`${api.name} — ${api.http_method} ${fullPath}`}
+                                              >
                                                 {api.http_method} {fullPath}
                                               </span>
                                             </div>
@@ -697,10 +799,7 @@ function CreateClientPage() {
           </Card>
 
           <div className="flex items-center justify-end gap-4">
-            <LoadingButton
-              type="submit"
-              loading={createMutation.isPending}
-            >
+            <LoadingButton type="submit" loading={createMutation.isPending}>
               Create Client
             </LoadingButton>
           </div>

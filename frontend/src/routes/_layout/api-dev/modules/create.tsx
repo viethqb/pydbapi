@@ -1,10 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
@@ -15,10 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { LoadingButton } from "@/components/ui/loading-button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -26,11 +30,9 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import {
-  ModulesService,
-  type ApiModuleCreate,
-} from "@/services/modules"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { type ApiModuleCreate, ModulesService } from "@/services/modules"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -154,7 +156,9 @@ function ModuleCreate() {
                                 placeholder="Optional description"
                                 {...field}
                                 value={field.value || ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
+                                onChange={(e) =>
+                                  field.onChange(e.target.value || null)
+                                }
                                 className="min-h-[80px]"
                               />
                             </FormControl>
@@ -192,10 +196,7 @@ function ModuleCreate() {
           </Card>
 
           <div className="flex items-center justify-end gap-4">
-            <LoadingButton
-              type="submit"
-              loading={createMutation.isPending}
-            >
+            <LoadingButton type="submit" loading={createMutation.isPending}>
               Create Module
             </LoadingButton>
           </div>

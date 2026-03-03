@@ -19,7 +19,9 @@ _LOG = logging.getLogger(__name__)
 
 _lock = threading.Lock()
 _client_str: "redis.Redis | None" = None  # decode_responses=True  (cache, config)
-_client_bytes: "redis.Redis | None" = None  # decode_responses=False (ratelimit, concurrent)
+_client_bytes: "redis.Redis | None" = (
+    None  # decode_responses=False (ratelimit, concurrent)
+)
 _tried_str = False
 _tried_bytes = False
 

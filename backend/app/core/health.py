@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Individual dependency checks
 # ---------------------------------------------------------------------------
 
+
 def check_postgres() -> bool:
     """Check Postgres (app DB) by running SELECT 1. Returns True if ok."""
     try:
@@ -64,6 +65,7 @@ def redis_required() -> bool:
 # ---------------------------------------------------------------------------
 # Composite probes
 # ---------------------------------------------------------------------------
+
 
 def liveness_check() -> tuple[bool, list[str]]:
     """

@@ -76,7 +76,8 @@ export function CreateRole() {
         <DialogHeader>
           <DialogTitle>Create role</DialogTitle>
           <DialogDescription>
-            Add a new role. After creating, use Edit permissions to set access, view, edit and delete per resource.
+            Add a new role. After creating, use Edit permissions to set access,
+            view, edit and delete per resource.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -101,7 +102,10 @@ export function CreateRole() {
                 <FormItem>
                   <FormLabel>Description (optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Read-only support role" {...field} />
+                    <Input
+                      placeholder="e.g. Read-only support role"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

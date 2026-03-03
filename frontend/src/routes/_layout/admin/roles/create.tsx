@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { ChevronDown, Save, X } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -82,7 +82,8 @@ function CreateRolePage() {
 
   const datasourceNameById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const ds of resourceNames?.datasources ?? []) map.set(normId(ds.id), ds.name)
+    for (const ds of resourceNames?.datasources ?? [])
+      map.set(normId(ds.id), ds.name)
     return map
   }, [resourceNames])
 
@@ -94,13 +95,15 @@ function CreateRolePage() {
 
   const apiAssignmentNameById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const a of resourceNames?.api_assignments ?? []) map.set(normId(a.id), a.name)
+    for (const a of resourceNames?.api_assignments ?? [])
+      map.set(normId(a.id), a.name)
     return map
   }, [resourceNames])
 
   const macroDefNameById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const m of resourceNames?.macro_defs ?? []) map.set(normId(m.id), m.name)
+    for (const m of resourceNames?.macro_defs ?? [])
+      map.set(normId(m.id), m.name)
     return map
   }, [resourceNames])
 
@@ -116,17 +119,31 @@ function CreateRolePage() {
       const key = normId(resourceId)
       switch (resourceType) {
         case "module":
-          return moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            moduleNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "datasource":
-          return datasourceNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            datasourceNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "group":
-          return groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            groupNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "api_assignment":
-          return apiAssignmentNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            apiAssignmentNameById.get(key) ??
+            `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "macro_def":
-          return macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            macroDefNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         case "client":
-          return clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          return (
+            clientNameById.get(key) ?? `ID:${String(resourceId).slice(0, 8)}…`
+          )
         default:
           return `ID:${String(resourceId).slice(0, 8)}…`
       }
@@ -171,7 +188,9 @@ function CreateRolePage() {
     }
     return order
       .filter((t) => byType.has(t))
-      .map((t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const)
+      .map(
+        (t) => [t, RESOURCE_TYPE_LABELS[t] ?? t, byType.get(t) ?? []] as const,
+      )
   }, [permissionRows])
 
   const togglePermission = (permId: string, checked: boolean) => {
@@ -272,13 +291,15 @@ function CreateRolePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Permissions</CardTitle>
           <p className="text-sm text-muted-foreground font-normal mt-0.5">
-            Select permissions by group (Datasource, Module, …). When closed, only selected
-            permissions are shown.
+            Select permissions by group (Datasource, Module, …). When closed,
+            only selected permissions are shown.
           </p>
         </CardHeader>
         <CardContent className="pt-0">
           {permsLoading ? (
-            <div className="text-sm text-muted-foreground py-4">Loading permissions…</div>
+            <div className="text-sm text-muted-foreground py-4">
+              Loading permissions…
+            </div>
           ) : (
             <div className="space-y-3">
               {permissionRowsByType.map(([typeKey, typeLabel, rows]) => {
@@ -306,7 +327,8 @@ function CreateRolePage() {
                                     type="button"
                                     className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                     onKeyDown={(e) => {
-                                      if (e.key === "Enter") togglePermission(row.id, false)
+                                      if (e.key === "Enter")
+                                        togglePermission(row.id, false)
                                     }}
                                     onMouseDown={(e) => {
                                       e.preventDefault()
@@ -350,7 +372,10 @@ function CreateRolePage() {
                                 readOnly
                                 className="h-4 w-4 rounded border-gray-300"
                               />
-                              <span className="font-mono text-xs truncate" title={row.label}>
+                              <span
+                                className="font-mono text-xs truncate"
+                                title={row.label}
+                              >
                                 {row.label}
                               </span>
                             </div>
@@ -382,4 +407,3 @@ function CreateRolePage() {
     </div>
   )
 }
-

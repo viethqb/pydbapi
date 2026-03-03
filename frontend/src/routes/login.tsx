@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import type { Body_login_login_access_token as AccessToken } from "@/client"
-import { passwordSchema, usernameSchema } from "@/lib/validations"
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import {
   Form,
@@ -22,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
+import { passwordSchema, usernameSchema } from "@/lib/validations"
 
 const formSchema = z.object({
   username: usernameSchema,

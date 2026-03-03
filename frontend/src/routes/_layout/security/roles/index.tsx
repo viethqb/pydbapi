@@ -1,8 +1,12 @@
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query"
 import { Pencil, ShieldCheck, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
-
+import PendingItems from "@/components/Pending/PendingItems"
 import CreateRoleDialog from "@/components/Security/CreateRoleDialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,9 +30,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { RolesService, type RolePublic } from "@/services/roles"
 import useCustomToast from "@/hooks/useCustomToast"
-import PendingItems from "@/components/Pending/PendingItems"
+import { type RolePublic, RolesService } from "@/services/roles"
 
 export const Route = createFileRoute("/_layout/security/roles/")({
   component: RolesPage,
@@ -71,9 +74,7 @@ function RolesListContent() {
       {/* SubMenu-style bar: full-width, muted bg, title left, buttons right (Superset) */}
       <div className="bg-muted/50 border-b px-4 py-3 mb-4 rounded-t-lg">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-lg font-semibold tracking-tight">
-            Roles
-          </h1>
+          <h1 className="text-lg font-semibold tracking-tight">Roles</h1>
           <div className="flex items-center gap-2">
             <CreateRoleDialog />
           </div>
@@ -87,7 +88,8 @@ function RolesListContent() {
             <ShieldCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground font-medium">No roles yet</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-              Create your first custom role with the button above, or ensure backend seeding has run (Admin, Alpha, Gamma, Operator).
+              Create your first custom role with the button above, or ensure
+              backend seeding has run (Admin, Alpha, Gamma, Operator).
             </p>
           </div>
         ) : (
@@ -127,9 +129,7 @@ function RolesListContent() {
                             </Button>
                           </Link>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          Edit role
-                        </TooltipContent>
+                        <TooltipContent side="bottom">Edit role</TooltipContent>
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -165,8 +165,8 @@ function RolesListContent() {
             <DialogTitle>Delete role</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete the role{" "}
-              <strong>{deleteRole?.name}</strong>? This will remove the role from
-              all users. This action cannot be undone.
+              <strong>{deleteRole?.name}</strong>? This will remove the role
+              from all users. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -179,9 +179,7 @@ function RolesListContent() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() =>
-                deleteRole && deleteMutation.mutate(deleteRole.id)
-              }
+              onClick={() => deleteRole && deleteMutation.mutate(deleteRole.id)}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting…" : "Delete"}

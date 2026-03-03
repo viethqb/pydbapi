@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { useEffect, useState } from "react"
-
+import { PERMISSION_MATRIX } from "@/components/Admin/permissionMatrix"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Sheet,
   SheetContent,
@@ -13,7 +14,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Table,
   TableBody,
@@ -24,11 +24,10 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-import { PERMISSION_MATRIX } from "@/components/Admin/permissionMatrix"
 import {
+  PermissionsService,
   type ResourcePermissionItem,
   type RolePublic,
-  PermissionsService,
   RolesService,
 } from "@/services/roles"
 import { handleError } from "@/utils"
@@ -76,16 +75,24 @@ function ResourcePermissionsTable({
     onError: handleError.bind(showErrorToast),
   })
 
-  const toggle = (index: number, field: "can_view" | "can_edit" | "can_delete", value: boolean) => {
+  const toggle = (
+    index: number,
+    field: "can_view" | "can_edit" | "can_delete",
+    value: boolean,
+  ) => {
     setItems((prev) =>
-      prev.map((it, i) =>
-        i === index ? { ...it, [field]: value } : it
-      )
+      prev.map((it, i) => (i === index ? { ...it, [field]: value } : it)),
     )
   }
 
-  if (isLoading) return <p className="text-muted-foreground text-sm">Loading…</p>
-  if (!items.length) return <p className="text-muted-foreground text-sm">No resources of this type.</p>
+  if (isLoading)
+    return <p className="text-muted-foreground text-sm">Loading…</p>
+  if (!items.length)
+    return (
+      <p className="text-muted-foreground text-sm">
+        No resources of this type.
+      </p>
+    )
 
   return (
     <div className="space-y-2">
@@ -102,7 +109,9 @@ function ResourcePermissionsTable({
           <TableBody>
             {items.map((it, idx) => (
               <TableRow key={it.resource_id}>
-                <TableCell className="font-medium">{it.resource_name ?? it.resource_id}</TableCell>
+                <TableCell className="font-medium">
+                  {it.resource_name ?? it.resource_id}
+                </TableCell>
                 <TableCell className="text-center">
                   <Checkbox
                     checked={it.can_view}
@@ -120,7 +129,9 @@ function ResourcePermissionsTable({
                 <TableCell className="text-center">
                   <Checkbox
                     checked={it.can_delete}
-                    onCheckedChange={(c) => toggle(idx, "can_delete", c === true)}
+                    onCheckedChange={(c) =>
+                      toggle(idx, "can_delete", c === true)
+                    }
                     aria-label={`${it.resource_name} delete`}
                   />
                 </TableCell>
@@ -144,7 +155,10 @@ interface EditRolePermissionsProps {
   onSuccess: () => void
 }
 
-export function EditRolePermissions({ role, onSuccess }: EditRolePermissionsProps) {
+export function EditRolePermissions({
+  role,
+  onSuccess,
+}: EditRolePermissionsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const queryClient = useQueryClient()
@@ -187,7 +201,7 @@ export function EditRolePermissions({ role, onSuccess }: EditRolePermissionsProp
 
   const togglePermission = (id: string, checked: boolean) => {
     setSelectedIds((prev) =>
-      checked ? [...prev, id] : prev.filter((x) => x !== id)
+      checked ? [...prev, id] : prev.filter((x) => x !== id),
     )
   }
 
@@ -221,114 +235,134 @@ export function EditRolePermissions({ role, onSuccess }: EditRolePermissionsProp
                 ? "System role. You can still change which permissions it has."
                 : "Set permissions per resource."}
               <span className="block rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-                <strong>Can access</strong> = show this item in the sidebar menu and allow entering the page. Without access, view/edit/delete for that section have no effect.
+                <strong>Can access</strong> = show this item in the sidebar menu
+                and allow entering the page. Without access, view/edit/delete
+                for that section have no effect.
               </span>
             </SheetDescription>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-auto py-2">
-          <Tabs defaultValue="global" className="w-full">
-            <TabsList className="mb-2 flex flex-wrap gap-1">
-              <TabsTrigger value="global">Menu &amp; global</TabsTrigger>
-              {RESOURCE_TYPE_TABS.map((t) => (
-                <TabsTrigger key={t.value} value={t.value}>
-                  {t.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <TabsContent value="global" className="mt-2">
-          <div className="py-2">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[200px]">Resource</TableHead>
-                  <TableHead className="w-28 text-center whitespace-nowrap">Can access (menu)</TableHead>
-                  <TableHead className="w-28 text-center whitespace-nowrap">Can view</TableHead>
-                  <TableHead className="w-28 text-center whitespace-nowrap">Can edit</TableHead>
-                  <TableHead className="w-28 text-center whitespace-nowrap">Can delete</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {PERMISSION_MATRIX.map((row, idx) => {
-                  const accessId = row.access ? codeToId[row.access] : undefined
-                  const viewId = row.view ? codeToId[row.view] : undefined
-                  const editId = row.edit ? codeToId[row.edit] : undefined
-                  const deleteId = row.delete ? codeToId[row.delete] : undefined
-                  const hasAny = accessId || viewId || editId || deleteId
-                  if (!hasAny) return null
-                  return (
-                    <TableRow key={`${row.resource}-${row.label}-${idx}`}>
-                      <TableCell className="font-medium">{row.label}</TableCell>
-                      <TableCell className="text-center">
-                        {accessId != null ? (
-                          <Checkbox
-                            checked={selectedIds.includes(accessId)}
-                            onCheckedChange={(c) =>
-                              togglePermission(accessId, c === true)
-                            }
-                            aria-label={`${row.label} access`}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {viewId != null ? (
-                          <Checkbox
-                            checked={selectedIds.includes(viewId)}
-                            onCheckedChange={(c) =>
-                              togglePermission(viewId, c === true)
-                            }
-                            aria-label={`${row.label} view`}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {editId != null ? (
-                          <Checkbox
-                            checked={selectedIds.includes(editId)}
-                            onCheckedChange={(c) =>
-                              togglePermission(editId, c === true)
-                            }
-                            aria-label={`${row.label} edit`}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {deleteId != null ? (
-                          <Checkbox
-                            checked={selectedIds.includes(deleteId)}
-                            onCheckedChange={(c) =>
-                              togglePermission(deleteId, c === true)
-                            }
-                            aria-label={`${row.label} delete`}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-            </TabsContent>
-            {RESOURCE_TYPE_TABS.map((t) => (
-              <TabsContent key={t.value} value={t.value} className="mt-2">
-                <ResourcePermissionsTable
-                  roleId={role.id}
-                  resourceType={t.value}
-                  onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ["role", role.id] })
-                  }}
-                />
+            <Tabs defaultValue="global" className="w-full">
+              <TabsList className="mb-2 flex flex-wrap gap-1">
+                <TabsTrigger value="global">Menu &amp; global</TabsTrigger>
+                {RESOURCE_TYPE_TABS.map((t) => (
+                  <TabsTrigger key={t.value} value={t.value}>
+                    {t.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <TabsContent value="global" className="mt-2">
+                <div className="py-2">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[200px]">
+                          Resource
+                        </TableHead>
+                        <TableHead className="w-28 text-center whitespace-nowrap">
+                          Can access (menu)
+                        </TableHead>
+                        <TableHead className="w-28 text-center whitespace-nowrap">
+                          Can view
+                        </TableHead>
+                        <TableHead className="w-28 text-center whitespace-nowrap">
+                          Can edit
+                        </TableHead>
+                        <TableHead className="w-28 text-center whitespace-nowrap">
+                          Can delete
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {PERMISSION_MATRIX.map((row, idx) => {
+                        const accessId = row.access
+                          ? codeToId[row.access]
+                          : undefined
+                        const viewId = row.view ? codeToId[row.view] : undefined
+                        const editId = row.edit ? codeToId[row.edit] : undefined
+                        const deleteId = row.delete
+                          ? codeToId[row.delete]
+                          : undefined
+                        const hasAny = accessId || viewId || editId || deleteId
+                        if (!hasAny) return null
+                        return (
+                          <TableRow key={`${row.resource}-${row.label}-${idx}`}>
+                            <TableCell className="font-medium">
+                              {row.label}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {accessId != null ? (
+                                <Checkbox
+                                  checked={selectedIds.includes(accessId)}
+                                  onCheckedChange={(c) =>
+                                    togglePermission(accessId, c === true)
+                                  }
+                                  aria-label={`${row.label} access`}
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {viewId != null ? (
+                                <Checkbox
+                                  checked={selectedIds.includes(viewId)}
+                                  onCheckedChange={(c) =>
+                                    togglePermission(viewId, c === true)
+                                  }
+                                  aria-label={`${row.label} view`}
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {editId != null ? (
+                                <Checkbox
+                                  checked={selectedIds.includes(editId)}
+                                  onCheckedChange={(c) =>
+                                    togglePermission(editId, c === true)
+                                  }
+                                  aria-label={`${row.label} edit`}
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {deleteId != null ? (
+                                <Checkbox
+                                  checked={selectedIds.includes(deleteId)}
+                                  onCheckedChange={(c) =>
+                                    togglePermission(deleteId, c === true)
+                                  }
+                                  aria-label={`${row.label} delete`}
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </TabsContent>
-            ))}
-          </Tabs>
+              {RESOURCE_TYPE_TABS.map((t) => (
+                <TabsContent key={t.value} value={t.value} className="mt-2">
+                  <ResourcePermissionsTable
+                    roleId={role.id}
+                    resourceType={t.value}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({
+                        queryKey: ["role", role.id],
+                      })
+                    }}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
           </div>
           <SheetFooter className="border-t pt-4">
             <Button

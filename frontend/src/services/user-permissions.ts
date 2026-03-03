@@ -1,4 +1,4 @@
-import { request, type RequestOptions } from "@/lib/api-request"
+import { type RequestOptions, request } from "@/lib/api-request"
 
 export type PermissionItem = {
   resource_type: string

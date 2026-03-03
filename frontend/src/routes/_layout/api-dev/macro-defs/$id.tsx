@@ -1,20 +1,29 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useMatchRoute } from "@tanstack/react-router"
-import { useState, useEffect } from "react"
-import { ArrowLeft, GitBranch, RotateCcw, Trash2, Undo2, User } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatchRoute,
+} from "@tanstack/react-router"
+import {
+  ArrowLeft,
+  GitBranch,
+  RotateCcw,
+  Trash2,
+  Undo2,
+  User,
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +34,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
   SelectContent,
@@ -32,13 +42,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
-import { MacroDefsService, type ApiMacroDefDetail, type MacroDefVersionCommitPublic, type MacroDefVersionCommitDetail } from "@/services/macro-defs"
-import { ModulesService } from "@/services/modules"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
+import {
+  type ApiMacroDefDetail,
+  MacroDefsService,
+  type MacroDefVersionCommitDetail,
+  type MacroDefVersionCommitPublic,
+} from "@/services/macro-defs"
+import { ModulesService } from "@/services/modules"
 
 export const Route = createFileRoute("/_layout/api-dev/macro-defs/$id")({
   component: MacroDetail,
@@ -68,14 +89,19 @@ function MacroDetail() {
   const canDelete = hasPermission("macro_def", "delete", id)
 
   const [versions, setVersions] = useState<MacroDefVersionCommitPublic[]>([])
-  const [selectedVersion, setSelectedVersion] = useState<MacroDefVersionCommitDetail | null>(null)
+  const [selectedVersion, setSelectedVersion] =
+    useState<MacroDefVersionCommitDetail | null>(null)
   const [createVersionDialogOpen, setCreateVersionDialogOpen] = useState(false)
   const [commitMessage, setCommitMessage] = useState("")
-  const [publishVersionDialogOpen, setPublishVersionDialogOpen] = useState(false)
-  const [selectedVersionForPublish, setSelectedVersionForPublish] = useState<string | null>(null)
+  const [publishVersionDialogOpen, setPublishVersionDialogOpen] =
+    useState(false)
+  const [selectedVersionForPublish, setSelectedVersionForPublish] = useState<
+    string | null
+  >(null)
   const [deleteVersionDialogOpen, setDeleteVersionDialogOpen] = useState(false)
   const [versionToDelete, setVersionToDelete] = useState<string | null>(null)
-  const [restoreVersionDialogOpen, setRestoreVersionDialogOpen] = useState(false)
+  const [restoreVersionDialogOpen, setRestoreVersionDialogOpen] =
+    useState(false)
   const [versionToRestore, setVersionToRestore] = useState<string | null>(null)
 
   const { data: macro, isLoading } = useQuery({
@@ -98,10 +124,7 @@ function MacroDetail() {
     if (publishVersionDialogOpen && versions.length > 0) {
       setSelectedVersionForPublish(
         (prev) =>
-          prev ||
-          macro?.published_version_id ||
-          versions[0]?.id ||
-          null,
+          prev || macro?.published_version_id || versions[0]?.id || null,
       )
     }
   }, [publishVersionDialogOpen, versions, macro?.published_version_id])
@@ -113,7 +136,9 @@ function MacroDetail() {
 
   const createVersionMutation = useMutation({
     mutationFn: () =>
-      MacroDefsService.createVersion(id, { commit_message: commitMessage || null }),
+      MacroDefsService.createVersion(id, {
+        commit_message: commitMessage || null,
+      }),
     onSuccess: () => {
       showSuccessToast("Version created successfully")
       setCreateVersionDialogOpen(false)
@@ -140,7 +165,8 @@ function MacroDetail() {
   })
 
   const revertToDraftMutation = useMutation({
-    mutationFn: (versionId: string) => MacroDefsService.revertVersionToDraft(versionId),
+    mutationFn: (versionId: string) =>
+      MacroDefsService.revertVersionToDraft(versionId),
     onSuccess: () => {
       showSuccessToast("Version reverted to draft")
       queryClient.invalidateQueries({ queryKey: ["macro", id] })
@@ -150,7 +176,8 @@ function MacroDetail() {
   })
 
   const restoreVersionMutation = useMutation({
-    mutationFn: (versionId: string) => MacroDefsService.restoreVersion(id, versionId),
+    mutationFn: (versionId: string) =>
+      MacroDefsService.restoreVersion(id, versionId),
     onSuccess: () => {
       showSuccessToast("Macro content restored from version successfully")
       setRestoreVersionDialogOpen(false)
@@ -164,8 +191,12 @@ function MacroDetail() {
 
   const publishMutation = useMutation({
     mutationFn: () => {
-      if (!selectedVersionForPublish) throw new Error("Please select a version to publish")
-      return MacroDefsService.publish({ id, version_id: selectedVersionForPublish })
+      if (!selectedVersionForPublish)
+        throw new Error("Please select a version to publish")
+      return MacroDefsService.publish({
+        id,
+        version_id: selectedVersionForPublish,
+      })
     },
     onSuccess: () => {
       showSuccessToast("Macro published successfully")
@@ -199,7 +230,9 @@ function MacroDetail() {
 
   const handleDeleteVersion = (versionId: string) => {
     if (macro?.published_version_id === versionId) {
-      showErrorToast("Cannot delete published version. Unpublish or publish another version first.")
+      showErrorToast(
+        "Cannot delete published version. Unpublish or publish another version first.",
+      )
       return
     }
     setVersionToDelete(versionId)
@@ -213,7 +246,7 @@ function MacroDetail() {
 
   const moduleName =
     macro?.module_id && modules
-      ? modules.find((m) => m.id === macro.module_id)?.name ?? "—"
+      ? (modules.find((m) => m.id === macro.module_id)?.name ?? "—")
       : "Global"
 
   if (isLoading || !macro) {
@@ -240,8 +273,12 @@ function MacroDetail() {
           </Link>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold tracking-tight">{macro.name}</h1>
-              <Badge variant={macro.macro_type === "JINJA" ? "secondary" : "outline"}>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {macro.name}
+              </h1>
+              <Badge
+                variant={macro.macro_type === "JINJA" ? "secondary" : "outline"}
+              >
                 {macro.macro_type}
               </Badge>
               <Badge variant={macro.is_published ? "default" : "outline"}>
@@ -252,7 +289,8 @@ function MacroDetail() {
               </span>
               {(macro as ApiMacroDefDetail).used_by_apis_count > 0 && (
                 <span className="text-muted-foreground text-sm">
-                  · Used by {(macro as ApiMacroDefDetail).used_by_apis_count} API(s)
+                  · Used by {(macro as ApiMacroDefDetail).used_by_apis_count}{" "}
+                  API(s)
                 </span>
               )}
             </div>
@@ -291,7 +329,9 @@ function MacroDetail() {
       <Card>
         <CardHeader>
           <CardTitle>{macro.name}</CardTitle>
-          <CardDescription>{macro.description || "View and manage macro content"}</CardDescription>
+          <CardDescription>
+            {macro.description || "View and manage macro content"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="detail" className="w-full">
@@ -307,11 +347,15 @@ function MacroDetail() {
                   <TableBody>
                     <TableRow>
                       <TableCell className="w-40 font-medium">Name</TableCell>
-                      <TableCell className="font-mono break-all">{macro.name}</TableCell>
+                      <TableCell className="font-mono break-all">
+                        {macro.name}
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell className="font-medium">ID</TableCell>
-                      <TableCell className="font-mono break-all">{macro.id}</TableCell>
+                      <TableCell className="font-mono break-all">
+                        {macro.id}
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell className="font-medium">Type</TableCell>
@@ -323,16 +367,22 @@ function MacroDetail() {
                     </TableRow>
                     <TableRow>
                       <TableCell className="font-medium">Status</TableCell>
-                      <TableCell>{macro.is_published ? "Published" : "Draft"}</TableCell>
+                      <TableCell>
+                        {macro.is_published ? "Published" : "Draft"}
+                      </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Used by APIs</TableCell>
+                      <TableCell className="font-medium">
+                        Used by APIs
+                      </TableCell>
                       <TableCell>
                         {(macro as ApiMacroDefDetail).used_by_apis_count ?? 0}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Published version ID</TableCell>
+                      <TableCell className="font-medium">
+                        Published version ID
+                      </TableCell>
                       <TableCell className="font-mono break-all">
                         {macro.published_version_id || "—"}
                       </TableCell>
@@ -410,17 +460,23 @@ function MacroDetail() {
                       <TableBody>
                         {versions.map((version) => (
                           <TableRow key={version.id}>
-                            <TableCell className="font-mono font-semibold">v{version.version}</TableCell>
+                            <TableCell className="font-mono font-semibold">
+                              v{version.version}
+                            </TableCell>
                             <TableCell>
                               {version.commit_message || (
-                                <span className="text-muted-foreground italic">No message</span>
+                                <span className="text-muted-foreground italic">
+                                  No message
+                                </span>
                               )}
                             </TableCell>
                             <TableCell>
                               {version.committed_by_email ? (
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm">{version.committed_by_email}</span>
+                                  <span className="text-sm">
+                                    {version.committed_by_email}
+                                  </span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
@@ -443,10 +499,17 @@ function MacroDetail() {
                                   size="sm"
                                   onClick={async () => {
                                     try {
-                                      const detail = await MacroDefsService.getVersion(version.id)
+                                      const detail =
+                                        await MacroDefsService.getVersion(
+                                          version.id,
+                                        )
                                       setSelectedVersion(detail)
                                     } catch (error) {
-                                      showErrorToast(error instanceof Error ? error.message : "Failed to load")
+                                      showErrorToast(
+                                        error instanceof Error
+                                          ? error.message
+                                          : "Failed to load",
+                                      )
                                     }
                                   }}
                                 >
@@ -455,19 +518,27 @@ function MacroDetail() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleRestoreVersion(version.id)}
+                                  onClick={() =>
+                                    handleRestoreVersion(version.id)
+                                  }
                                   title="Restore this version into current content"
                                 >
                                   <RotateCcw className="mr-1 h-4 w-4" />
                                   Restore
                                 </Button>
                                 {!macro?.is_published &&
-                                  macro?.published_version_id === version.id && (
+                                  macro?.published_version_id ===
+                                    version.id && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => revertToDraftMutation.mutate(version.id)}
-                                      disabled={!canUpdate || revertToDraftMutation.isPending}
+                                      onClick={() =>
+                                        revertToDraftMutation.mutate(version.id)
+                                      }
+                                      disabled={
+                                        !canUpdate ||
+                                        revertToDraftMutation.isPending
+                                      }
                                       title="Revert this version to draft (only when macro is not published)"
                                     >
                                       <Undo2 className="mr-1 h-4 w-4" />
@@ -477,8 +548,13 @@ function MacroDetail() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDeleteVersion(version.id)}
-                                  disabled={!canDelete || macro?.published_version_id === version.id}
+                                  onClick={() =>
+                                    handleDeleteVersion(version.id)
+                                  }
+                                  disabled={
+                                    !canDelete ||
+                                    macro?.published_version_id === version.id
+                                  }
                                   className="text-destructive hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -497,7 +573,10 @@ function MacroDetail() {
         </CardContent>
       </Card>
 
-      <Dialog open={createVersionDialogOpen} onOpenChange={setCreateVersionDialogOpen}>
+      <Dialog
+        open={createVersionDialogOpen}
+        onOpenChange={setCreateVersionDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Version</DialogTitle>
@@ -518,10 +597,17 @@ function MacroDetail() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" disabled={createVersionMutation.isPending} onClick={() => setCreateVersionDialogOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={createVersionMutation.isPending}
+              onClick={() => setCreateVersionDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <LoadingButton onClick={() => createVersionMutation.mutate()} loading={createVersionMutation.isPending}>
+            <LoadingButton
+              onClick={() => createVersionMutation.mutate()}
+              loading={createVersionMutation.isPending}
+            >
               Create Version
             </LoadingButton>
           </DialogFooter>
@@ -562,7 +648,11 @@ function MacroDetail() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" disabled={publishMutation.isPending} onClick={() => setPublishVersionDialogOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={publishMutation.isPending}
+              onClick={() => setPublishVersionDialogOpen(false)}
+            >
               Cancel
             </Button>
             <LoadingButton
@@ -576,24 +666,43 @@ function MacroDetail() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={deleteVersionDialogOpen} onOpenChange={setDeleteVersionDialogOpen}>
+      <Dialog
+        open={deleteVersionDialogOpen}
+        onOpenChange={setDeleteVersionDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Version</DialogTitle>
-            <DialogDescription>Are you sure you want to delete this version?</DialogDescription>
+            <DialogDescription>
+              Are you sure you want to delete this version?
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" disabled={deleteVersionMutation.isPending} onClick={() => setDeleteVersionDialogOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={deleteVersionMutation.isPending}
+              onClick={() => setDeleteVersionDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <LoadingButton variant="destructive" onClick={() => deleteVersionMutation.mutate()} loading={deleteVersionMutation.isPending}>
+            <LoadingButton
+              variant="destructive"
+              onClick={() => deleteVersionMutation.mutate()}
+              loading={deleteVersionMutation.isPending}
+            >
               Delete
             </LoadingButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={restoreVersionDialogOpen} onOpenChange={(open) => { setRestoreVersionDialogOpen(open); if (!open) setVersionToRestore(null) }}>
+      <Dialog
+        open={restoreVersionDialogOpen}
+        onOpenChange={(open) => {
+          setRestoreVersionDialogOpen(open)
+          if (!open) setVersionToRestore(null)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Restore Version</DialogTitle>
@@ -602,11 +711,18 @@ function MacroDetail() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" disabled={restoreVersionMutation.isPending} onClick={() => setRestoreVersionDialogOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={restoreVersionMutation.isPending}
+              onClick={() => setRestoreVersionDialogOpen(false)}
+            >
               Cancel
             </Button>
             <LoadingButton
-              onClick={() => versionToRestore && restoreVersionMutation.mutate(versionToRestore)}
+              onClick={() =>
+                versionToRestore &&
+                restoreVersionMutation.mutate(versionToRestore)
+              }
               loading={restoreVersionMutation.isPending}
               disabled={!versionToRestore}
             >
@@ -616,11 +732,16 @@ function MacroDetail() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!selectedVersion} onOpenChange={() => setSelectedVersion(null)}>
+      <Dialog
+        open={!!selectedVersion}
+        onOpenChange={() => setSelectedVersion(null)}
+      >
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Version {selectedVersion?.version}</DialogTitle>
-            <DialogDescription>{selectedVersion?.commit_message || "No commit message"}</DialogDescription>
+            <DialogDescription>
+              {selectedVersion?.commit_message || "No commit message"}
+            </DialogDescription>
           </DialogHeader>
           <div className="rounded-md border overflow-hidden mt-4">
             <ApiContentEditor
@@ -633,11 +754,17 @@ function MacroDetail() {
             />
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            Committed: {selectedVersion ? new Date(selectedVersion.committed_at).toLocaleString() : ""}
-            {selectedVersion?.committed_by_email && ` by ${selectedVersion.committed_by_email}`}
+            Committed:{" "}
+            {selectedVersion
+              ? new Date(selectedVersion.committed_at).toLocaleString()
+              : ""}
+            {selectedVersion?.committed_by_email &&
+              ` by ${selectedVersion.committed_by_email}`}
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedVersion(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setSelectedVersion(null)}>
+              Close
+            </Button>
             {selectedVersion && (
               <Button onClick={() => handleRestoreVersion(selectedVersion.id)}>
                 <RotateCcw className="mr-2 h-4 w-4" />

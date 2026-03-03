@@ -1,10 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
+import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Form,
   FormControl,
@@ -16,7 +23,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -24,10 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import ApiContentEditor from "@/components/ApiDev/ApiContentEditor"
-import { MacroDefsService, type ApiMacroDefCreate } from "@/services/macro-defs"
-import { ModulesService } from "@/services/modules"
 import useCustomToast from "@/hooks/useCustomToast"
+import { type ApiMacroDefCreate, MacroDefsService } from "@/services/macro-defs"
+import { ModulesService } from "@/services/modules"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(128),
@@ -107,7 +112,9 @@ function MacroCreate() {
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create macro definition</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Create macro definition
+        </h1>
         <p className="text-muted-foreground mt-1">
           Add a Jinja macro or Python function for use in API content
         </p>
@@ -157,7 +164,9 @@ function MacroCreate() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="global">Global (all APIs)</SelectItem>
+                        <SelectItem value="global">
+                          Global (all APIs)
+                        </SelectItem>
                         {modules?.map((m) => (
                           <SelectItem key={m.id} value={m.id}>
                             {m.name}
@@ -178,22 +187,24 @@ function MacroCreate() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type *</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="JINJA">Jinja (SQL templates)</SelectItem>
-                        <SelectItem value="PYTHON">Python (Script APIs)</SelectItem>
+                        <SelectItem value="JINJA">
+                          Jinja (SQL templates)
+                        </SelectItem>
+                        <SelectItem value="PYTHON">
+                          Python (Script APIs)
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      JINJA: prepended to SQL content. PYTHON: prepended to Script content.
+                      JINJA: prepended to SQL content. PYTHON: prepended to
+                      Script content.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -210,9 +221,7 @@ function MacroCreate() {
                         placeholder="Optional description"
                         {...field}
                         value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(e.target.value || null)
-                        }
+                        onChange={(e) => field.onChange(e.target.value || null)}
                       />
                     </FormControl>
                     <FormMessage />

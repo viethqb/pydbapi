@@ -84,7 +84,8 @@ const SQL_EXAMPLES: Example[] = [
   },
   {
     title: "SQL – Single row by ID",
-    description: "Structure: Jinja2 SELECT WHERE. Input: id (param). Output: single row or empty. Use sql_int for numeric IDs.",
+    description:
+      "Structure: Jinja2 SELECT WHERE. Input: id (param). Output: single row or empty. Use sql_int for numeric IDs.",
     code:
       "SELECT id, name, email, created_at\n" +
       "FROM users\n" +
@@ -92,7 +93,8 @@ const SQL_EXAMPLES: Example[] = [
   },
   {
     title: "SQL – Conditional JOIN",
-    description: "Structure: Jinja2 SELECT with {% if %} JOIN. Input: include_profile (param). Output: user rows; profile columns only if include_profile is true.",
+    description:
+      "Structure: Jinja2 SELECT with {% if %} JOIN. Input: include_profile (param). Output: user rows; profile columns only if include_profile is true.",
     code:
       "SELECT u.id, u.name, p.title AS profile_title\n" +
       "FROM users u\n" +
@@ -103,7 +105,8 @@ const SQL_EXAMPLES: Example[] = [
   },
   {
     title: "SQL – Pagination + ordering",
-    description: "Structure: Jinja2 SELECT with {% where %}. Input: q, limit, offset (params). Output: rows filtered, ordered, sliced.",
+    description:
+      "Structure: Jinja2 SELECT with {% where %}. Input: q, limit, offset (params). Output: rows filtered, ordered, sliced.",
     code:
       "SELECT id, name, status\n" +
       "FROM items\n" +
@@ -119,7 +122,7 @@ const SCRIPT_EXAMPLES: Example[] = [
   {
     title: "Script – Simple query (default)",
     description:
-      "result has success, message, data. Append to result[\"data\"], optionally result[\"total\"], return result.",
+      'result has success, message, data. Append to result["data"], optionally result["total"], return result.',
     code:
       "def execute(params=None):\n" +
       "    params = params or {}\n" +
@@ -131,12 +134,12 @@ const SCRIPT_EXAMPLES: Example[] = [
   {
     title: "Script – Lookup by ID",
     description:
-      "Function: execute(params=None). params.get(\"user_id\"), db.query_one; return {\"user\": row} or {\"error\": \"...\"}.",
+      'Function: execute(params=None). params.get("user_id"), db.query_one; return {"user": row} or {"error": "..."}.',
     code:
       "def execute(params=None):\n" +
       "    params = params or {}\n" +
       '    user_id = params.get("user_id")\n' +
-      '    if not user_id:\n' +
+      "    if not user_id:\n" +
       '        return {"error": "user_id is required"}\n' +
       "    row = db.query_one(\n" +
       '        "SELECT id, name, email FROM users WHERE id = %s",\n' +
@@ -147,19 +150,19 @@ const SCRIPT_EXAMPLES: Example[] = [
   {
     title: "Script – 2 SQL queries (like SQL mode)",
     description:
-      "Append each query result to result[\"data\"]; add result[\"total\"]; return result.",
+      'Append each query result to result["data"]; add result["total"]; return result.',
     code:
       "def execute(params=None):\n" +
       "    params = params or {}\n" +
       '    result["data"].append(db.query("SELECT id, name FROM users LIMIT 10"))\n' +
       '    count_row = db.query_one("SELECT COUNT(*) AS total FROM users")\n' +
-      "    result[\"total\"] = count_row[\"total\"] if count_row else 0\n" +
+      '    result["total"] = count_row["total"] if count_row else 0\n' +
       "    return result\n",
   },
   {
     title: "Script – List + filter",
     description:
-      "Function: execute(params=None). params.get(\"min_age\", 18), db.query; return {\"total\": n, \"users\": rows}.",
+      'Function: execute(params=None). params.get("min_age", 18), db.query; return {"total": n, "users": rows}.',
     code:
       "def execute(params=None):\n" +
       "    params = params or {}\n" +
@@ -173,7 +176,7 @@ const SCRIPT_EXAMPLES: Example[] = [
   {
     title: "Script – Transaction (DML)",
     description:
-      "Function: execute(params=None). tx.begin/commit/rollback, db.execute; return {\"updated\": rc} or {\"error\": str}.",
+      'Function: execute(params=None). tx.begin/commit/rollback, db.execute; return {"updated": rc} or {"error": str}.',
     code:
       "def execute(params=None):\n" +
       "    params = params or {}\n" +
@@ -181,7 +184,7 @@ const SCRIPT_EXAMPLES: Example[] = [
       "    try:\n" +
       "        rc = db.execute(\n" +
       '            "UPDATE users SET status = %s WHERE id = %s",\n' +
-      "            (params.get(\"status\", 1), params.get(\"user_id\")),\n" +
+      '            (params.get("status", 1), params.get("user_id")),\n' +
       "        )\n" +
       "        tx.commit()\n" +
       '        return {"updated": rc}\n' +
@@ -192,11 +195,11 @@ const SCRIPT_EXAMPLES: Example[] = [
   {
     title: "Script – Cache read-through",
     description:
-      "Function: execute(params=None). cache.get/set, db.query_one; return user dict or {\"error\": \"Not found\"}.",
+      'Function: execute(params=None). cache.get/set, db.query_one; return user dict or {"error": "Not found"}.',
     code:
       "def execute(params=None):\n" +
       "    params = params or {}\n" +
-      '    key = f"user_{params.get(\'user_id\')}"\n' +
+      "    key = f\"user_{params.get('user_id')}\"\n" +
       "    cached = cache.get(key)\n" +
       "    if cached:\n" +
       "        return cached\n" +

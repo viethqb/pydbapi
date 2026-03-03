@@ -24,7 +24,7 @@ export function MobileNavMenu({ items, onLinkClick }: MobileNavMenuProps) {
       "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
       currentPath === path
         ? "bg-accent text-accent-foreground"
-        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
     )
 
   return (
@@ -42,13 +42,16 @@ export function MobileNavMenu({ items, onLinkClick }: MobileNavMenuProps) {
                   "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >
                 <item.icon className="size-4" />
                 {item.title}
                 <ChevronRight
-                  className={cn("ml-auto size-4 transition-transform", isOpen && "rotate-90")}
+                  className={cn(
+                    "ml-auto size-4 transition-transform",
+                    isOpen && "rotate-90",
+                  )}
                 />
               </button>
               {isOpen && (

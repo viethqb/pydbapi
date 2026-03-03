@@ -4,7 +4,7 @@ Backward compat: /token/generate also works (same handler, no /api prefix).
 Legacy migration: GET /api/token/generate?clientId=&secret= → { expireAt, token }.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -47,7 +47,9 @@ def _get_client_by_client_id(session: Session, client_id: str) -> AppClient | No
 @router.post(
     "/generate",
     response_model=GatewayTokenResponse,
-    dependencies=[Depends(require_rate_limit("token", settings.AUTH_RATE_LIMIT_TOKEN_GENERATE))],
+    dependencies=[
+        Depends(require_rate_limit("token", settings.AUTH_RATE_LIMIT_TOKEN_GENERATE))
+    ],
 )
 async def token_generate(
     request: Request,
@@ -108,7 +110,9 @@ async def token_generate(
 @router.get(
     "/generate",
     response_model=GatewayTokenGenerateGetResponse,
-    dependencies=[Depends(require_rate_limit("token", settings.AUTH_RATE_LIMIT_TOKEN_GENERATE))],
+    dependencies=[
+        Depends(require_rate_limit("token", settings.AUTH_RATE_LIMIT_TOKEN_GENERATE))
+    ],
 )
 def token_generate_get(
     clientId: str,
@@ -142,7 +146,7 @@ def token_generate_get(
 
     expire_secs = _effective_expire_seconds(client)
     expires_delta = timedelta(seconds=expire_secs)
-    expire_dt = datetime.now(timezone.utc) + expires_delta
+    expire_dt = datetime.now(UTC) + expires_delta
     expire_at = int(expire_dt.timestamp())
     access_token = create_access_token(
         subject=client.client_id,

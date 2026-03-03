@@ -1,28 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
 import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { DataTable } from "@/components/Common/DataTable"
-import {
-  moduleColumns,
   type ModuleTableData,
+  moduleColumns,
 } from "@/components/ApiDev/module-columns"
-import {
-  ModulesService,
-  type ApiModuleListIn,
-} from "@/services/modules"
-import useCustomToast from "@/hooks/useCustomToast"
-import { usePermissions } from "@/hooks/usePermissions"
+import { DataTable } from "@/components/Common/DataTable"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -31,6 +16,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
+import { type ApiModuleListIn, ModulesService } from "@/services/modules"
 
 export const Route = createFileRoute("/_layout/api-dev/modules/")({
   component: ModulesList,
@@ -80,7 +76,13 @@ function ModulesList() {
 
   // Toggle status mutation
   const toggleStatusMutation = useMutation({
-    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: boolean }) => {
+    mutationFn: async ({
+      id,
+      currentStatus,
+    }: {
+      id: string
+      currentStatus: boolean
+    }) => {
       return ModulesService.update({
         id,
         is_active: !currentStatus,
@@ -114,27 +116,26 @@ function ModulesList() {
     }
   }
 
-  const tableData: ModuleTableData[] =
-    (Array.isArray(data?.data) ? data.data : []).map((m) => {
-      const canUpdate = hasPermission("module", "update", m.id)
-      const canDelete = hasPermission("module", "delete", m.id)
-      return {
-        ...m,
-        onDelete: handleDelete,
-        onToggleStatus: canUpdate ? handleToggleStatus : undefined,
-        canUpdate,
-        canDelete,
-      }
-    })
+  const tableData: ModuleTableData[] = (
+    Array.isArray(data?.data) ? data.data : []
+  ).map((m) => {
+    const canUpdate = hasPermission("module", "update", m.id)
+    const canDelete = hasPermission("module", "delete", m.id)
+    return {
+      ...m,
+      onDelete: handleDelete,
+      onToggleStatus: canUpdate ? handleToggleStatus : undefined,
+      canUpdate,
+      canDelete,
+    }
+  })
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Modules</h1>
-          <p className="text-muted-foreground">
-            Organize APIs into modules
-          </p>
+          <p className="text-muted-foreground">Organize APIs into modules</p>
         </div>
         {canCreate && (
           <Link to="/api-dev/modules/create">
@@ -176,8 +177,7 @@ function ModulesList() {
           onValueChange={(value) =>
             setFilters({
               ...filters,
-              is_active:
-                value === "all" ? null : value === "active" ? true : false,
+              is_active: value === "all" ? null : value === "active",
               page: 1,
             })
           }
@@ -195,9 +195,7 @@ function ModulesList() {
 
       {/* DataTable */}
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading...
-        </div>
+        <div className="text-center py-8 text-muted-foreground">Loading...</div>
       ) : (
         <DataTable columns={moduleColumns} data={tableData} />
       )}
@@ -224,9 +222,7 @@ function ModulesList() {
             <Button
               variant="outline"
               size="sm"
-              disabled={
-                filters.page! * filters.page_size! >= data.total
-              }
+              disabled={filters.page! * filters.page_size! >= data.total}
               onClick={() =>
                 setFilters({ ...filters, page: (filters.page || 1) + 1 })
               }
@@ -243,8 +239,8 @@ function ModulesList() {
           <DialogHeader>
             <DialogTitle>Delete Module</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this module? This action
-              cannot be undone and will cascade to all APIs in this module.
+              Are you sure you want to delete this module? This action cannot be
+              undone and will cascade to all APIs in this module.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

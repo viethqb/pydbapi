@@ -4,8 +4,12 @@ from datetime import timedelta
 
 from sqlmodel import Session
 
-from app.core.security import TOKEN_TYPE_DASHBOARD, TOKEN_TYPE_GATEWAY, create_access_token
 from app.core.gateway.auth import verify_gateway_client
+from app.core.security import (
+    TOKEN_TYPE_DASHBOARD,
+    TOKEN_TYPE_GATEWAY,
+    create_access_token,
+)
 from tests.utils.client import create_random_client
 
 

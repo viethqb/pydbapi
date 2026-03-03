@@ -6,15 +6,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type UserPublic, UsersService } from "@/client"
-import {
-  optionalEmailSchema,
-  optionalPasswordSchema,
-  passwordsMatch,
-  passwordsMismatchError,
-  usernameSchema,
-} from "@/lib/validations"
-import { RolesService } from "@/services/roles"
-import { UserPermissionsService } from "@/services/user-permissions"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -38,6 +29,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  optionalEmailSchema,
+  optionalPasswordSchema,
+  passwordsMatch,
+  passwordsMismatchError,
+  usernameSchema,
+} from "@/lib/validations"
+import { RolesService } from "@/services/roles"
+import { UserPermissionsService } from "@/services/user-permissions"
 import { handleError } from "@/utils"
 
 const formSchema = z
@@ -81,7 +81,7 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
     if (isOpen && userRolesData) {
       setSelectedRoleIds(userRolesData.role_ids ?? [])
     }
-  }, [isOpen, userRolesData?.role_ids?.join(",")])
+  }, [isOpen, userRolesData])
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -183,11 +183,7 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Email"
-                        type="email"
-                        {...field}
-                      />
+                      <Input placeholder="Email" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -281,10 +277,7 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
                   <FormLabel>Roles</FormLabel>
                   <div className="flex flex-wrap gap-3">
                     {roles.map((role) => (
-                      <div
-                        key={role.id}
-                        className="flex items-center gap-2"
-                      >
+                      <div key={role.id} className="flex items-center gap-2">
                         <Checkbox
                           id={`edit-role-${user.id}-${role.id}`}
                           checked={selectedRoleIds.includes(role.id)}

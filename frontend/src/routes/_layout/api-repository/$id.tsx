@@ -1,14 +1,27 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, Copy, Check, Terminal, Play, Loader2, Plus, X, Braces } from "lucide-react"
-import { useState, useEffect, useMemo } from "react"
-
-import { Button } from "@/components/ui/button"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import {
+  ArrowLeft,
+  Braces,
+  Check,
+  Copy,
+  Loader2,
+  Play,
+  Plus,
+  Terminal,
+  X,
+} from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -17,12 +30,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ApiAssignmentsService, type VersionCommitDetail } from "@/services/api-assignments"
-import { ModulesService } from "@/services/modules"
-import { DataSourceService } from "@/services/datasource"
-import { GroupsService } from "@/services/groups"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { getGatewayApiKey } from "@/lib/gatewayApiKey"
+import {
+  ApiAssignmentsService,
+  type VersionCommitDetail,
+} from "@/services/api-assignments"
+import { DataSourceService } from "@/services/datasource"
+import { GroupsService } from "@/services/groups"
+import { ModulesService } from "@/services/modules"
 
 export const Route = createFileRoute("/_layout/api-repository/$id")({
   component: ApiRepositoryDetail,
@@ -40,17 +58,34 @@ function ApiRepositoryDetail() {
   const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [copiedUrl, setCopiedUrl] = useState(false)
-  const [queryParams, setQueryParams] = useState<Array<{ key: string; value: string }>>([])
-  const [headers, setHeaders] = useState<Array<{ key: string; value: string }>>([])
+  const [queryParams, setQueryParams] = useState<
+    Array<{ key: string; value: string }>
+  >([])
+  const [headers, setHeaders] = useState<Array<{ key: string; value: string }>>(
+    [],
+  )
   const [body, setBody] = useState("{}")
-  const [response, setResponse] = useState<{ status?: number; data?: unknown; error?: string } | null>(null)
+  const [response, setResponse] = useState<{
+    status?: number
+    data?: unknown
+    error?: string
+  } | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
-  const [tokenHeaders, setTokenHeaders] = useState<Array<{ key: string; value: string }>>([{ key: "Content-Type", value: "application/json" }])
-  const [tokenBody, setTokenBody] = useState('{"client_id": "", "client_secret": ""}')
+  const [tokenHeaders, setTokenHeaders] = useState<
+    Array<{ key: string; value: string }>
+  >([{ key: "Content-Type", value: "application/json" }])
+  const [tokenBody, setTokenBody] = useState(
+    '{"client_id": "", "client_secret": ""}',
+  )
   const [generatedToken, setGeneratedToken] = useState<string | null>(null)
   const [isGeneratingToken, setIsGeneratingToken] = useState(false)
-  const [tokenResponse, setTokenResponse] = useState<{ status?: number; data?: unknown; error?: string } | null>(null)
-  const [publishedVersion, setPublishedVersion] = useState<VersionCommitDetail | null>(null)
+  const [tokenResponse, setTokenResponse] = useState<{
+    status?: number
+    data?: unknown
+    error?: string
+  } | null>(null)
+  const [publishedVersion, setPublishedVersion] =
+    useState<VersionCommitDetail | null>(null)
 
   // Fetch API detail
   const { data: apiDetail, isLoading } = useQuery({
@@ -61,9 +96,10 @@ function ApiRepositoryDetail() {
   // Fetch published version if exists
   const { data: versionData } = useQuery({
     queryKey: ["api-version", apiDetail?.published_version_id],
-    queryFn: () => apiDetail?.published_version_id 
-      ? ApiAssignmentsService.getVersion(apiDetail.published_version_id) 
-      : null,
+    queryFn: () =>
+      apiDetail?.published_version_id
+        ? ApiAssignmentsService.getVersion(apiDetail.published_version_id)
+        : null,
     enabled: !!apiDetail?.published_version_id,
   })
 
@@ -78,13 +114,16 @@ function ApiRepositoryDetail() {
   // Fetch related data
   const { data: module } = useQuery({
     queryKey: ["module", apiDetail?.module_id],
-    queryFn: () => apiDetail ? ModulesService.get(apiDetail.module_id) : null,
+    queryFn: () => (apiDetail ? ModulesService.get(apiDetail.module_id) : null),
     enabled: !!apiDetail,
   })
 
   const { data: datasource } = useQuery({
     queryKey: ["datasource", apiDetail?.datasource_id],
-    queryFn: () => apiDetail?.datasource_id ? DataSourceService.get(apiDetail.datasource_id) : null,
+    queryFn: () =>
+      apiDetail?.datasource_id
+        ? DataSourceService.get(apiDetail.datasource_id)
+        : null,
     enabled: !!apiDetail?.datasource_id,
   })
 
@@ -103,33 +142,42 @@ function ApiRepositoryDetail() {
 
   // Build default values from params definition
   const defaultValues = useMemo(() => {
-    if (!apiDetail?.api_context?.params || !Array.isArray(apiDetail.api_context.params)) {
+    if (
+      !apiDetail?.api_context?.params ||
+      !Array.isArray(apiDetail.api_context.params)
+    ) {
       return { query: {}, header: {}, body: {} }
     }
 
-    const defaults: { query: Record<string, string>; header: Record<string, string>; body: Record<string, unknown> } = {
+    const defaults: {
+      query: Record<string, string>
+      header: Record<string, string>
+      body: Record<string, unknown>
+    } = {
       query: {},
       header: {},
       body: {},
     }
 
-    apiDetail.api_context.params.forEach((param: { name?: string; location?: string; default_value?: string }) => {
-      if (!param.name) return
-      const location = param.location || "query"
-      const defaultValue = param.default_value || ""
-      
-      if (defaultValue) {
-        if (location === "query" || location === "header") {
-          defaults[location][param.name] = defaultValue
-        } else if (location === "body") {
-          try {
-            defaults.body[param.name] = JSON.parse(defaultValue)
-          } catch {
-            defaults.body[param.name] = defaultValue
+    apiDetail.api_context.params.forEach(
+      (param: { name?: string; location?: string; default_value?: string }) => {
+        if (!param.name) return
+        const location = param.location || "query"
+        const defaultValue = param.default_value || ""
+
+        if (defaultValue) {
+          if (location === "query" || location === "header") {
+            defaults[location][param.name] = defaultValue
+          } else if (location === "body") {
+            try {
+              defaults.body[param.name] = JSON.parse(defaultValue)
+            } catch {
+              defaults.body[param.name] = defaultValue
+            }
           }
         }
-      }
-    })
+      },
+    )
 
     return defaults
   }, [apiDetail?.api_context?.params])
@@ -138,25 +186,35 @@ function ApiRepositoryDetail() {
   useEffect(() => {
     if (apiDetail && defaultValues) {
       // Convert query params to key-value array
-      const queryArray = Object.entries(defaultValues.query).map(([key, value]) => ({
-        key,
-        value: String(value),
-      }))
-      setQueryParams(queryArray.length > 0 ? queryArray : [{ key: "", value: "" }])
+      const queryArray = Object.entries(defaultValues.query).map(
+        ([key, value]) => ({
+          key,
+          value: String(value),
+        }),
+      )
+      setQueryParams(
+        queryArray.length > 0 ? queryArray : [{ key: "", value: "" }],
+      )
 
       // Convert headers to key-value array (JWT from Generate token or Settings → Gateway API Key)
       const gatewayToken = generatedToken || getGatewayApiKey()
       const defaultHeaders = {
         ...defaultValues.header,
         "Content-Type": "application/json",
-        ...(apiDetail.access_type === "private" && gatewayToken ? { Authorization: `Bearer ${gatewayToken}` } : {}),
+        ...(apiDetail.access_type === "private" && gatewayToken
+          ? { Authorization: `Bearer ${gatewayToken}` }
+          : {}),
       }
-      const headersArray = Object.entries(defaultHeaders).map(([key, value]) => ({
-        key,
-        value: String(value),
-      }))
-      setHeaders(headersArray.length > 0 ? headersArray : [{ key: "", value: "" }])
-      
+      const headersArray = Object.entries(defaultHeaders).map(
+        ([key, value]) => ({
+          key,
+          value: String(value),
+        }),
+      )
+      setHeaders(
+        headersArray.length > 0 ? headersArray : [{ key: "", value: "" }],
+      )
+
       setBody(JSON.stringify(defaultValues.body, null, 2))
     } else if (!apiDetail) {
       // Reset to defaults when apiDetail is not available
@@ -174,11 +232,15 @@ function ApiRepositoryDetail() {
         const existing = prev.find((h) => h.key === "Authorization")
         if (existing) {
           return prev.map((h) =>
-            h.key === "Authorization" ? { ...h, value: `Bearer ${gatewayToken}` } : h
+            h.key === "Authorization"
+              ? { ...h, value: `Bearer ${gatewayToken}` }
+              : h,
           )
-        } else {
-          return [...prev, { key: "Authorization", value: `Bearer ${gatewayToken}` }]
         }
+        return [
+          ...prev,
+          { key: "Authorization", value: `Bearer ${gatewayToken}` },
+        ]
       })
     }
   }, [generatedToken, apiDetail?.access_type])
@@ -189,7 +251,9 @@ function ApiRepositoryDetail() {
     const currentApiDetail = apiDetail
     if (!currentModule || !currentApiDetail) return ""
     const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-    const apiPath = currentApiDetail.path.startsWith("/") ? currentApiDetail.path.slice(1) : currentApiDetail.path
+    const apiPath = currentApiDetail.path.startsWith("/")
+      ? currentApiDetail.path.slice(1)
+      : currentApiDetail.path
     let url = `${baseUrl}/api/${apiPath}`
     const validParams = queryParams.filter((p) => p.key && p.value)
     if (validParams.length > 0) {
@@ -203,20 +267,27 @@ function ApiRepositoryDetail() {
   }, [module, apiDetail, queryParams])
 
   if (isLoading) {
-    return <div className="text-center py-8 text-muted-foreground">Loading...</div>
+    return (
+      <div className="text-center py-8 text-muted-foreground">Loading...</div>
+    )
   }
 
   if (!apiDetail) {
-    return <div className="text-center py-8 text-muted-foreground">API not found</div>
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        API not found
+      </div>
+    )
   }
 
   if (!apiDetail.is_published) {
     return null // Will redirect via useEffect
   }
 
-  const assignedGroups = (Array.isArray(groupsData?.data) && apiDetail?.group_ids 
-    ? groupsData.data.filter(g => apiDetail.group_ids.includes(g.id)) 
-    : [])
+  const assignedGroups =
+    Array.isArray(groupsData?.data) && apiDetail?.group_ids
+      ? groupsData.data.filter((g) => apiDetail.group_ids.includes(g.id))
+      : []
   const methodColors: Record<string, string> = {
     GET: "bg-blue-500",
     POST: "bg-green-500",
@@ -246,7 +317,7 @@ function ApiRepositoryDetail() {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
       const tokenUrl = `${baseUrl}/api/token/generate`
-      
+
       // Build headers
       const headersObj: Record<string, string> = {}
       tokenHeaders.forEach(({ key, value }) => {
@@ -257,14 +328,16 @@ function ApiRepositoryDetail() {
       if (!headersObj["Content-Type"]) {
         headersObj["Content-Type"] = "application/json"
       }
-      
+
       const response = await fetch(tokenUrl, {
         method: "POST",
         headers: headersObj,
         body: JSON.stringify(bodyObj),
       })
 
-      const responseData = await response.json().catch(() => ({ error: "Invalid JSON response" }))
+      const responseData = await response
+        .json()
+        .catch(() => ({ error: "Invalid JSON response" }))
 
       setTokenResponse({
         status: response.status,
@@ -274,19 +347,27 @@ function ApiRepositoryDetail() {
       if (!response.ok) {
         const detail = responseData.detail
         const msg = Array.isArray(detail)
-          ? detail.map((e: { msg?: string }) => e.msg).filter(Boolean).join(", ") || `HTTP ${response.status}`
-          : (typeof detail === "string" ? detail : `HTTP ${response.status}`)
+          ? detail
+              .map((e: { msg?: string }) => e.msg)
+              .filter(Boolean)
+              .join(", ") || `HTTP ${response.status}`
+          : typeof detail === "string"
+            ? detail
+            : `HTTP ${response.status}`
         setTokenResponse({
           status: response.status,
           error: msg || `HTTP ${response.status}`,
         })
-        showErrorToast(`Failed to generate token: ${msg || `HTTP ${response.status}`}`)
+        showErrorToast(
+          `Failed to generate token: ${msg || `HTTP ${response.status}`}`,
+        )
       } else {
         setGeneratedToken(responseData.access_token)
         showSuccessToast("Token generated successfully")
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       setTokenResponse({
         error: errorMessage,
       })
@@ -300,9 +381,13 @@ function ApiRepositoryDetail() {
     if (!apiUrl || !apiDetail) return
 
     if (apiDetail.access_type === "private") {
-      const hasAuthHeader = headers.some((h) => h.key.toLowerCase() === "authorization" && h.value.trim())
+      const hasAuthHeader = headers.some(
+        (h) => h.key.toLowerCase() === "authorization" && h.value.trim(),
+      )
       if (!hasAuthHeader) {
-        showErrorToast("Please add Authorization header with Bearer token for private APIs")
+        showErrorToast(
+          "Please add Authorization header with Bearer token for private APIs",
+        )
         return
       }
     }
@@ -331,7 +416,9 @@ function ApiRepositoryDetail() {
         headers: headersObj,
         ...(bodyObj !== null && { body: JSON.stringify(bodyObj) }),
       })
-      const responseData = await fetchResponse.json().catch(() => ({ error: "Invalid JSON response" }))
+      const responseData = await fetchResponse
+        .json()
+        .catch(() => ({ error: "Invalid JSON response" }))
 
       setResponse({ status: fetchResponse.status, data: responseData })
       if (fetchResponse.ok) {
@@ -360,15 +447,21 @@ function ApiRepositoryDetail() {
   }
 
   // Key-value table helpers
-  const addKeyValue = (setter: React.Dispatch<React.SetStateAction<Array<{ key: string; value: string }>>>) => {
+  const addKeyValue = (
+    setter: React.Dispatch<
+      React.SetStateAction<Array<{ key: string; value: string }>>
+    >,
+  ) => {
     setter((prev) => [...prev, { key: "", value: "" }])
   }
 
   const updateKeyValue = (
-    setter: React.Dispatch<React.SetStateAction<Array<{ key: string; value: string }>>>,
+    setter: React.Dispatch<
+      React.SetStateAction<Array<{ key: string; value: string }>>
+    >,
     index: number,
     field: "key" | "value",
-    value: string
+    value: string,
   ) => {
     setter((prev) => {
       const updated = [...prev]
@@ -378,8 +471,10 @@ function ApiRepositoryDetail() {
   }
 
   const removeKeyValue = (
-    setter: React.Dispatch<React.SetStateAction<Array<{ key: string; value: string }>>>,
-    index: number
+    setter: React.Dispatch<
+      React.SetStateAction<Array<{ key: string; value: string }>>
+    >,
+    index: number,
   ) => {
     setter((prev) => prev.filter((_, i) => i !== index))
   }
@@ -398,51 +493,51 @@ function ApiRepositoryDetail() {
   }) => {
     const safeData = Array.isArray(data) ? data : []
     return (
-    <div className="space-y-2">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[200px]">Key</TableHead>
-            <TableHead>Value</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {safeData.map((item, index) => (
-            <TableRow key={`${index}-${item.key}-${item.value}`}>
-              <TableCell>
-                <Input
-                  value={item.key}
-                  onChange={(e) => onUpdate(index, "key", e.target.value)}
-                  placeholder="Key"
-                />
-              </TableCell>
-              <TableCell>
-                <Input
-                  value={item.value}
-                  onChange={(e) => onUpdate(index, "value", e.target.value)}
-                  placeholder="Value"
-                />
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onRemove(index)}
-                  disabled={safeData.length === 1}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </TableCell>
+      <div className="space-y-2">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Key</TableHead>
+              <TableHead>Value</TableHead>
+              <TableHead className="w-[50px]" />
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <Button variant="outline" size="sm" onClick={onAdd} className="w-full">
-        <Plus className="mr-2 h-4 w-4" />
-        Add Row
-      </Button>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {safeData.map((item, index) => (
+              <TableRow key={`${index}-${item.key}-${item.value}`}>
+                <TableCell>
+                  <Input
+                    value={item.key}
+                    onChange={(e) => onUpdate(index, "key", e.target.value)}
+                    placeholder="Key"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={item.value}
+                    onChange={(e) => onUpdate(index, "value", e.target.value)}
+                    placeholder="Value"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRemove(index)}
+                    disabled={safeData.length === 1}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <Button variant="outline" size="sm" onClick={onAdd} className="w-full">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Row
+        </Button>
+      </div>
     )
   }
 
@@ -467,11 +562,15 @@ function ApiRepositoryDetail() {
           </Link>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold tracking-tight">{apiDetail.name}</h1>
-              <Badge variant="default">
-                Published
-              </Badge>
-              <Badge variant={apiDetail.access_type === "public" ? "default" : "secondary"}>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {apiDetail.name}
+              </h1>
+              <Badge variant="default">Published</Badge>
+              <Badge
+                variant={
+                  apiDetail.access_type === "public" ? "default" : "secondary"
+                }
+              >
                 {apiDetail.access_type === "public" ? "Public" : "Private"}
               </Badge>
             </div>
@@ -488,7 +587,9 @@ function ApiRepositoryDetail() {
       <Card>
         <CardHeader>
           <CardTitle>{apiDetail.name}</CardTitle>
-          <CardDescription>View API details and test the endpoint</CardDescription>
+          <CardDescription>
+            View API details and test the endpoint
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="info" className="w-full">
@@ -515,7 +616,10 @@ function ApiRepositoryDetail() {
                   <TableRow>
                     <TableHead className="w-[180px]">Path</TableHead>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono font-normal">
+                      <Badge
+                        variant="outline"
+                        className="font-mono font-normal"
+                      >
                         {apiDetail.path}
                       </Badge>
                     </TableCell>
@@ -523,7 +627,11 @@ function ApiRepositoryDetail() {
                   <TableRow>
                     <TableHead className="w-[180px]">HTTP Method</TableHead>
                     <TableCell>
-                      <Badge className={methodColors[apiDetail.http_method] || "bg-gray-500"}>
+                      <Badge
+                        className={
+                          methodColors[apiDetail.http_method] || "bg-gray-500"
+                        }
+                      >
                         {apiDetail.http_method}
                       </Badge>
                     </TableCell>
@@ -554,7 +662,11 @@ function ApiRepositoryDetail() {
                       {assignedGroups.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {assignedGroups.map((group) => (
-                            <Badge key={group.id} variant="outline" className="font-normal">
+                            <Badge
+                              key={group.id}
+                              variant="outline"
+                              className="font-normal"
+                            >
                               {group.name}
                             </Badge>
                           ))}
@@ -593,7 +705,9 @@ function ApiRepositoryDetail() {
                   {publishedVersion && (
                     <>
                       <TableRow>
-                        <TableHead className="w-[180px]">Published Version</TableHead>
+                        <TableHead className="w-[180px]">
+                          Published Version
+                        </TableHead>
                         <TableCell>
                           <Badge variant="default" className="font-mono">
                             v{publishedVersion.version}
@@ -606,9 +720,13 @@ function ApiRepositoryDetail() {
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableHead className="w-[180px]">Version Committed At</TableHead>
+                        <TableHead className="w-[180px]">
+                          Version Committed At
+                        </TableHead>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(publishedVersion.committed_at).toLocaleString()}
+                          {new Date(
+                            publishedVersion.committed_at,
+                          ).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     </>
@@ -620,9 +738,12 @@ function ApiRepositoryDetail() {
               {publishedVersion && (
                 <div className="mt-6 border-t pt-6">
                   <div className="mb-4">
-                    <div className="text-sm font-medium">Published Version Content</div>
+                    <div className="text-sm font-medium">
+                      Published Version Content
+                    </div>
                     <div className="text-sm text-muted-foreground">
-                      Content snapshot of the published version (v{publishedVersion.version})
+                      Content snapshot of the published version (v
+                      {publishedVersion.version})
                     </div>
                   </div>
                   <div className="rounded-md border bg-muted/50">
@@ -641,7 +762,9 @@ function ApiRepositoryDetail() {
                   </div>
                 </div>
 
-                {apiDetail.api_context?.params && Array.isArray(apiDetail.api_context.params) && apiDetail.api_context.params.length > 0 ? (
+                {apiDetail.api_context?.params &&
+                Array.isArray(apiDetail.api_context.params) &&
+                apiDetail.api_context.params.length > 0 ? (
                   <div className="rounded-md border">
                     <Table>
                       <TableBody>
@@ -652,40 +775,58 @@ function ApiRepositoryDetail() {
                           <TableHead className="w-[110px]">Required</TableHead>
                           <TableHead>Default</TableHead>
                         </TableRow>
-                        {apiDetail.api_context.params.map((p: unknown, idx: number) => {
-                          const param = p as {
-                            name?: string
-                            location?: string
-                            data_type?: string
-                            is_required?: boolean
-                            default_value?: unknown
-                          }
-                          return (
-                          <TableRow key={`${p?.name || "param"}-${idx}`}>
-                            <TableCell className="font-mono text-sm">{param.name || "-"}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="font-normal">
-                                {param.location || "query"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="font-normal">
-                                {param.data_type || "string"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={param.is_required ? "default" : "secondary"} className="font-normal">
-                                {param.is_required ? "Yes" : "No"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-mono text-xs text-muted-foreground break-all">
-                              {param.default_value != null && String(param.default_value).trim() !== ""
-                                ? String(param.default_value)
-                                : "-"}
-                            </TableCell>
-                          </TableRow>
-                          )
-                        })}
+                        {apiDetail.api_context.params.map(
+                          (p: unknown, idx: number) => {
+                            const param = p as {
+                              name?: string
+                              location?: string
+                              data_type?: string
+                              is_required?: boolean
+                              default_value?: unknown
+                            }
+                            return (
+                              <TableRow key={`${p?.name || "param"}-${idx}`}>
+                                <TableCell className="font-mono text-sm">
+                                  {param.name || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className="font-normal"
+                                  >
+                                    {param.location || "query"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className="font-normal"
+                                  >
+                                    {param.data_type || "string"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      param.is_required
+                                        ? "default"
+                                        : "secondary"
+                                    }
+                                    className="font-normal"
+                                  >
+                                    {param.is_required ? "Yes" : "No"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs text-muted-foreground break-all">
+                                  {param.default_value != null &&
+                                  String(param.default_value).trim() !== ""
+                                    ? String(param.default_value)
+                                    : "-"}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          },
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -702,18 +843,26 @@ function ApiRepositoryDetail() {
                   {apiDetail.access_type === "private" && (
                     <div>
                       <div className="mb-4">
-                        <h3 className="text-lg font-semibold mb-2">Generate Token</h3>
+                        <h3 className="text-lg font-semibold mb-2">
+                          Generate Token
+                        </h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Set Headers and Body (JSON with client_id, client_secret) to generate an access token for testing this private API.
+                          Set Headers and Body (JSON with client_id,
+                          client_secret) to generate an access token for testing
+                          this private API.
                         </p>
                         <div className="space-y-4">
                           {/* Token API URL */}
                           <div>
-                            <div className="text-sm font-medium mb-2">Token API URL</div>
+                            <div className="text-sm font-medium mb-2">
+                              Token API URL
+                            </div>
                             <div className="flex items-center gap-2">
                               <div className="flex-1 p-3 bg-muted rounded-md border font-mono text-sm break-all">
                                 {(() => {
-                                  const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
+                                  const baseUrl =
+                                    import.meta.env.VITE_API_URL ||
+                                    window.location.origin
                                   return `${baseUrl}/api/token/generate`
                                 })()}
                               </div>
@@ -721,10 +870,14 @@ function ApiRepositoryDetail() {
                                 variant="outline"
                                 size="icon"
                                 onClick={() => {
-                                  const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
+                                  const baseUrl =
+                                    import.meta.env.VITE_API_URL ||
+                                    window.location.origin
                                   const tokenUrl = `${baseUrl}/api/token/generate`
                                   navigator.clipboard.writeText(tokenUrl)
-                                  showSuccessToast("Token URL copied to clipboard")
+                                  showSuccessToast(
+                                    "Token URL copied to clipboard",
+                                  )
                                 }}
                                 title="Copy Token URL"
                               >
@@ -735,10 +888,28 @@ function ApiRepositoryDetail() {
                           <div className="space-y-2">
                             <div className="text-sm font-medium">Headers</div>
                             <KeyValueTable
-                              data={tokenHeaders.length > 0 ? tokenHeaders : [{ key: "Content-Type", value: "application/json" }]}
+                              data={
+                                tokenHeaders.length > 0
+                                  ? tokenHeaders
+                                  : [
+                                      {
+                                        key: "Content-Type",
+                                        value: "application/json",
+                                      },
+                                    ]
+                              }
                               onAdd={() => addKeyValue(setTokenHeaders)}
-                              onUpdate={(index, field, value) => updateKeyValue(setTokenHeaders, index, field, value)}
-                              onRemove={(index) => removeKeyValue(setTokenHeaders, index)}
+                              onUpdate={(index, field, value) =>
+                                updateKeyValue(
+                                  setTokenHeaders,
+                                  index,
+                                  field,
+                                  value,
+                                )
+                              }
+                              onRemove={(index) =>
+                                removeKeyValue(setTokenHeaders, index)
+                              }
                             />
                           </div>
                           <div className="space-y-2">
@@ -757,7 +928,9 @@ function ApiRepositoryDetail() {
                                 onClick={() => {
                                   try {
                                     const parsed = JSON.parse(tokenBody || "{}")
-                                    setTokenBody(JSON.stringify(parsed, null, 2))
+                                    setTokenBody(
+                                      JSON.stringify(parsed, null, 2),
+                                    )
                                     showSuccessToast("JSON formatted")
                                   } catch {
                                     showErrorToast("Invalid JSON format")
@@ -768,9 +941,12 @@ function ApiRepositoryDetail() {
                                 <Braces className="h-4 w-4" />
                               </Button>
                             </div>
-                            <p className="text-xs text-muted-foreground">JSON. Include client_id and client_secret. grant_type is added automatically if missing.</p>
+                            <p className="text-xs text-muted-foreground">
+                              JSON. Include client_id and client_secret.
+                              grant_type is added automatically if missing.
+                            </p>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
                             <Button
                               onClick={handleGenerateToken}
@@ -802,11 +978,24 @@ function ApiRepositoryDetail() {
                       {tokenResponse && (
                         <div className="mt-6 space-y-3">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-base font-semibold">Token Response</h4>
+                            <h4 className="text-base font-semibold">
+                              Token Response
+                            </h4>
                             <div className="flex items-center gap-2">
                               {tokenResponse.status && (
-                                <Badge variant={tokenResponse.status >= 200 && tokenResponse.status < 300 ? "default" : "destructive"}>
-                                  {tokenResponse.status} {tokenResponse.status >= 200 && tokenResponse.status < 300 ? "OK" : "Error"}
+                                <Badge
+                                  variant={
+                                    tokenResponse.status >= 200 &&
+                                    tokenResponse.status < 300
+                                      ? "default"
+                                      : "destructive"
+                                  }
+                                >
+                                  {tokenResponse.status}{" "}
+                                  {tokenResponse.status >= 200 &&
+                                  tokenResponse.status < 300
+                                    ? "OK"
+                                    : "Error"}
                                 </Badge>
                               )}
                               {!tokenResponse.error && tokenResponse.data && (
@@ -817,11 +1006,19 @@ function ApiRepositoryDetail() {
                                     className="h-8 w-8"
                                     onClick={() => {
                                       try {
-                                        const formatted = JSON.stringify(tokenResponse.data, null, 2)
+                                        const formatted = JSON.stringify(
+                                          tokenResponse.data,
+                                          null,
+                                          2,
+                                        )
                                         navigator.clipboard.writeText(formatted)
-                                        showSuccessToast("Response copied to clipboard")
+                                        showSuccessToast(
+                                          "Response copied to clipboard",
+                                        )
                                       } catch {
-                                        showErrorToast("Failed to copy response")
+                                        showErrorToast(
+                                          "Failed to copy response",
+                                        )
                                       }
                                     }}
                                     title="Copy response"
@@ -834,11 +1031,20 @@ function ApiRepositoryDetail() {
                                     className="h-8 w-8"
                                     onClick={() => {
                                       try {
-                                        const formatted = JSON.stringify(tokenResponse.data, null, 2)
-                                        setTokenResponse({ ...tokenResponse, data: JSON.parse(formatted) })
+                                        const formatted = JSON.stringify(
+                                          tokenResponse.data,
+                                          null,
+                                          2,
+                                        )
+                                        setTokenResponse({
+                                          ...tokenResponse,
+                                          data: JSON.parse(formatted),
+                                        })
                                         showSuccessToast("Response formatted")
                                       } catch {
-                                        showErrorToast("Invalid JSON in response")
+                                        showErrorToast(
+                                          "Invalid JSON in response",
+                                        )
                                       }
                                     }}
                                     title="Format JSON"
@@ -852,7 +1058,9 @@ function ApiRepositoryDetail() {
                           <div className="p-4 bg-muted rounded-lg border">
                             {tokenResponse.error ? (
                               <div className="space-y-2">
-                                <p className="text-sm font-medium text-destructive">Error</p>
+                                <p className="text-sm font-medium text-destructive">
+                                  Error
+                                </p>
                                 <pre className="text-sm text-destructive font-mono whitespace-pre-wrap break-all">
                                   {tokenResponse.error}
                                 </pre>
@@ -870,7 +1078,7 @@ function ApiRepositoryDetail() {
 
                   {/* Divider between Generate Token and Execute API */}
                   {apiDetail.access_type === "private" && (
-                    <div className="border-t pt-6"></div>
+                    <div className="border-t pt-6" />
                   )}
 
                   {/* Execute API */}
@@ -878,10 +1086,12 @@ function ApiRepositoryDetail() {
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-semibold">Execute API</h3>
-                        <p className="text-sm text-muted-foreground">Test the API with custom parameters</p>
+                        <p className="text-sm text-muted-foreground">
+                          Test the API with custom parameters
+                        </p>
                       </div>
                     </div>
-                    
+
                     {/* API URL */}
                     <div className="mb-4">
                       <div className="text-sm font-medium mb-2">API URL</div>
@@ -909,23 +1119,39 @@ function ApiRepositoryDetail() {
                       <div className="space-y-2">
                         <div className="text-sm font-medium">Query Params</div>
                         <KeyValueTable
-                          data={queryParams.length > 0 ? queryParams : [{ key: "", value: "" }]}
+                          data={
+                            queryParams.length > 0
+                              ? queryParams
+                              : [{ key: "", value: "" }]
+                          }
                           onAdd={() => addKeyValue(setQueryParams)}
-                          onUpdate={(index, field, value) => updateKeyValue(setQueryParams, index, field, value)}
-                          onRemove={(index) => removeKeyValue(setQueryParams, index)}
+                          onUpdate={(index, field, value) =>
+                            updateKeyValue(setQueryParams, index, field, value)
+                          }
+                          onRemove={(index) =>
+                            removeKeyValue(setQueryParams, index)
+                          }
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="text-sm font-medium">Headers</div>
                         <KeyValueTable
-                          data={headers.length > 0 ? headers : [{ key: "", value: "" }]}
+                          data={
+                            headers.length > 0
+                              ? headers
+                              : [{ key: "", value: "" }]
+                          }
                           onAdd={() => addKeyValue(setHeaders)}
-                          onUpdate={(index, field, value) => updateKeyValue(setHeaders, index, field, value)}
-                          onRemove={(index) => removeKeyValue(setHeaders, index)}
+                          onUpdate={(index, field, value) =>
+                            updateKeyValue(setHeaders, index, field, value)
+                          }
+                          onRemove={(index) =>
+                            removeKeyValue(setHeaders, index)
+                          }
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="text-sm font-medium">Body</div>
                         <div className="relative">
@@ -934,9 +1160,15 @@ function ApiRepositoryDetail() {
                             onChange={(e) => setBody(e.target.value)}
                             placeholder='{"key": "value"}'
                             className="font-mono min-h-[120px] pr-10"
-                            disabled={!["POST", "PUT", "PATCH"].includes(apiDetail.http_method)}
+                            disabled={
+                              !["POST", "PUT", "PATCH"].includes(
+                                apiDetail.http_method,
+                              )
+                            }
                           />
-                          {["POST", "PUT", "PATCH"].includes(apiDetail.http_method) && (
+                          {["POST", "PUT", "PATCH"].includes(
+                            apiDetail.http_method,
+                          ) && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -957,7 +1189,9 @@ function ApiRepositoryDetail() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {["POST", "PUT", "PATCH"].includes(apiDetail.http_method)
+                          {["POST", "PUT", "PATCH"].includes(
+                            apiDetail.http_method,
+                          )
                             ? "JSON object for request body"
                             : "Body is not used for GET/DELETE requests"}
                         </p>
@@ -991,8 +1225,18 @@ function ApiRepositoryDetail() {
                           <h4 className="text-base font-semibold">Response</h4>
                           <div className="flex items-center gap-2">
                             {response.status && (
-                              <Badge variant={response.status >= 200 && response.status < 300 ? "default" : "destructive"}>
-                                {response.status} {response.status >= 200 && response.status < 300 ? "OK" : "Error"}
+                              <Badge
+                                variant={
+                                  response.status >= 200 &&
+                                  response.status < 300
+                                    ? "default"
+                                    : "destructive"
+                                }
+                              >
+                                {response.status}{" "}
+                                {response.status >= 200 && response.status < 300
+                                  ? "OK"
+                                  : "Error"}
                               </Badge>
                             )}
                             {!response.error && (
@@ -1003,9 +1247,15 @@ function ApiRepositoryDetail() {
                                   className="h-8 w-8"
                                   onClick={() => {
                                     try {
-                                      const formatted = JSON.stringify(response.data, null, 2)
+                                      const formatted = JSON.stringify(
+                                        response.data,
+                                        null,
+                                        2,
+                                      )
                                       navigator.clipboard.writeText(formatted)
-                                      showSuccessToast("Response copied to clipboard")
+                                      showSuccessToast(
+                                        "Response copied to clipboard",
+                                      )
                                     } catch {
                                       showErrorToast("Failed to copy response")
                                     }
@@ -1020,8 +1270,15 @@ function ApiRepositoryDetail() {
                                   className="h-8 w-8"
                                   onClick={() => {
                                     try {
-                                      const formatted = JSON.stringify(response.data, null, 2)
-                                      setResponse({ ...response, data: JSON.parse(formatted) })
+                                      const formatted = JSON.stringify(
+                                        response.data,
+                                        null,
+                                        2,
+                                      )
+                                      setResponse({
+                                        ...response,
+                                        data: JSON.parse(formatted),
+                                      })
                                       showSuccessToast("Response formatted")
                                     } catch {
                                       showErrorToast("Invalid JSON in response")
@@ -1038,7 +1295,9 @@ function ApiRepositoryDetail() {
                         <div className="p-4 bg-muted rounded-lg border">
                           {response.error ? (
                             <div className="space-y-2">
-                              <p className="text-sm font-medium text-destructive">Error</p>
+                              <p className="text-sm font-medium text-destructive">
+                                Error
+                              </p>
                               <pre className="text-sm text-destructive font-mono whitespace-pre-wrap break-all">
                                 {response.error}
                               </pre>

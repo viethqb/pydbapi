@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Plus, X } from "lucide-react"
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import ApiContentEditor, {
+  type MacroDefForCompletion,
+} from "@/components/ApiDev/ApiContentEditor"
 import { Button } from "@/components/ui/button"
-import ApiContentEditor, { type MacroDefForCompletion } from "@/components/ApiDev/ApiContentEditor"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 /**
  * Split SQL string into statements by ';'.
@@ -46,12 +47,14 @@ export default function SqlStatementsEditor({
   macroDefs,
   disabled = false,
 }: Props) {
-  const [statements, setStatements] = useState<string[]>(() => splitStatements(value ?? ""))
+  const [statements, setStatements] = useState<string[]>(() =>
+    splitStatements(value ?? ""),
+  )
   const [activeTab, setActiveTab] = useState<string>("stmt-0")
-  
+
   // Version counter to track internal changes
   const [version, setVersion] = useState(0)
-  
+
   // Track if we're the source of the change to avoid echo
   const lastEmittedRef = useRef<string>(value ?? "")
   const isExternalUpdateRef = useRef(false)
@@ -73,7 +76,7 @@ export default function SqlStatementsEditor({
 
   const tabIds = useMemo(
     () => statements.map((_, i) => `stmt-${i}`),
-    [statements]
+    [statements],
   )
 
   // Correct active tab if it no longer exists
@@ -94,16 +97,16 @@ export default function SqlStatementsEditor({
       isExternalUpdateRef.current = false
       return
     }
-    
+
     const nextValue = joinStatements(statements)
     if (nextValue === lastEmittedRef.current) return
-    
+
     lastEmittedRef.current = nextValue
     // Use setTimeout to break out of React's update cycle
     const timer = setTimeout(() => {
       onChangeRef.current(nextValue)
     }, 0)
-    
+
     return () => clearTimeout(timer)
   }, [version, statements])
 

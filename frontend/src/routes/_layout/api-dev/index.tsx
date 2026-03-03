@@ -1,4 +1,9 @@
-import { createFileRoute, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const Route = createFileRoute("/_layout/api-dev/")({
@@ -15,12 +20,21 @@ export const Route = createFileRoute("/_layout/api-dev/")({
 function ApiDevLayout() {
   const navigate = useNavigate()
   const matchRoute = useMatchRoute()
-  
-  const isModulesRoute = matchRoute({ to: "/api-dev/modules" }) || matchRoute({ to: "/api-dev/modules/" })
-  const isApisRoute = matchRoute({ to: "/api-dev/apis" }) || matchRoute({ to: "/api-dev/apis/" })
-  const isMacroDefsRoute = matchRoute({ to: "/api-dev/macro-defs" }) || matchRoute({ to: "/api-dev/macro-defs/" })
 
-  const activeTab = isModulesRoute ? "modules" : isMacroDefsRoute ? "macro-defs" : "apis"
+  const isModulesRoute =
+    matchRoute({ to: "/api-dev/modules" }) ||
+    matchRoute({ to: "/api-dev/modules/" })
+  const _isApisRoute =
+    matchRoute({ to: "/api-dev/apis" }) || matchRoute({ to: "/api-dev/apis/" })
+  const isMacroDefsRoute =
+    matchRoute({ to: "/api-dev/macro-defs" }) ||
+    matchRoute({ to: "/api-dev/macro-defs/" })
+
+  const activeTab = isModulesRoute
+    ? "modules"
+    : isMacroDefsRoute
+      ? "macro-defs"
+      : "apis"
 
   const handleTabChange = (value: string) => {
     if (value === "modules") {
@@ -41,7 +55,11 @@ function ApiDevLayout() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList>
           <TabsTrigger value="modules">Modules</TabsTrigger>
           <TabsTrigger value="apis">APIs</TabsTrigger>

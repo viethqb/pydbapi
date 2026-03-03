@@ -1,4 +1,4 @@
-import { request, type RequestOptions } from "@/lib/api-request"
+import { type RequestOptions, request } from "@/lib/api-request"
 
 export type OverviewStats = {
   datasources: number
@@ -69,7 +69,10 @@ export const OverviewService = {
     })
   },
 
-  getRecentAccess: async (limit = 20, opts?: Opts): Promise<RecentAccessOut> => {
+  getRecentAccess: async (
+    limit = 20,
+    opts?: Opts,
+  ): Promise<RecentAccessOut> => {
     const params = new URLSearchParams({ limit: String(limit) })
     return request<RecentAccessOut>(
       `/api/v1/overview/recent-access?${params}`,
@@ -77,7 +80,10 @@ export const OverviewService = {
     )
   },
 
-  getRecentCommits: async (limit = 20, opts?: Opts): Promise<RecentCommitsOut> => {
+  getRecentCommits: async (
+    limit = 20,
+    opts?: Opts,
+  ): Promise<RecentCommitsOut> => {
     const params = new URLSearchParams({ limit: String(limit) })
     return request<RecentCommitsOut>(
       `/api/v1/overview/recent-commits?${params}`,
@@ -85,7 +91,10 @@ export const OverviewService = {
     )
   },
 
-  getRequestsByDay: async (days = 14, opts?: Opts): Promise<RequestsByDayOut> => {
+  getRequestsByDay: async (
+    days = 14,
+    opts?: Opts,
+  ): Promise<RequestsByDayOut> => {
     const params = new URLSearchParams({ days: String(days) })
     return request<RequestsByDayOut>(
       `/api/v1/overview/requests-by-day?${params}`,
@@ -93,7 +102,11 @@ export const OverviewService = {
     )
   },
 
-  getTopPaths: async (days = 7, limit = 10, opts?: Opts): Promise<TopPathsOut> => {
+  getTopPaths: async (
+    days = 7,
+    limit = 10,
+    opts?: Opts,
+  ): Promise<TopPathsOut> => {
     const params = new URLSearchParams({
       days: String(days),
       limit: String(limit),

@@ -5,12 +5,6 @@ import { z } from "zod"
 
 import { type UpdatePassword, UsersService } from "@/client"
 import {
-  confirmPasswordSchema,
-  passwordSchema,
-  passwordsMatch,
-  passwordsMismatchError,
-} from "@/lib/validations"
-import {
   Form,
   FormControl,
   FormField,
@@ -21,6 +15,12 @@ import {
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  confirmPasswordSchema,
+  passwordSchema,
+  passwordsMatch,
+  passwordsMismatchError,
+} from "@/lib/validations"
 import { handleError } from "@/utils"
 
 const formSchema = z

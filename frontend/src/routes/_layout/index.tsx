@@ -1,6 +1,6 @@
-import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import { useState } from "react"
 import { ErrorBoundary } from "@/components/Common/ErrorBoundary"
 import { DashboardCharts } from "@/components/Dashboard/DashboardCharts"
 import { RecentAccessTable } from "@/components/Dashboard/RecentAccessTable"
@@ -34,22 +34,26 @@ function Dashboard() {
 
   const requestsByDayQuery = useQuery({
     queryKey: ["overview", "requests-by-day", requestsDays],
-    queryFn: ({ signal }) => OverviewService.getRequestsByDay(requestsDays, { signal }),
+    queryFn: ({ signal }) =>
+      OverviewService.getRequestsByDay(requestsDays, { signal }),
   })
 
   const topPathsQuery = useQuery({
     queryKey: ["overview", "top-paths", 7, topPathsLimit],
-    queryFn: ({ signal }) => OverviewService.getTopPaths(7, topPathsLimit, { signal }),
+    queryFn: ({ signal }) =>
+      OverviewService.getTopPaths(7, topPathsLimit, { signal }),
   })
 
   const recentAccessQuery = useQuery({
     queryKey: ["overview", "recent-access", recentAccessLimit],
-    queryFn: ({ signal }) => OverviewService.getRecentAccess(recentAccessLimit, { signal }),
+    queryFn: ({ signal }) =>
+      OverviewService.getRecentAccess(recentAccessLimit, { signal }),
   })
 
   const recentCommitsQuery = useQuery({
     queryKey: ["overview", "recent-commits", recentCommitsLimit],
-    queryFn: ({ signal }) => OverviewService.getRecentCommits(recentCommitsLimit, { signal }),
+    queryFn: ({ signal }) =>
+      OverviewService.getRecentCommits(recentCommitsLimit, { signal }),
   })
 
   return (
@@ -68,7 +72,10 @@ function Dashboard() {
               Failed to load stats: {statsQuery.error.message}
             </div>
           ) : null}
-          <StatsCards stats={statsQuery.data} isLoading={statsQuery.isLoading} />
+          <StatsCards
+            stats={statsQuery.data}
+            isLoading={statsQuery.isLoading}
+          />
         </div>
       </ErrorBoundary>
 

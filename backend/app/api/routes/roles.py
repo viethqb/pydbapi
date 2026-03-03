@@ -105,8 +105,7 @@ def list_roles(session: SessionDep, current_user: CurrentUser) -> Any:  # noqa: 
     roles = session.exec(select(Role).order_by(Role.name)).all()
     # Batch-fetch all user counts in a single query instead of N+1
     count_rows = session.exec(
-        select(UserRoleLink.role_id, func.count())
-        .group_by(UserRoleLink.role_id)
+        select(UserRoleLink.role_id, func.count()).group_by(UserRoleLink.role_id)
     ).all()
     user_counts: dict[uuid.UUID, int] = {role_id: cnt for role_id, cnt in count_rows}
     return RoleListOut(

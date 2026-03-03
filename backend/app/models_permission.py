@@ -10,11 +10,12 @@ import uuid
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, Enum as SQLEnum, ForeignKey, UniqueConstraint
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
+from sqlmodel import Field, SQLModel
 
 if TYPE_CHECKING:
-    from app.models import User
+    pass
 
 
 # ---------------------------------------------------------------------------

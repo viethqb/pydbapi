@@ -8,17 +8,17 @@ import useCustomToast from "@/hooks/useCustomToast"
 const DATA_TYPES_TEXT =
   "Data types (DBAPI converts raw HTTP input to these before your SQL/Jinja or Python runs):\n\n" +
   "  string   — Text; leading/trailing spaces trimmed.\n" +
-  "            Example: \"hello\", \"  abc  \" → \"abc\".\n\n" +
+  '            Example: "hello", "  abc  " → "abc".\n\n' +
   "  integer  — Whole number. Accepts int or numeric string.\n" +
-  "            Example: 42, \"100\".\n\n" +
+  '            Example: 42, "100".\n\n' +
   "  number   — Float. Accepts int, float or numeric string.\n" +
-  "            Example: 3.14, \"1.5\".\n\n" +
-  "  boolean  — true/false. Accepts: true, false, 1, 0, \"true\", \"false\", \"yes\", \"no\".\n" +
-  "            Example: true, \"yes\", 1.\n\n" +
+  '            Example: 3.14, "1.5".\n\n' +
+  '  boolean  — true/false. Accepts: true, false, 1, 0, "true", "false", "yes", "no".\n' +
+  '            Example: true, "yes", 1.\n\n' +
   "  array    — List. Accepts JSON array string or comma-separated string.\n" +
-  "            Example: [1, 2, 3], \"[1,2,3]\", \"a,b,c\".\n\n" +
+  '            Example: [1, 2, 3], "[1,2,3]", "a,b,c".\n\n' +
   "  object   — Key-value. Accepts JSON object string only.\n" +
-  "            Example: {\"a\": 1, \"b\": 2}, \"{\\\"key\\\": \\\"value\\\"}\".\n\n" +
+  '            Example: {"a": 1, "b": 2}, "{\\"key\\": \\"value\\"}".\n\n' +
   "If a value cannot be converted to the selected type, DBAPI returns a 400 validation error before executing your engine."
 
 const EXAMPLE_PARAMS_TEXT =
@@ -114,8 +114,14 @@ export default function ParamsExample() {
       {open && (
         <div className="px-3 pb-3 space-y-3">
           <CopyableBlock title="Data types" content={DATA_TYPES_TEXT} />
-          <CopyableBlock title="Example parameter definitions" content={EXAMPLE_PARAMS_TEXT} />
-          <CopyableBlock title="Example data (JSON)" content={EXAMPLE_DATA_JSON} />
+          <CopyableBlock
+            title="Example parameter definitions"
+            content={EXAMPLE_PARAMS_TEXT}
+          />
+          <CopyableBlock
+            title="Example data (JSON)"
+            content={EXAMPLE_DATA_JSON}
+          />
         </div>
       )}
     </div>

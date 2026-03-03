@@ -1,6 +1,6 @@
 import { Link as RouterLink, useRouterState } from "@tanstack/react-router"
-import { ChevronRight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import {
@@ -74,12 +74,12 @@ export function Main({ items }: MainProps) {
           {items.map((item) => {
             const hasSubmenu = item.submenu && item.submenu.length > 0
             const isSubmenuOpen = openSubmenus[item.title] ?? false
-            const isActive =
-              item.path
-                ? currentPath === item.path
-                : hasSubmenu
-                  ? item.submenu?.some((sub) => currentPath === sub.path) ?? false
-                  : false
+            const isActive = item.path
+              ? currentPath === item.path
+              : hasSubmenu
+                ? (item.submenu?.some((sub) => currentPath === sub.path) ??
+                  false)
+                : false
 
             if (hasSubmenu) {
               return (

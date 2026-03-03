@@ -1,9 +1,7 @@
-import { useCallback, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-
+import { useCallback, useMemo } from "react"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { UserPermissionsService } from "@/services/user-permissions"
-import { isLoggedIn } from "@/hooks/useAuth"
-import useAuth from "@/hooks/useAuth"
 
 export type PermissionTuple = {
   resource_type: string
@@ -25,7 +23,8 @@ export function usePermissions() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["myPermissions"],
-    queryFn: ({ signal }) => UserPermissionsService.getMyPermissions({ signal }),
+    queryFn: ({ signal }) =>
+      UserPermissionsService.getMyPermissions({ signal }),
     enabled: isLoggedIn() && !isSuperuser,
   })
 
@@ -49,7 +48,8 @@ export function usePermissions() {
     ): boolean => {
       if (isSuperuser) return true
       return permissions.some((p) => {
-        if (p.resource_type !== resourceType || p.action !== action) return false
+        if (p.resource_type !== resourceType || p.action !== action)
+          return false
         const permResourceId = p.resource_id ?? null
         if (resourceId == null || resourceId === "") {
           return true // caller doesn't care about specific resource

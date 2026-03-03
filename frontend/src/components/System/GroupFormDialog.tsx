@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -21,16 +21,15 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  GroupsService,
-  type ApiGroupCreate,
-  type ApiGroupUpdate,
-  type ApiGroupPublic,
-} from "@/services/groups"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  type ApiGroupCreate,
+  type ApiGroupPublic,
+  type ApiGroupUpdate,
+  GroupsService,
+} from "@/services/groups"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({

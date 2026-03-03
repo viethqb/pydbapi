@@ -1,8 +1,12 @@
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query"
 import { Eye, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
-
+import PendingItems from "@/components/Pending/PendingItems"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,9 +29,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { RolesService, type RolePublic } from "@/services/roles"
 import useCustomToast from "@/hooks/useCustomToast"
-import PendingItems from "@/components/Pending/PendingItems"
+import { type RolePublic, RolesService } from "@/services/roles"
 
 export const Route = createFileRoute("/_layout/admin/roles/")({
   component: RolesPage,
@@ -119,10 +122,7 @@ function RolesListContent() {
                     <div className="flex items-center justify-end gap-1">
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Link
-                            to="/admin/roles/$id"
-                            params={{ id: role.id }}
-                          >
+                          <Link to="/admin/roles/$id" params={{ id: role.id }}>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -142,11 +142,14 @@ function RolesListContent() {
                             to="/admin/roles/$id/edit"
                             params={{ id: role.id }}
                             onClick={() => {
-                              console.log("[Roles list] Edit clicked, navigating to /admin/roles/$id/edit", {
-                                roleId: role.id,
-                                roleName: role.name,
-                                targetPath: `/admin/roles/${role.id}/edit`,
-                              })
+                              console.log(
+                                "[Roles list] Edit clicked, navigating to /admin/roles/$id/edit",
+                                {
+                                  roleId: role.id,
+                                  roleName: role.name,
+                                  targetPath: `/admin/roles/${role.id}/edit`,
+                                },
+                              )
                             }}
                           >
                             <Button
@@ -158,9 +161,7 @@ function RolesListContent() {
                             </Button>
                           </Link>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          Edit role
-                        </TooltipContent>
+                        <TooltipContent side="bottom">Edit role</TooltipContent>
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -209,9 +210,7 @@ function RolesListContent() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() =>
-                deleteRole && deleteMutation.mutate(deleteRole.id)
-              }
+              onClick={() => deleteRole && deleteMutation.mutate(deleteRole.id)}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting…" : "Delete"}

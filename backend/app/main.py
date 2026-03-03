@@ -57,9 +57,7 @@ async def validation_exception_handler(
 
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unhandled exceptions — log and return 500 with safe message."""
     _logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     detail = "Internal server error"

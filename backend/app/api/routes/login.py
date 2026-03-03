@@ -6,7 +6,12 @@ from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser, require_rate_limit
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    get_current_active_superuser,
+    require_rate_limit,
+)
 from app.core import security
 from app.core.config import settings
 from app.core.security import TOKEN_TYPE_DASHBOARD, get_password_hash
@@ -58,7 +63,11 @@ def test_token(current_user: CurrentUser) -> Any:
 
 @router.post(
     "/password-recovery/{email}",
-    dependencies=[Depends(require_rate_limit("recovery", settings.AUTH_RATE_LIMIT_PASSWORD_RECOVERY))],
+    dependencies=[
+        Depends(
+            require_rate_limit("recovery", settings.AUTH_RATE_LIMIT_PASSWORD_RECOVERY)
+        )
+    ],
 )
 def recover_password(email: str, session: SessionDep) -> Message:
     """
@@ -84,7 +93,9 @@ def recover_password(email: str, session: SessionDep) -> Message:
 
 @router.post(
     "/reset-password/",
-    dependencies=[Depends(require_rate_limit("reset", settings.AUTH_RATE_LIMIT_RESET_PASSWORD))],
+    dependencies=[
+        Depends(require_rate_limit("reset", settings.AUTH_RATE_LIMIT_RESET_PASSWORD))
+    ],
 )
 def reset_password(session: SessionDep, body: NewPassword) -> Message:
     """

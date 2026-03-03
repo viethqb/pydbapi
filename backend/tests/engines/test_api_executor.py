@@ -44,7 +44,9 @@ def test_api_executor_sql_returns_data(
     )
 
     assert out == {"data": [[{"n": 1}, {"n": 2}]]}
-    mock_engine_cls.return_value.render.assert_called_once_with("SELECT 1 AS n", {"x": 1})
+    mock_engine_cls.return_value.render.assert_called_once_with(
+        "SELECT 1 AS n", {"x": 1}
+    )
     mock_execute_sql.assert_called_once_with(ds, "SELECT 1 AS n", use_pool=True)
 
 
@@ -122,7 +124,9 @@ def test_api_executor_script_returns_data(
 
     assert out == {"data": [1, 2, 3]}
     mock_ctx_cls.assert_called_once()
-    mock_se_cls.return_value.execute.assert_called_once_with("result = [1,2,3]", mock_ctx)
+    mock_se_cls.return_value.execute.assert_called_once_with(
+        "result = [1,2,3]", mock_ctx
+    )
 
 
 @patch("app.engines.executor.ScriptExecutor")

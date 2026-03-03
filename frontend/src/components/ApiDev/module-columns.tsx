@@ -1,6 +1,6 @@
-import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "@tanstack/react-router"
-import { MoreHorizontal, Trash2, Eye, Pencil } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -69,9 +69,7 @@ export const moduleColumns: ColumnDef<ModuleTableData>[] = [
                 module.is_active ? "bg-green-500" : "bg-gray-400",
               )}
             />
-            <span
-              className={module.is_active ? "" : "text-muted-foreground"}
-            >
+            <span className={module.is_active ? "" : "text-muted-foreground"}>
               {module.is_active ? "Active" : "Inactive"}
             </span>
           </div>

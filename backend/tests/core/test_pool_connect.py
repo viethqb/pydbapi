@@ -149,7 +149,9 @@ def test_health_check_fails_on_closed_connection() -> None:
 
 
 @patch("app.core.pool.connect.settings")
-def test_execute_applies_statement_timeout_when_configured(mock_settings: MagicMock) -> None:
+def test_execute_applies_statement_timeout_when_configured(
+    mock_settings: MagicMock,
+) -> None:
     """When EXTERNAL_DB_STATEMENT_TIMEOUT is set, execute() runs SET statement_timeout (Postgres) before query and resets after."""
     mock_settings.EXTERNAL_DB_STATEMENT_TIMEOUT = 5
     calls: list[tuple[str, tuple]] = []

@@ -86,7 +86,9 @@ class ApiExecutor:
                 _log.error("PostgreSQL error: %s. SQL: %s", e, sql, exc_info=True)
                 raise ValueError(f"SQL execution failed: {e}") from e
             except pymysql.err.OperationalError as e:
-                _log.error("MySQL operational error: %s. SQL: %s", e, sql, exc_info=True)
+                _log.error(
+                    "MySQL operational error: %s. SQL: %s", e, sql, exc_info=True
+                )
                 raise ValueError(f"SQL execution failed: {e}") from e
             except pymysql.err.ProgrammingError as e:
                 _log.warning("MySQL programming error: %s", e)

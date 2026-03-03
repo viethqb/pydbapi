@@ -40,7 +40,11 @@ async def liveness() -> bool | JSONResponse:
     if not ok:
         return JSONResponse(
             status_code=503,
-            content={"success": False, "message": "Process unhealthy", "data": failures},
+            content={
+                "success": False,
+                "message": "Process unhealthy",
+                "data": failures,
+            },
         )
     return True
 

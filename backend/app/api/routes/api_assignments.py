@@ -7,7 +7,7 @@ Phase 3: debug calls ApiExecutor.execute (SQL or SCRIPT).
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -23,16 +23,19 @@ from app.api.deps import (
     require_permission_for_resource,
 )
 from app.api.pagination import get_allowed_ids, paginate
-from app.core.permission import get_user_permissions, has_permission
+from app.core.gateway.config_cache import invalidate_gateway_config, load_macros_for_api
+from app.core.gateway.request_response import normalize_api_result
+from app.core.gateway.resolver import invalidate_route_cache
+from app.core.param_type import ParamTypeError, validate_and_coerce_params
+from app.core.param_validate import ParamValidateError, run_param_validates
 from app.core.permission_resources import (
     ensure_resource_permissions,
     remove_resource_permissions,
 )
-from app.models_permission import PermissionActionEnum, ResourceTypeEnum
+from app.core.result_transform import ResultTransformError, run_result_transform
 from app.engines import ApiExecutor
 from app.engines.sql import check_sql_template_safety
-from app.models import Message
-from app.models import User
+from app.models import Message, User
 from app.models_dbapi import (
     ApiAssignment,
     ApiAssignmentGroupLink,
@@ -40,8 +43,7 @@ from app.models_dbapi import (
     HttpMethodEnum,
     VersionCommit,
 )
-from app.core.param_type import ParamTypeError, validate_and_coerce_params
-from app.core.param_validate import ParamValidateError, run_param_validates
+from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.schemas_dbapi import (
     ApiAssignmentCreate,
     ApiAssignmentDebugIn,
@@ -57,10 +59,6 @@ from app.schemas_dbapi import (
     VersionCommitListOut,
     VersionCommitPublic,
 )
-from app.core.result_transform import ResultTransformError, run_result_transform
-from app.core.gateway.config_cache import invalidate_gateway_config, load_macros_for_api
-from app.core.gateway.resolver import invalidate_route_cache
-from app.core.gateway.request_response import normalize_api_result
 
 _log = logging.getLogger(__name__)
 
@@ -222,7 +220,10 @@ def list_api_assignments(
 ) -> Any:
     """List API assignments with pagination and optional filters."""
     allowed_ids = get_allowed_ids(
-        session, current_user, ResourceTypeEnum.API_ASSIGNMENT, PermissionActionEnum.READ
+        session,
+        current_user,
+        ResourceTypeEnum.API_ASSIGNMENT,
+        PermissionActionEnum.READ,
     )
     data, total = paginate(
         session,
@@ -381,9 +382,7 @@ def update_api_assignment(
             if "http_method" in body.model_fields_set
             else a.http_method
         )
-        _assert_path_method_unique(
-            session, new_path, new_method, exclude_id=body.id
-        )
+        _assert_path_method_unique(session, new_path, new_method, exclude_id=body.id)
 
     update_data = body.model_dump(
         exclude_unset=True,
@@ -446,7 +445,7 @@ def update_api_assignment(
                 ctx.param_validates = param_validates_dict
             if "result_transform" in body.model_fields_set:
                 ctx.result_transform = body.result_transform or None
-            ctx.updated_at = datetime.now(timezone.utc)
+            ctx.updated_at = datetime.now(UTC)
             session.add(ctx)
         else:
             params_dict = None
@@ -547,7 +546,7 @@ def publish_api_assignment(
 
     a.published_version_id = body.version_id
     a.is_published = True
-    a.updated_at = datetime.now(timezone.utc)
+    a.updated_at = datetime.now(UTC)
     session.add(a)
     session.commit()
     invalidate_gateway_config(a.id)
@@ -578,7 +577,7 @@ def unpublish_api_assignment(
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
     a.is_published = False
     # Keep published_version_id when unpublishing (don't clear it)
-    a.updated_at = datetime.now(timezone.utc)
+    a.updated_at = datetime.now(UTC)
     session.add(a)
     session.commit()
     invalidate_gateway_config(a.id)
@@ -1030,7 +1029,7 @@ def restore_version(
         ctx.params = params
         ctx.param_validates = param_validates
         ctx.result_transform = result_transform
-        ctx.updated_at = datetime.now(timezone.utc)
+        ctx.updated_at = datetime.now(UTC)
         session.add(ctx)
     else:
         session.add(
@@ -1083,7 +1082,7 @@ def revert_version_to_draft(
         )
     if a.published_version_id == version_id:
         a.published_version_id = None
-        a.updated_at = datetime.now(timezone.utc)
+        a.updated_at = datetime.now(UTC)
         session.add(a)
         session.commit()
     return Message(message="Version reverted to draft")

@@ -1,12 +1,20 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { ArrowLeft } from "lucide-react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { useEffect } from "react"
-import { ArrowLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
@@ -17,10 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { LoadingButton } from "@/components/ui/loading-button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -28,11 +33,9 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import {
-  ModulesService,
-  type ApiModuleUpdate,
-} from "@/services/modules"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { type ApiModuleUpdate, ModulesService } from "@/services/modules"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -133,7 +136,12 @@ function ModuleEdit() {
     )
   }
 
-  console.log("Rendering form, module:", module, "form values:", form.getValues())
+  console.log(
+    "Rendering form, module:",
+    module,
+    "form values:",
+    form.getValues(),
+  )
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto">
@@ -146,7 +154,9 @@ function ModuleEdit() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Module</h1>
-          <p className="text-muted-foreground mt-1">Update API module settings</p>
+          <p className="text-muted-foreground mt-1">
+            Update API module settings
+          </p>
         </div>
       </div>
 
@@ -210,7 +220,9 @@ function ModuleEdit() {
                                 placeholder="Optional description"
                                 {...field}
                                 value={field.value || ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
+                                onChange={(e) =>
+                                  field.onChange(e.target.value || null)
+                                }
                                 className="min-h-[80px]"
                               />
                             </FormControl>
@@ -248,10 +260,7 @@ function ModuleEdit() {
           </Card>
 
           <div className="flex items-center justify-end gap-4">
-            <LoadingButton
-              type="submit"
-              loading={updateMutation.isPending}
-            >
+            <LoadingButton type="submit" loading={updateMutation.isPending}>
               Update Module
             </LoadingButton>
           </div>

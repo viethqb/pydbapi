@@ -30,7 +30,9 @@ def make_cache_module(
             return v.decode("utf-8", errors="replace")
         return v
 
-    def set(key: str, value: str | int | float | bool, ttl_seconds: int | None = None) -> None:
+    def set(
+        key: str, value: str | int | float | bool, ttl_seconds: int | None = None
+    ) -> None:
         if cache_client is None:
             return
         k = _key(key)

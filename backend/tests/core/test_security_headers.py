@@ -6,9 +6,8 @@ Runs without database:
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.main import SecurityHeadersMiddleware, _SECURITY_HEADERS
+from app.main import _SECURITY_HEADERS, SecurityHeadersMiddleware
 
 
 def _make_app() -> FastAPI:

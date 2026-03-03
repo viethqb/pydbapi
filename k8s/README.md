@@ -74,7 +74,7 @@ kubectl apply -f pydbapi/secret.yaml
 kubectl apply -f pydbapi/job-prestart.yaml
 kubectl apply -f pydbapi/deployment.yaml
 kubectl apply -f pydbapi/service.yaml
-kubectl apply -f pydbapi/ingress.yaml  
+kubectl apply -f pydbapi/ingress.yaml
 ```
 
 Check resources:

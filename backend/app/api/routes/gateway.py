@@ -23,6 +23,7 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.core.db import engine
 from app.core.gateway import (
+    acquire_concurrent_slot,
     check_firewall,
     check_rate_limit,
     client_can_access_api,
@@ -30,7 +31,6 @@ from app.core.gateway import (
     merge_params,
     normalize_api_result,
     release_concurrent_slot,
-    acquire_concurrent_slot,
     verify_gateway_client,
 )
 from app.core.gateway.config_cache import get_or_load_gateway_config
@@ -121,7 +121,9 @@ def _gateway_pipeline(
             # 5. Rate limit
             api_limit = getattr(api, "rate_limit_per_minute", None)
             client_limit = (
-                getattr(app_client, "rate_limit_per_minute", None) if app_client else None
+                getattr(app_client, "rate_limit_per_minute", None)
+                if app_client
+                else None
             )
             effective_limit: int | None = None
             rate_limit_key: str = ""
@@ -144,17 +146,25 @@ def _gateway_pipeline(
 
             # 7. Merge params (sync — body was pre-read by the async handler)
             params, body_for_log = merge_params(
-                query, body, path_params, headers, method,
+                query,
+                body,
+                path_params,
+                headers,
+                method,
                 params_definition=params_definition,
             )
 
             # 8. Serialize request metadata for access log
             #    Strip sensitive headers to avoid leaking credentials in logs.
-            _REDACTED_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
+            _REDACTED_HEADERS = frozenset(
+                {"authorization", "cookie", "proxy-authorization"}
+            )
             request_headers_str: str | None = None
             try:
                 safe_headers = {
-                    k: v for k, v in headers.items() if k.lower() not in _REDACTED_HEADERS
+                    k: v
+                    for k, v in headers.items()
+                    if k.lower() not in _REDACTED_HEADERS
                 }
                 request_headers_str = json.dumps(safe_headers)
             except Exception:
@@ -183,16 +193,16 @@ def _gateway_pipeline(
 
             engine_attr = getattr(api, "execute_engine", None)
             engine_value = (
-                engine_attr.value if hasattr(engine_attr, "value") else (engine_attr or None)
+                engine_attr.value
+                if hasattr(engine_attr, "value")
+                else (engine_attr or None)
             )
             return {"_result": result, "_engine": engine_value}
         finally:
             release_concurrent_slot(client_key)
 
 
-@router.api_route(
-    "/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
-)
+@router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def gateway_proxy(
     path: str,
     request: Request,
@@ -248,7 +258,8 @@ async def gateway_proxy(
             detail = str(e)
         error_body = {"success": False, "message": detail, "data": []}
         return JSONResponse(
-            status_code=500, content=format_response(error_body, naming),
+            status_code=500,
+            content=format_response(error_body, naming),
         )
 
     normalized = normalize_api_result(out["_result"], out["_engine"])

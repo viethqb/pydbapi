@@ -1,10 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft, ExternalLink } from "lucide-react"
-
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -13,10 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { GroupsService } from "@/services/groups"
-import { ApiAssignmentsService } from "@/services/api-assignments"
-import { ModulesService } from "@/services/modules"
 import { cn } from "@/lib/utils"
+import { ApiAssignmentsService } from "@/services/api-assignments"
+import { GroupsService } from "@/services/groups"
+import { ModulesService } from "@/services/modules"
 
 type ApiWithMeta = Awaited<ReturnType<typeof ApiAssignmentsService.get>> & {
   moduleName: string
@@ -58,7 +57,13 @@ function GroupDetailPage() {
         group.api_assignment_ids.map((aid) => ApiAssignmentsService.get(aid)),
       )
       const list = results
-        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof ApiAssignmentsService.get>>> => r.status === "fulfilled")
+        .filter(
+          (
+            r,
+          ): r is PromiseFulfilledResult<
+            Awaited<ReturnType<typeof ApiAssignmentsService.get>>
+          > => r.status === "fulfilled",
+        )
         .map((r) => r.value)
       if (!list.length) return []
       const modules = await ModulesService.listSimple()
@@ -174,7 +179,7 @@ function GroupDetailPage() {
                   <TableHead>Method</TableHead>
                   <TableHead>Engine</TableHead>
                   <TableHead>Published</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
+                  <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -190,18 +195,22 @@ function GroupDetailPage() {
                         {api.moduleName}
                       </Link>
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{api.path}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {api.path}
+                    </TableCell>
                     <TableCell>
                       {api.fullPath ? (
                         <a
                           href={
-                            (import.meta.env.VITE_API_URL || window.location.origin) + api.fullPath
+                            (import.meta.env.VITE_API_URL ||
+                              window.location.origin) + api.fullPath
                           }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-mono text-sm text-primary hover:underline max-w-[200px] truncate block"
                           title={
-                            (import.meta.env.VITE_API_URL || window.location.origin) + api.fullPath
+                            (import.meta.env.VITE_API_URL ||
+                              window.location.origin) + api.fullPath
                           }
                         >
                           {api.fullPath}

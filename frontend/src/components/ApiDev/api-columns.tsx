@@ -1,6 +1,6 @@
-import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "@tanstack/react-router"
-import { MoreHorizontal, Trash2, Eye, Pencil, Globe } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { Eye, Globe, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -66,12 +66,8 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
       const api = row.original
       const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
       const fullPath = `/api/${apiPath}`
-      
-      return (
-        <span className="font-mono text-sm">
-          {fullPath}
-        </span>
-      )
+
+      return <span className="font-mono text-sm">{fullPath}</span>
     },
   },
   {
@@ -86,11 +82,7 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
         DELETE: "bg-red-500",
         PATCH: "bg-purple-500",
       }
-      return (
-        <Badge className={colors[method] || "bg-gray-500"}>
-          {method}
-        </Badge>
-      )
+      return <Badge className={colors[method] || "bg-gray-500"}>{method}</Badge>
     },
   },
   {
@@ -195,9 +187,7 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
                 </DropdownMenuItem>
               )}
               {api.onPublish && !api.is_published && (
-                <DropdownMenuItem
-                  onClick={() => api.onPublish?.(api.id)}
-                >
+                <DropdownMenuItem onClick={() => api.onPublish?.(api.id)}>
                   <Globe className="mr-2 h-4 w-4" />
                   Publish
                 </DropdownMenuItem>

@@ -5,11 +5,12 @@ When AccessLogConfig.datasource_id is set, logs are stored in that DataSource.
 """
 
 import uuid as uuid_mod
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
-from sqlmodel import Session as SMSession, func, select
+from sqlmodel import Session as SMSession
+from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep, require_permission
 from app.core.access_log_storage import (
@@ -34,9 +35,9 @@ from app.schemas_dbapi import (
     AccessLogConfigUpdate,
     AccessLogDatasourceOption,
     AccessLogDatasourceOptionsOut,
+    AccessLogListOut,
     AccessRecordDetail,
     AccessRecordPublic,
-    AccessLogListOut,
 )
 
 router = APIRouter(prefix="/access-logs", tags=["access-logs"])
@@ -73,7 +74,9 @@ def _to_public(r: AccessRecord) -> AccessRecordPublic:
     "/datasource-options",
     response_model=AccessLogDatasourceOptionsOut,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ))
+        Depends(
+            require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ)
+        )
     ],
 )
 def get_access_log_datasource_options(
@@ -81,10 +84,16 @@ def get_access_log_datasource_options(
     current_user: CurrentUser,
 ) -> AccessLogDatasourceOptionsOut:
     """List datasources suitable for access log storage (postgres/mysql, active). For dropdown; no DATASOURCE read required."""
-    stmt = select(DataSource).where(
-        DataSource.is_active == True,
-        DataSource.product_type.in_([ProductTypeEnum.POSTGRES, ProductTypeEnum.MYSQL]),
-    ).order_by(DataSource.name)
+    stmt = (
+        select(DataSource)
+        .where(
+            DataSource.is_active == True,
+            DataSource.product_type.in_(
+                [ProductTypeEnum.POSTGRES, ProductTypeEnum.MYSQL]
+            ),
+        )
+        .order_by(DataSource.name)
+    )
     rows = session.exec(stmt).all()
     return AccessLogDatasourceOptionsOut(
         data=[
@@ -102,10 +111,14 @@ def get_access_log_datasource_options(
     "/config",
     response_model=AccessLogConfigPublic,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ))
+        Depends(
+            require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ)
+        )
     ],
 )
-def get_access_log_config(session: SessionDep, current_user: CurrentUser) -> AccessLogConfigPublic:
+def get_access_log_config(
+    session: SessionDep, current_user: CurrentUser
+) -> AccessLogConfigPublic:
     """Get current access log storage: null = main DB, else DataSource id; use_starrocks_audit for MySQL."""
     config = session.get(AccessLogConfig, ACCESS_LOG_CONFIG_ROW_ID)
     if not config:
@@ -120,7 +133,9 @@ def get_access_log_config(session: SessionDep, current_user: CurrentUser) -> Acc
     "/config",
     response_model=AccessLogConfigPublic,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.UPDATE))
+        Depends(
+            require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.UPDATE)
+        )
     ],
 )
 def update_access_log_config(
@@ -185,7 +200,10 @@ def _resolve_display_names(
             full_path = f"/{prefix}/{p}".replace("//", "/").strip("/") or "/"
             api_display = f"{getattr(api, 'http_method', None) or 'GET'} /{full_path}"
         elif api:
-            api_display = getattr(api, "name", None) or f"{getattr(api, 'http_method', 'GET')} {getattr(api, 'path', '')}"
+            api_display = (
+                getattr(api, "name", None)
+                or f"{getattr(api, 'http_method', 'GET')} {getattr(api, 'path', '')}"
+            )
         else:
             api_display = str(api_assignment_id)
     if app_client_id:
@@ -208,18 +226,28 @@ def _get_log_session_and_mode(session: SessionDep):
     "",
     response_model=AccessLogListOut,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ))
+        Depends(
+            require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ)
+        )
     ],
 )
 def list_access_logs(
     session: SessionDep,
     current_user: CurrentUser,
-    api_assignment_id: str | None = Query(None, description="Filter by API assignment UUID"),
-    module_id: str | None = Query(None, description="Filter by module UUID (resolves to API assignment ids)"),
-    group_id: str | None = Query(None, description="Filter by group UUID (resolves to API assignment ids)"),
+    api_assignment_id: str | None = Query(
+        None, description="Filter by API assignment UUID"
+    ),
+    module_id: str | None = Query(
+        None, description="Filter by module UUID (resolves to API assignment ids)"
+    ),
+    group_id: str | None = Query(
+        None, description="Filter by group UUID (resolves to API assignment ids)"
+    ),
     app_client_id: str | None = Query(None, description="Filter by app client UUID"),
     path__ilike: str | None = Query(None, description="Filter by path (substring)"),
-    http_method: str | None = Query(None, description="Filter by HTTP method (GET, POST, ...)"),
+    http_method: str | None = Query(
+        None, description="Filter by HTTP method (GET, POST, ...)"
+    ),
     ip_address: str | None = Query(None, description="Filter by client IP"),
     time_from: datetime | None = Query(None, description="From (inclusive)"),
     time_to: datetime | None = Query(None, description="To (inclusive)"),
@@ -236,7 +264,9 @@ def list_access_logs(
     if module_id:
         try:
             mid = uuid_mod.UUID(module_id)
-            rows = session.exec(select(ApiAssignment.id).where(ApiAssignment.module_id == mid)).all()
+            rows = session.exec(
+                select(ApiAssignment.id).where(ApiAssignment.module_id == mid)
+            ).all()
             api_ids_from_module = {r for r in rows if r}
         except (ValueError, TypeError):
             api_ids_from_module = set()
@@ -244,7 +274,9 @@ def list_access_logs(
         try:
             gid = uuid_mod.UUID(group_id)
             rows = session.exec(
-                select(ApiAssignmentGroupLink.api_assignment_id).where(ApiAssignmentGroupLink.api_group_id == gid)
+                select(ApiAssignmentGroupLink.api_assignment_id).where(
+                    ApiAssignmentGroupLink.api_group_id == gid
+                )
             ).all()
             api_ids_from_group = {r for r in rows if r}
         except (ValueError, TypeError):
@@ -258,7 +290,9 @@ def list_access_logs(
     elif api_ids_from_group is not None:
         api_ids_filter = api_ids_from_group
 
-    log_session, is_main, use_starrocks_audit, engine = _get_log_session_and_mode(session)
+    log_session, is_main, use_starrocks_audit, engine = _get_log_session_and_mode(
+        session
+    )
     if use_starrocks_audit and engine is not None:
         api_assignment_ids: list[str] | None = None
         if api_ids_filter is not None:
@@ -283,12 +317,18 @@ def list_access_logs(
             data.append(
                 AccessRecordPublic(
                     id=uuid_mod.UUID(_id) if isinstance(_id, str) else _id,
-                    api_assignment_id=uuid_mod.UUID(r["api_assignment_id"]) if r.get("api_assignment_id") else None,
-                    app_client_id=uuid_mod.UUID(r["app_client_id"]) if r.get("app_client_id") else None,
+                    api_assignment_id=uuid_mod.UUID(r["api_assignment_id"])
+                    if r.get("api_assignment_id")
+                    else None,
+                    app_client_id=uuid_mod.UUID(r["app_client_id"])
+                    if r.get("app_client_id")
+                    else None,
                     ip_address=r.get("ip_address") or "",
                     http_method=r.get("http_method") or "GET",
                     path=r.get("path") or "",
-                    status_code=int(r["status_code"]) if r.get("status_code") is not None else 0,
+                    status_code=int(r["status_code"])
+                    if r.get("status_code") is not None
+                    else 0,
                     created_at=r["created_at"],
                     duration_ms=r.get("duration_ms"),
                     request_body=_truncate(r.get("request_body")),
@@ -316,16 +356,22 @@ def list_access_logs(
                 pass
         if path__ilike is not None and path__ilike.strip():
             stmt = stmt.where(AccessRecord.path.ilike(f"%{path__ilike.strip()}%"))
-            count_stmt = count_stmt.where(AccessRecord.path.ilike(f"%{path__ilike.strip()}%"))
+            count_stmt = count_stmt.where(
+                AccessRecord.path.ilike(f"%{path__ilike.strip()}%")
+            )
         if api_ids_filter is not None:
             if len(api_ids_filter) == 0:
                 # No API assignments match module/group filter
                 return AccessLogListOut(data=[], total=0)
             stmt = stmt.where(AccessRecord.api_assignment_id.in_(api_ids_filter))
-            count_stmt = count_stmt.where(AccessRecord.api_assignment_id.in_(api_ids_filter))
+            count_stmt = count_stmt.where(
+                AccessRecord.api_assignment_id.in_(api_ids_filter)
+            )
         if http_method is not None and http_method.strip():
             stmt = stmt.where(AccessRecord.http_method == http_method.strip().upper())
-            count_stmt = count_stmt.where(AccessRecord.http_method == http_method.strip().upper())
+            count_stmt = count_stmt.where(
+                AccessRecord.http_method == http_method.strip().upper()
+            )
         if ip_address is not None and ip_address.strip():
             stmt = stmt.where(AccessRecord.ip_address == ip_address.strip())
             count_stmt = count_stmt.where(AccessRecord.ip_address == ip_address.strip())
@@ -355,7 +401,9 @@ def list_access_logs(
     "/{log_id}",
     response_model=AccessRecordDetail,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ))
+        Depends(
+            require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.READ)
+        )
     ],
 )
 def get_access_log_detail(
@@ -370,13 +418,21 @@ def get_access_log_detail(
         lid = uuid_mod.UUID(log_id)
     except (ValueError, TypeError):
         raise HTTPException(status_code=404, detail="Not found")
-    log_session, is_main, use_starrocks_audit, engine = _get_log_session_and_mode(session)
+    log_session, is_main, use_starrocks_audit, engine = _get_log_session_and_mode(
+        session
+    )
     if use_starrocks_audit and engine is not None:
         out = read_starrocks_audit_detail(engine, log_id)
         if not out:
             raise HTTPException(status_code=404, detail="Not found")
-        aa_id = uuid_mod.UUID(out["api_assignment_id"]) if out.get("api_assignment_id") else None
-        ac_id = uuid_mod.UUID(out["app_client_id"]) if out.get("app_client_id") else None
+        aa_id = (
+            uuid_mod.UUID(out["api_assignment_id"])
+            if out.get("api_assignment_id")
+            else None
+        )
+        ac_id = (
+            uuid_mod.UUID(out["app_client_id"]) if out.get("app_client_id") else None
+        )
         api_display, app_client_display = _resolve_display_names(session, aa_id, ac_id)
         return AccessRecordDetail(
             id=uuid_mod.UUID(out["id"]) if isinstance(out["id"], str) else out["id"],
@@ -398,7 +454,9 @@ def get_access_log_detail(
         rec = log_session.get(AccessRecord, lid)
         if not rec:
             raise HTTPException(status_code=404, detail="Not found")
-        api_display, app_client_display = _resolve_display_names(session, rec.api_assignment_id, rec.app_client_id)
+        api_display, app_client_display = _resolve_display_names(
+            session, rec.api_assignment_id, rec.app_client_id
+        )
         return AccessRecordDetail(
             id=rec.id,
             api_assignment_id=rec.api_assignment_id,
@@ -466,7 +524,9 @@ CREATE TABLE IF NOT EXISTS access_record (
     "/init-external-table",
     response_model=Message,
     dependencies=[
-        Depends(require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.UPDATE))
+        Depends(
+            require_permission(ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.UPDATE)
+        )
     ],
 )
 def init_external_access_log_table(
@@ -486,7 +546,10 @@ def init_external_access_log_table(
     ds = session.get(DataSource, config.datasource_id)
     if not ds:
         raise HTTPException(status_code=404, detail="DataSource not found")
-    use_sr = getattr(config, "use_starrocks_audit", False) and ds.product_type == ProductTypeEnum.MYSQL
+    use_sr = (
+        getattr(config, "use_starrocks_audit", False)
+        and ds.product_type == ProductTypeEnum.MYSQL
+    )
     if use_sr:
         ddl = DDL_STARROCKS_AUDIT
     else:
@@ -508,5 +571,7 @@ def init_external_access_log_table(
                 conn.execute(text(part))
                 conn.commit()
     if use_sr:
-        return Message(message="StarRocks audit database and table created or already exist.")
+        return Message(
+            message="StarRocks audit database and table created or already exist."
+        )
     return Message(message="External access_record table created or already exists.")

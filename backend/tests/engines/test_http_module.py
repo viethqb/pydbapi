@@ -12,13 +12,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.engines.script.modules.http import (
-    _SSRFSafeBackend,
     _check_url_allowed,
     _filter_kwargs,
     _is_blocked_ip,
+    _SSRFSafeBackend,
     make_http_module,
 )
-
 
 # ---------------------------------------------------------------------------
 # _is_blocked_ip
@@ -108,9 +107,7 @@ def _fake_getaddrinfo_multi(ips: list[str]):
     """Return a mock getaddrinfo result resolving to multiple IPs."""
 
     def _gai(host, port, family=0, type_=0, proto=0, flags=0):
-        return [
-            (socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, port)) for ip in ips
-        ]
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, port)) for ip in ips]
 
     return _gai
 
@@ -127,7 +124,9 @@ class TestSSRFSafeBackend:
     def test_blocks_metadata_endpoint(self):
         backend = _SSRFSafeBackend()
         with patch("socket.getaddrinfo", _fake_getaddrinfo("169.254.169.254")):
-            with pytest.raises(PermissionError, match="blocked address 169.254.169.254"):
+            with pytest.raises(
+                PermissionError, match="blocked address 169.254.169.254"
+            ):
                 backend.connect_tcp("evil.com", 80)
 
     def test_blocks_private_10(self):
@@ -143,7 +142,9 @@ class TestSSRFSafeBackend:
             "socket.getaddrinfo",
             _fake_getaddrinfo_multi(["8.8.8.8", "169.254.169.254"]),
         ):
-            with pytest.raises(PermissionError, match="blocked address 169.254.169.254"):
+            with pytest.raises(
+                PermissionError, match="blocked address 169.254.169.254"
+            ):
                 backend.connect_tcp("evil.com", 80)
 
     def test_allows_public_ip_and_connects(self):
@@ -227,7 +228,9 @@ class TestRedirectValidation:
 
         with patch("httpcore.ConnectionPool", return_value=MagicMock()):
             with patch("httpx.Client", return_value=mock_client):
-                with pytest.raises(PermissionError, match="not in SCRIPT_HTTP_ALLOWED_HOSTS"):
+                with pytest.raises(
+                    PermissionError, match="not in SCRIPT_HTTP_ALLOWED_HOSTS"
+                ):
                     mod.get("http://good.example.com/redirect")
 
     def test_redirect_to_allowed_host_succeeds(self):

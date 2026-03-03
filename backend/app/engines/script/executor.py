@@ -29,23 +29,65 @@ _SAFE_MODULE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 # Modules that must never be injected into the script sandbox, even if an
 # admin accidentally adds them to SCRIPT_EXTRA_MODULES.  These would let
 # script authors escape the RestrictedPython sandbox entirely.
-_BLOCKED_MODULES = frozenset({
-    # OS / process / shell
-    "os", "sys", "subprocess", "shutil", "signal", "posix", "nt",
-    "multiprocessing", "threading", "ctypes", "_thread",
-    # Code execution / import system
-    "importlib", "code", "codeop", "compileall", "compile",
-    "runpy", "ast", "dis", "inspect", "types",
-    # File / network I/O
-    "io", "socket", "http", "urllib", "requests", "httpx",
-    "ftplib", "smtplib", "poplib", "imaplib", "xmlrpc",
-    "pathlib", "glob", "fnmatch", "tempfile", "fileinput",
-    # Persistence / serialization (arbitrary code execution via pickle)
-    "pickle", "shelve", "marshal",
-    # Security-sensitive internals
-    "builtins", "_io", "_socket", "_subprocess", "gc", "resource",
-    "sysconfig", "distutils", "setuptools", "pip",
-})
+_BLOCKED_MODULES = frozenset(
+    {
+        # OS / process / shell
+        "os",
+        "sys",
+        "subprocess",
+        "shutil",
+        "signal",
+        "posix",
+        "nt",
+        "multiprocessing",
+        "threading",
+        "ctypes",
+        "_thread",
+        # Code execution / import system
+        "importlib",
+        "code",
+        "codeop",
+        "compileall",
+        "compile",
+        "runpy",
+        "ast",
+        "dis",
+        "inspect",
+        "types",
+        # File / network I/O
+        "io",
+        "socket",
+        "http",
+        "urllib",
+        "requests",
+        "httpx",
+        "ftplib",
+        "smtplib",
+        "poplib",
+        "imaplib",
+        "xmlrpc",
+        "pathlib",
+        "glob",
+        "fnmatch",
+        "tempfile",
+        "fileinput",
+        # Persistence / serialization (arbitrary code execution via pickle)
+        "pickle",
+        "shelve",
+        "marshal",
+        # Security-sensitive internals
+        "builtins",
+        "_io",
+        "_socket",
+        "_subprocess",
+        "gc",
+        "resource",
+        "sysconfig",
+        "distutils",
+        "setuptools",
+        "pip",
+    }
+)
 
 _SCRIPT_CACHE_MAX_SIZE = 256
 _script_cache: "OrderedDict[str, object]" = OrderedDict()
@@ -91,9 +133,7 @@ def _inject_extra_modules(g: dict[str, Any]) -> None:
         if not _SAFE_MODULE_NAME_RE.match(name):
             continue
         if name in _BLOCKED_MODULES:
-            _LOG.warning(
-                "SCRIPT_EXTRA_MODULES: blocked dangerous module '%s'", name
-            )
+            _LOG.warning("SCRIPT_EXTRA_MODULES: blocked dangerous module '%s'", name)
             continue
         try:
             g[name] = importlib.import_module(name)
@@ -130,14 +170,10 @@ def _exec_with_timeout(code: object, g: dict[str, Any], timeout_sec: int) -> Non
             )
             # res > 1 means we accidentally hit multiple threads — undo
             if res > 1:
-                ctypes.pythonapi.PyThreadState_SetAsyncExc(
-                    ctypes.c_ulong(tid), None
-                )
+                ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         # Give the thread a moment to clean up
         t.join(timeout=1.0)
-        raise ScriptTimeoutError(
-            f"Script execution timed out after {timeout_sec}s"
-        )
+        raise ScriptTimeoutError(f"Script execution timed out after {timeout_sec}s")
 
     # Re-raise any exception captured in the worker thread
     if exc_info:

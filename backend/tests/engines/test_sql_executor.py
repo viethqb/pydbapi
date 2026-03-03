@@ -41,7 +41,9 @@ def test_execute_sql_select_uses_pool(
     # Single statement -> list of one result
     assert out == [[{"n": 1}]]
     mock_pm.return_value.get_connection.assert_called_once_with(ds)
-    mock_execute.assert_called_once_with(mock_conn, "SELECT 1 AS n", product_type=ds.product_type)
+    mock_execute.assert_called_once_with(
+        mock_conn, "SELECT 1 AS n", product_type=ds.product_type
+    )
     mock_ctd.assert_called_once_with(mock_cur)
     mock_pm.return_value.release.assert_called_once_with(mock_conn, ds.id)
 

@@ -32,7 +32,9 @@ function CopyableBlock({
         <div>
           <span className="text-sm font-medium">{title}</span>
           {description && (
-            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {description}
+            </p>
           )}
         </div>
         <ChevronDown
@@ -98,31 +100,31 @@ const JINJA_USAGE =
 
 const PYTHON_HELPERS =
   "def safe_int(val, default=0):\n" +
-  "    \"\"\"Safely convert to int with fallback.\"\"\"\n" +
+  '    """Safely convert to int with fallback."""\n' +
   "    try:\n" +
   "        return int(val) if val is not None else default\n" +
   "    except (TypeError, ValueError):\n" +
   "        return default\n\n" +
   "def safe_float(val, default=0.0):\n" +
-  "    \"\"\"Safely convert to float with fallback.\"\"\"\n" +
+  '    """Safely convert to float with fallback."""\n' +
   "    try:\n" +
   "        return float(val) if val is not None else default\n" +
   "    except (TypeError, ValueError):\n" +
   "        return default\n\n" +
   "def is_valid_email(s):\n" +
-  "    \"\"\"Basic email validation.\"\"\"\n" +
-  "    return bool(s and isinstance(s, str) and \"@\" in s and \".\" in s)"
+  '    """Basic email validation."""\n' +
+  '    return bool(s and isinstance(s, str) and "@" in s and "." in s)'
 
 const PYTHON_HTTP_HELPER =
   "def fetch_json(url, params=None):\n" +
-  "    \"\"\"Fetch JSON from an external API.\"\"\"\n" +
+  '    """Fetch JSON from an external API."""\n' +
   "    resp = http.get(url, params=params)\n" +
   "    return resp if isinstance(resp, (dict, list)) else {}\n\n" +
   "def post_json(url, data):\n" +
-  "    \"\"\"POST JSON to an external API.\"\"\"\n" +
+  '    """POST JSON to an external API."""\n' +
   "    return http.post(url, json=data)\n\n" +
   "def cached_fetch(key, url, ttl=300):\n" +
-  "    \"\"\"Fetch with cache-aside pattern.\"\"\"\n" +
+  '    """Fetch with cache-aside pattern."""\n' +
   "    cached = cache.get(key)\n" +
   "    if cached is not None:\n" +
   "        return cached\n" +
@@ -134,16 +136,16 @@ const PYTHON_SCRIPT_USAGE =
   "# Macro functions (safe_int, fetch_json, etc.) are auto-prepended\n\n" +
   "def execute(params=None):\n" +
   "    params = params or {}\n" +
-  "    limit = safe_int(params.get(\"limit\"), 20)\n" +
-  "    offset = safe_int(params.get(\"offset\"), 0)\n\n" +
+  '    limit = safe_int(params.get("limit"), 20)\n' +
+  '    offset = safe_int(params.get("offset"), 0)\n\n' +
   "    # Use http helper from macro\n" +
-  "    config = fetch_json(\"https://api.example.com/config\")\n" +
-  "    user_type = config.get(\"default_type\", \"standard\")\n\n" +
+  '    config = fetch_json("https://api.example.com/config")\n' +
+  '    user_type = config.get("default_type", "standard")\n\n' +
   "    rows = db.query(\n" +
-  "        \"SELECT * FROM users WHERE type = %s LIMIT %s OFFSET %s\",\n" +
+  '        "SELECT * FROM users WHERE type = %s LIMIT %s OFFSET %s",\n' +
   "        (user_type, limit, offset)\n" +
   "    )\n" +
-  "    return {\"data\": rows, \"config\": config}"
+  '    return {"data": rows, "config": config}'
 
 const PYTHON_VALIDATE_USAGE =
   "# Macro functions are also available in parameter validate scripts.\n" +
@@ -158,9 +160,9 @@ const PYTHON_TRANSFORM_USAGE =
   "# Example: use safe_int from macro to normalize pagination.\n\n" +
   "def transform(result, params=None):\n" +
   "    p = params or {}\n" +
-  "    result[\"offset\"] = safe_int(p.get(\"offset\"), 0)\n" +
-  "    result[\"limit\"] = safe_int(p.get(\"limit\"), 20)\n" +
-  "    result[\"total\"] = len(result.get(\"data\", []))\n" +
+  '    result["offset"] = safe_int(p.get("offset"), 0)\n' +
+  '    result["limit"] = safe_int(p.get("limit"), 20)\n' +
+  '    result["total"] = len(result.get("data", []))\n' +
   "    return result"
 
 export default function MacroDefUsageGuide() {
@@ -169,14 +171,33 @@ export default function MacroDefUsageGuide() {
       <div>
         <h2 className="text-xl font-semibold">Macro Definition Guide</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Macros are reusable code snippets shared across all APIs in the <strong className="text-foreground">same module</strong>.
-          Define them once, use them in any API within that module.
+          Macros are reusable code snippets shared across all APIs in the{" "}
+          <strong className="text-foreground">same module</strong>. Define them
+          once, use them in any API within that module.
         </p>
         <ul className="text-sm text-muted-foreground mt-2 space-y-1 ml-4 list-disc">
-          <li><strong className="text-foreground">Jinja macros</strong> — prepended to SQL template content. Define reusable SQL fragments with <code className="rounded bg-muted px-1">{`{% macro name(args) %} ... {% endmacro %}`}</code>.</li>
-          <li><strong className="text-foreground">Python macros</strong> — prepended to script content, parameter validation scripts, and result transform scripts. Define helper functions that are callable directly.</li>
-          <li><strong className="text-foreground">Scope</strong> — macros are available to all APIs in the same module but not across modules. Multiple macros in a module are joined together.</li>
-          <li><strong className="text-foreground">Versioning</strong> — macros have their own version commits, independent of API versions.</li>
+          <li>
+            <strong className="text-foreground">Jinja macros</strong> —
+            prepended to SQL template content. Define reusable SQL fragments
+            with{" "}
+            <code className="rounded bg-muted px-1">{`{% macro name(args) %} ... {% endmacro %}`}</code>
+            .
+          </li>
+          <li>
+            <strong className="text-foreground">Python macros</strong> —
+            prepended to script content, parameter validation scripts, and
+            result transform scripts. Define helper functions that are callable
+            directly.
+          </li>
+          <li>
+            <strong className="text-foreground">Scope</strong> — macros are
+            available to all APIs in the same module but not across modules.
+            Multiple macros in a module are joined together.
+          </li>
+          <li>
+            <strong className="text-foreground">Versioning</strong> — macros
+            have their own version commits, independent of API versions.
+          </li>
         </ul>
       </div>
 
@@ -188,10 +209,11 @@ export default function MacroDefUsageGuide() {
 
         <TabsContent value="jinja" className="space-y-4 mt-4">
           <p className="text-sm text-muted-foreground">
-            Jinja macros define reusable SQL fragments.
-            Use <code className="rounded bg-muted px-1">{`{% macro name(args) %} ... {% endmacro %}`}</code> in
-            the macro definition, then call with <code className="rounded bg-muted px-1">{`{{ name(args) }}`}</code> in
-            any SQL API content within the same module.
+            Jinja macros define reusable SQL fragments. Use{" "}
+            <code className="rounded bg-muted px-1">{`{% macro name(args) %} ... {% endmacro %}`}</code>{" "}
+            in the macro definition, then call with{" "}
+            <code className="rounded bg-muted px-1">{`{{ name(args) }}`}</code>{" "}
+            in any SQL API content within the same module.
           </p>
           <CopyableBlock
             title="1. Pagination Macro"
@@ -220,12 +242,14 @@ export default function MacroDefUsageGuide() {
 
         <TabsContent value="python" className="space-y-4 mt-4">
           <p className="text-sm text-muted-foreground">
-            Python macros define helper functions. They are auto-prepended to script content,
-            parameter validation scripts, and result transform scripts within the same module.
-            Functions can use <code className="rounded bg-muted px-1">db</code>,{" "}
+            Python macros define helper functions. They are auto-prepended to
+            script content, parameter validation scripts, and result transform
+            scripts within the same module. Functions can use{" "}
+            <code className="rounded bg-muted px-1">db</code>,{" "}
             <code className="rounded bg-muted px-1">http</code>,{" "}
             <code className="rounded bg-muted px-1">cache</code>,{" "}
-            <code className="rounded bg-muted px-1">req</code> — all context objects are in scope.
+            <code className="rounded bg-muted px-1">req</code> — all context
+            objects are in scope.
           </p>
           <CopyableBlock
             title="1. Type Conversion & Validation Helpers"

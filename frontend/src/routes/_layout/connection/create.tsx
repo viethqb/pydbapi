@@ -1,22 +1,30 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Loader2, Play } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Loader2, Play } from "lucide-react"
-import { useState, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
   SelectContent,
@@ -24,10 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -35,11 +39,9 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DataSourceService,
-  type DataSourceCreate,
-} from "@/services/datasource"
+import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { type DataSourceCreate, DataSourceService } from "@/services/datasource"
 
 const formSchema = z
   .object({
@@ -62,7 +64,10 @@ const formSchema = z
       }
       return true
     },
-    { message: "Password is required for Trino when using SSL/HTTPS", path: ["password"] }
+    {
+      message: "Password is required for Trino when using SSL/HTTPS",
+      path: ["password"],
+    },
   )
 
 type FormValues = z.infer<typeof formSchema>
@@ -165,8 +170,12 @@ function ConnectionCreate() {
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create Data Source</h1>
-        <p className="text-muted-foreground mt-1">Add a new database connection</p>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Create Data Source
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Add a new database connection
+        </p>
       </div>
 
       <Form {...form}>
@@ -174,7 +183,9 @@ function ConnectionCreate() {
           <Card>
             <CardHeader>
               <CardTitle>Connection Configuration</CardTitle>
-              <CardDescription>Configure the database connection settings</CardDescription>
+              <CardDescription>
+                Configure the database connection settings
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -214,7 +225,9 @@ function ConnectionCreate() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="postgres">PostgreSQL</SelectItem>
+                                <SelectItem value="postgres">
+                                  PostgreSQL
+                                </SelectItem>
                                 <SelectItem value="mysql">MySQL</SelectItem>
                                 <SelectItem value="trino">Trino</SelectItem>
                               </SelectContent>
@@ -279,7 +292,9 @@ function ConnectionCreate() {
                                 type="number"
                                 placeholder="5432"
                                 {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                               />
                             </FormControl>
                             <FormMessage />
@@ -331,7 +346,11 @@ function ConnectionCreate() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Input type="password" placeholder="Optional" {...field} />
+                              <Input
+                                type="password"
+                                placeholder="Optional"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -352,7 +371,9 @@ function ConnectionCreate() {
                                 placeholder="Optional description"
                                 {...field}
                                 value={field.value || ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
+                                onChange={(e) =>
+                                  field.onChange(e.target.value || null)
+                                }
                                 className="min-h-[80px]"
                               />
                             </FormControl>
@@ -377,7 +398,9 @@ function ConnectionCreate() {
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel>Enable this data source for use</FormLabel>
+                              <FormLabel>
+                                Enable this data source for use
+                              </FormLabel>
                             </div>
                           </FormItem>
                         )}
@@ -385,7 +408,9 @@ function ConnectionCreate() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead className="w-[180px]">Close connection after execute</TableHead>
+                    <TableHead className="w-[180px]">
+                      Close connection after execute
+                    </TableHead>
                     <TableCell>
                       <FormField
                         control={form.control}
@@ -399,7 +424,10 @@ function ConnectionCreate() {
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel>Close DB connection after each request (e.g. StarRocks impersonation)</FormLabel>
+                              <FormLabel>
+                                Close DB connection after each request (e.g.
+                                StarRocks impersonation)
+                              </FormLabel>
                             </div>
                           </FormItem>
                         )}

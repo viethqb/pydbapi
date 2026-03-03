@@ -9,8 +9,7 @@
 
 import { OpenAPI } from "@/client"
 
-export const API_BASE =
-  OpenAPI.BASE ?? import.meta.env.VITE_API_URL ?? ""
+export const API_BASE = OpenAPI.BASE ?? import.meta.env.VITE_API_URL ?? ""
 
 async function getAuthToken(): Promise<string | null> {
   if (!OpenAPI.TOKEN) return null

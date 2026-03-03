@@ -45,7 +45,9 @@ export type AccessLogListOut = {
 
 export const AccessLogsService = {
   getConfig: async (): Promise<AccessLogConfigPublic> => {
-    return request<AccessLogConfigPublic>("/api/v1/access-logs/config", { method: "GET" })
+    return request<AccessLogConfigPublic>("/api/v1/access-logs/config", {
+      method: "GET",
+    })
   },
 
   getDatasourceOptions: async (): Promise<AccessLogDatasourceOptionsOut> => {
@@ -65,20 +67,22 @@ export const AccessLogsService = {
     })
   },
 
-  list: async (params: {
-    api_assignment_id?: string | null
-    module_id?: string | null
-    group_id?: string | null
-    app_client_id?: string | null
-    path__ilike?: string | null
-    http_method?: string | null
-    ip_address?: string | null
-    time_from?: string | null
-    time_to?: string | null
-    status?: string | null
-    page?: number
-    page_size?: number
-  } = {}): Promise<AccessLogListOut> => {
+  list: async (
+    params: {
+      api_assignment_id?: string | null
+      module_id?: string | null
+      group_id?: string | null
+      app_client_id?: string | null
+      path__ilike?: string | null
+      http_method?: string | null
+      ip_address?: string | null
+      time_from?: string | null
+      time_to?: string | null
+      status?: string | null
+      page?: number
+      page_size?: number
+    } = {},
+  ): Promise<AccessLogListOut> => {
     const sp = new URLSearchParams()
     if (params.api_assignment_id != null && params.api_assignment_id !== "")
       sp.set("api_assignment_id", params.api_assignment_id)
@@ -94,25 +98,32 @@ export const AccessLogsService = {
       sp.set("http_method", params.http_method)
     if (params.ip_address != null && params.ip_address !== "")
       sp.set("ip_address", params.ip_address)
-    if (params.time_from != null && params.time_from !== "") sp.set("time_from", params.time_from)
-    if (params.time_to != null && params.time_to !== "") sp.set("time_to", params.time_to)
-    if (params.status != null && params.status !== "") sp.set("status", params.status)
+    if (params.time_from != null && params.time_from !== "")
+      sp.set("time_from", params.time_from)
+    if (params.time_to != null && params.time_to !== "")
+      sp.set("time_to", params.time_to)
+    if (params.status != null && params.status !== "")
+      sp.set("status", params.status)
     if (params.page != null) sp.set("page", String(params.page))
     if (params.page_size != null) sp.set("page_size", String(params.page_size))
     const q = sp.toString()
-    return request<AccessLogListOut>(
-      `/api/v1/access-logs${q ? `?${q}` : ""}`,
-      { method: "GET" },
-    )
+    return request<AccessLogListOut>(`/api/v1/access-logs${q ? `?${q}` : ""}`, {
+      method: "GET",
+    })
   },
 
   getDetail: async (logId: string): Promise<AccessRecordDetail> => {
-    return request<AccessRecordDetail>(`/api/v1/access-logs/${logId}`, { method: "GET" })
+    return request<AccessRecordDetail>(`/api/v1/access-logs/${logId}`, {
+      method: "GET",
+    })
   },
 
   initExternalTable: async (): Promise<{ message: string }> => {
-    return request<{ message: string }>("/api/v1/access-logs/init-external-table", {
-      method: "POST",
-    })
+    return request<{ message: string }>(
+      "/api/v1/access-logs/init-external-table",
+      {
+        method: "POST",
+      },
+    )
   },
 }

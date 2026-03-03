@@ -33,9 +33,13 @@ function UserInfo({ fullName, username }: UserInfoProps) {
         </AvatarFallback>
       </Avatar>
       <div className="flex flex-col items-start min-w-0">
-        <p className="text-sm font-medium truncate w-full">{fullName || username}</p>
+        <p className="text-sm font-medium truncate w-full">
+          {fullName || username}
+        </p>
         {fullName && (
-          <p className="text-xs text-muted-foreground truncate w-full">{username}</p>
+          <p className="text-xs text-muted-foreground truncate w-full">
+            {username}
+          </p>
         )}
       </div>
     </div>

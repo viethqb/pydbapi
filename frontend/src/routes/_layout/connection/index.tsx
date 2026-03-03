@@ -1,29 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
 import { useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/Common/DataTable"
 import {
   columns,
   type DataSourceTableData,
 } from "@/components/DataSource/columns"
-import {
-  DataSourceService,
-  type DataSourceListIn,
-  type ProductTypeEnum,
-} from "@/services/datasource"
-import useCustomToast from "@/hooks/useCustomToast"
-import { usePermissions } from "@/hooks/usePermissions"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -32,6 +16,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
+import {
+  type DataSourceListIn,
+  DataSourceService,
+  type ProductTypeEnum,
+} from "@/services/datasource"
 
 export const Route = createFileRoute("/_layout/connection/")({
   component: ConnectionList,
@@ -97,7 +96,13 @@ function ConnectionList() {
 
   // Toggle status mutation
   const toggleStatusMutation = useMutation({
-    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: boolean }) => {
+    mutationFn: async ({
+      id,
+      currentStatus,
+    }: {
+      id: string
+      currentStatus: boolean
+    }) => {
       return DataSourceService.update({
         id,
         is_active: !currentStatus,
@@ -220,8 +225,7 @@ function ConnectionList() {
           onValueChange={(value) =>
             setFilters({
               ...filters,
-              is_active:
-                value === "all" ? null : value === "active" ? true : false,
+              is_active: value === "all" ? null : value === "active",
               page: 1,
             })
           }
@@ -239,9 +243,7 @@ function ConnectionList() {
 
       {/* DataTable */}
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading...
-        </div>
+        <div className="text-center py-8 text-muted-foreground">Loading...</div>
       ) : (
         <DataTable columns={columns} data={tableData} />
       )}
@@ -268,9 +270,7 @@ function ConnectionList() {
             <Button
               variant="outline"
               size="sm"
-              disabled={
-                filters.page! * filters.page_size! >= data.total
-              }
+              disabled={filters.page! * filters.page_size! >= data.total}
               onClick={() =>
                 setFilters({ ...filters, page: (filters.page || 1) + 1 })
               }

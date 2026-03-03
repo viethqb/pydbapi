@@ -32,7 +32,9 @@ function CopyableBlock({
         <div>
           <span className="text-sm font-medium">{title}</span>
           {description && (
-            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {description}
+            </p>
           )}
         </div>
         <ChevronDown
@@ -78,7 +80,7 @@ const PARAMS_DEFINITION =
   "  status       query     integer  no                 Filter by status\n" +
   "  active       query     boolean  no                 Filter by active\n" +
   "  ids          query     array    no                 Filter by ID list\n" +
-  "  filters      body      object   no                 e.g. {\"min\": 1, \"max\": 100}\n" +
+  '  filters      body      object   no                 e.g. {"min": 1, "max": 100}\n' +
   "  X-User-Id    header    string   no                 Custom header param\n\n" +
   "Supported types: string, integer, number, boolean, array, object.\n" +
   "The gateway coerces HTTP input to these types before passing to SQL/Python."
@@ -134,7 +136,7 @@ const SQL_OBJECT_PARAM =
   "Object parameters (type: object) are passed as dicts.\n" +
   "Access nested keys in Jinja2 with dot notation:\n\n" +
   "  Parameter: filters (body, object)\n" +
-  "  Example value: {\"min\": 10, \"max\": 100}\n\n" +
+  '  Example value: {"min": 10, "max": 100}\n\n' +
   "  In SQL template:\n" +
   "  {% if filters and filters.min is defined %}\n" +
   "    AND price >= {{ filters.min | sql_float }}\n" +
@@ -143,62 +145,62 @@ const SQL_OBJECT_PARAM =
   "    AND price <= {{ filters.max | sql_float }}\n" +
   "  {% endif %}\n\n" +
   "  Nested objects also work:\n" +
-  "  Value: {\"range\": {\"low\": 0, \"high\": 99}}\n" +
+  '  Value: {"range": {"low": 0, "high": 99}}\n' +
   "  Access: filters.range.low, filters.range.high"
 
 const RESULT_TRANSFORM =
   "def transform(result, params=None):\n" +
   '    """Normalize to { data, message, total, offset, limit }"""\n' +
   "    p = params or {}\n" +
-  "    limit = int(p.get(\"limit\", 20))\n" +
-  "    offset = int(p.get(\"offset\", 0))\n" +
-  "    d = result.get(\"data\", [])\n\n" +
+  '    limit = int(p.get("limit", 20))\n' +
+  '    offset = int(p.get("offset", 0))\n' +
+  '    d = result.get("data", [])\n\n' +
   "    # Multi-statement SQL returns [[rows], [{total}]]\n" +
   "    if isinstance(d, list) and len(d) >= 2:\n" +
   "        rows = d[0] if isinstance(d[0], list) else d[0]\n" +
-  "        total_val = d[1][0].get(\"total\", len(rows)) if d[1] else len(rows)\n" +
-  "        result[\"data\"] = rows\n" +
-  "        result[\"total\"] = total_val\n" +
+  '        total_val = d[1][0].get("total", len(rows)) if d[1] else len(rows)\n' +
+  '        result["data"] = rows\n' +
+  '        result["total"] = total_val\n' +
   "    else:\n" +
   "        rows = d[0] if isinstance(d, list) and d and isinstance(d[0], list) else d\n" +
-  "        result[\"data\"] = rows if isinstance(rows, list) else []\n" +
-  "        result[\"total\"] = len(result[\"data\"])\n\n" +
-  "    result[\"message\"] = None\n" +
-  "    result[\"offset\"] = offset\n" +
-  "    result[\"limit\"] = limit\n" +
+  '        result["data"] = rows if isinstance(rows, list) else []\n' +
+  '        result["total"] = len(result["data"])\n\n' +
+  '    result["message"] = None\n' +
+  '    result["offset"] = offset\n' +
+  '    result["limit"] = limit\n' +
   "    return result"
 
 const PYTHON_CONTENT =
   "def execute(params=None):\n" +
   "    params = params or {}\n" +
-  "    limit = int(params.get(\"limit\", 20))\n" +
-  "    offset = int(params.get(\"offset\", 0))\n" +
-  "    q = params.get(\"q\", \"\").strip()\n" +
-  "    status = params.get(\"status\")\n" +
-  "    filters = params.get(\"filters\") or {}\n" +
-  "    price_min = filters.get(\"min\") if isinstance(filters, dict) else None\n" +
-  "    price_max = filters.get(\"max\") if isinstance(filters, dict) else None\n\n" +
-  "    where = \"WHERE 1=1\"\n" +
+  '    limit = int(params.get("limit", 20))\n' +
+  '    offset = int(params.get("offset", 0))\n' +
+  '    q = params.get("q", "").strip()\n' +
+  '    status = params.get("status")\n' +
+  '    filters = params.get("filters") or {}\n' +
+  '    price_min = filters.get("min") if isinstance(filters, dict) else None\n' +
+  '    price_max = filters.get("max") if isinstance(filters, dict) else None\n\n' +
+  '    where = "WHERE 1=1"\n' +
   "    args = []\n\n" +
   "    if q:\n" +
-  "        where += \" AND name ILIKE %s\"\n" +
-  "        args.append(f\"%{q}%\")\n" +
+  '        where += " AND name ILIKE %s"\n' +
+  '        args.append(f"%{q}%")\n' +
   "    if status is not None:\n" +
-  "        where += \" AND status = %s\"\n" +
+  '        where += " AND status = %s"\n' +
   "        args.append(status)\n" +
   "    if price_min is not None:\n" +
-  "        where += \" AND price >= %s\"\n" +
+  '        where += " AND price >= %s"\n' +
   "        args.append(price_min)\n" +
   "    if price_max is not None:\n" +
-  "        where += \" AND price <= %s\"\n" +
+  '        where += " AND price <= %s"\n' +
   "        args.append(price_max)\n\n" +
-  "    total_row = db.query_one(f\"SELECT COUNT(*) AS total FROM items {where}\", tuple(args))\n" +
-  "    total = total_row[\"total\"] if total_row else 0\n\n" +
+  '    total_row = db.query_one(f"SELECT COUNT(*) AS total FROM items {where}", tuple(args))\n' +
+  '    total = total_row["total"] if total_row else 0\n\n' +
   "    rows = db.query(\n" +
-  "        f\"SELECT id, name, status, price, created_at FROM items {where} ORDER BY created_at DESC LIMIT %s OFFSET %s\",\n" +
+  '        f"SELECT id, name, status, price, created_at FROM items {where} ORDER BY created_at DESC LIMIT %s OFFSET %s",\n' +
   "        tuple(args + [limit, offset])\n" +
   "    )\n\n" +
-  "    return {\"data\": rows, \"total\": total, \"offset\": offset, \"limit\": limit}"
+  '    return {"data": rows, "total": total, "offset": offset, "limit": limit}'
 
 export default function ApiUsageGuide() {
   return (
@@ -206,12 +208,18 @@ export default function ApiUsageGuide() {
       <div>
         <h2 className="text-xl font-semibold">API Create & Edit Guide</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Step-by-step: define parameters, write content (SQL or Python), add validation, and optionally transform results.
-          Standard response: <code className="rounded bg-muted px-1">{"{ success, data, message, total, offset, limit }"}</code>.
+          Step-by-step: define parameters, write content (SQL or Python), add
+          validation, and optionally transform results. Standard response:{" "}
+          <code className="rounded bg-muted px-1">
+            {"{ success, data, message, total, offset, limit }"}
+          </code>
+          .
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          <strong className="text-foreground">Tip:</strong> Use the <strong className="text-foreground">Debug</strong> tab to test
-          your API with sample parameters before publishing. For SQL, it also shows the rendered query.
+          <strong className="text-foreground">Tip:</strong> Use the{" "}
+          <strong className="text-foreground">Debug</strong> tab to test your
+          API with sample parameters before publishing. For SQL, it also shows
+          the rendered query.
         </p>
       </div>
 
@@ -223,9 +231,12 @@ export default function ApiUsageGuide() {
 
         <TabsContent value="sql" className="space-y-4 mt-4">
           <p className="text-sm text-muted-foreground">
-            SQL API with dynamic filtering (string, integer, boolean, array, object params), pagination, count, and result transform.
-            Use <code className="rounded bg-muted px-1">{";"}</code> to separate multiple statements (e.g. data + count).
-            Add <code className="rounded bg-muted px-1">?naming=camel</code> to convert response keys to camelCase.
+            SQL API with dynamic filtering (string, integer, boolean, array,
+            object params), pagination, count, and result transform. Use{" "}
+            <code className="rounded bg-muted px-1">{";"}</code> to separate
+            multiple statements (e.g. data + count). Add{" "}
+            <code className="rounded bg-muted px-1">?naming=camel</code> to
+            convert response keys to camelCase.
           </p>
           <CopyableBlock
             title="1. Parameters"
@@ -263,11 +274,15 @@ export default function ApiUsageGuide() {
 
         <TabsContent value="python" className="space-y-4 mt-4">
           <p className="text-sm text-muted-foreground">
-            Python API with the same filtering and pagination logic.
-            Uses <code className="rounded bg-muted px-1">db.query</code> / <code className="rounded bg-muted px-1">db.query_one</code> with <code className="rounded bg-muted px-1">%s</code> placeholders.
-            No result transform needed — the script returns the final shape directly via{" "}
-            <code className="rounded bg-muted px-1">def execute(params)</code> or the global{" "}
-            <code className="rounded bg-muted px-1">result</code> variable.
+            Python API with the same filtering and pagination logic. Uses{" "}
+            <code className="rounded bg-muted px-1">db.query</code> /{" "}
+            <code className="rounded bg-muted px-1">db.query_one</code> with{" "}
+            <code className="rounded bg-muted px-1">%s</code> placeholders. No
+            result transform needed — the script returns the final shape
+            directly via{" "}
+            <code className="rounded bg-muted px-1">def execute(params)</code>{" "}
+            or the global <code className="rounded bg-muted px-1">result</code>{" "}
+            variable.
           </p>
           <CopyableBlock
             title="1. Parameters"

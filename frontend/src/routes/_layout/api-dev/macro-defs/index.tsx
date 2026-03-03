@@ -1,28 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, BookOpen } from "lucide-react"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { BookOpen, Plus, Search } from "lucide-react"
 import { useMemo, useState } from "react"
-
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import MacroDefUsageGuide from "@/components/ApiDev/MacroDefUsageGuide"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { DataTable } from "@/components/Common/DataTable"
-import {
-  macroDefColumns,
   type MacroDefTableData,
+  macroDefColumns,
 } from "@/components/ApiDev/macro-columns"
-import { MacroDefsService, type ApiMacroDefListIn } from "@/services/macro-defs"
-import { ModulesService } from "@/services/modules"
-import useCustomToast from "@/hooks/useCustomToast"
-import { usePermissions } from "@/hooks/usePermissions"
+import { DataTable } from "@/components/Common/DataTable"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -31,6 +17,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
+import { type ApiMacroDefListIn, MacroDefsService } from "@/services/macro-defs"
+import { ModulesService } from "@/services/modules"
 
 export const Route = createFileRoute("/_layout/api-dev/macro-defs/")({
   component: MacroDefsList,
@@ -103,7 +102,7 @@ function MacroDefsList() {
     Array.isArray(data?.data) ? data.data : []
   ).map((m) => ({
     ...m,
-    moduleName: m.module_id ? moduleMap.get(m.module_id) ?? null : null,
+    moduleName: m.module_id ? (moduleMap.get(m.module_id) ?? null) : null,
     onDelete: handleDelete,
     canUpdate: hasPermission("macro_def", "update", m.id),
     canDelete: hasPermission("macro_def", "delete", m.id),
@@ -135,114 +134,114 @@ function MacroDefsList() {
         </TabsContent>
 
         <TabsContent value="list" className="mt-6 flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold">Macro definitions</h1>
-        <p className="text-muted-foreground">
-          Jinja macros and Python functions reusable in API content
-        </p>
-      </div>
+          <div>
+            <h1 className="text-2xl font-bold">Macro definitions</h1>
+            <p className="text-muted-foreground">
+              Jinja macros and Python functions reusable in API content
+            </p>
+          </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name..."
-              className="pl-8"
-              value={filters.name__ilike || ""}
-              onChange={(e) =>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name..."
+                  className="pl-8"
+                  value={filters.name__ilike || ""}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      name__ilike: e.target.value || null,
+                      page: 1,
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <Select
+              value={filters.module_id ?? "all"}
+              onValueChange={(value) =>
                 setFilters({
                   ...filters,
-                  name__ilike: e.target.value || null,
+                  module_id: value === "all" ? null : value,
                   page: 1,
                 })
               }
-            />
-          </div>
-        </div>
-        <Select
-          value={filters.module_id ?? "all"}
-          onValueChange={(value) =>
-            setFilters({
-              ...filters,
-              module_id: value === "all" ? null : value,
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Modules" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All (incl. Global)</SelectItem>
-            {modules?.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.macro_type ?? "all"}
-          onValueChange={(value) =>
-            setFilters({
-              ...filters,
-              macro_type: value === "all" ? null : (value as "JINJA" | "PYTHON"),
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="All Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="JINJA">Jinja</SelectItem>
-            <SelectItem value="PYTHON">Python</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading...
-        </div>
-      ) : (
-        <DataTable columns={macroDefColumns} data={tableData} />
-      )}
-
-      {data && data.total > 0 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Showing {(filters.page! - 1) * filters.page_size! + 1} to{" "}
-            {Math.min(filters.page! * filters.page_size!, data.total)} of{" "}
-            {data.total} entries
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={filters.page === 1}
-              onClick={() =>
-                setFilters({ ...filters, page: (filters.page || 1) - 1 })
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Modules" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All (incl. Global)</SelectItem>
+                {modules?.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.macro_type ?? "all"}
+              onValueChange={(value) =>
+                setFilters({
+                  ...filters,
+                  macro_type:
+                    value === "all" ? null : (value as "JINJA" | "PYTHON"),
+                  page: 1,
+                })
               }
             >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={filters.page! * filters.page_size! >= data.total}
-              onClick={() =>
-                setFilters({ ...filters, page: (filters.page || 1) + 1 })
-              }
-            >
-              Next
-            </Button>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="JINJA">Jinja</SelectItem>
+                <SelectItem value="PYTHON">Python</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      )}
 
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading...
+            </div>
+          ) : (
+            <DataTable columns={macroDefColumns} data={tableData} />
+          )}
+
+          {data && data.total > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {(filters.page! - 1) * filters.page_size! + 1} to{" "}
+                {Math.min(filters.page! * filters.page_size!, data.total)} of{" "}
+                {data.total} entries
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={filters.page === 1}
+                  onClick={() =>
+                    setFilters({ ...filters, page: (filters.page || 1) - 1 })
+                  }
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={filters.page! * filters.page_size! >= data.total}
+                  onClick={() =>
+                    setFilters({ ...filters, page: (filters.page || 1) + 1 })
+                  }
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -251,8 +250,8 @@ function MacroDefsList() {
           <DialogHeader>
             <DialogTitle>Delete macro definition</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this macro definition? APIs using it will no
-              longer have access to it.
+              Are you sure you want to delete this macro definition? APIs using
+              it will no longer have access to it.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -5,7 +5,7 @@ Table schema matches AccessRecord (id, api_assignment_id, app_client_id, ip_addr
 http_method, path, status_code, request_body, created_at) with StarRocks-compatible types.
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -61,12 +61,22 @@ def write_starrocks_audit_row(
     duration_ms: int | None = None,
 ) -> None:
     """Insert one gateway access record into starrocks_audit_db__.pydbapi_access_log_tbl__."""
-    ts = created_at or datetime.now(timezone.utc)
+    ts = created_at or datetime.now(UTC)
     body_val = None
     if request_body is not None:
-        body_val = request_body[:2000] + "..." if len(request_body) > 2000 else request_body
-    headers_val = (request_headers[:65533] + "...") if request_headers and len(request_headers) > 65533 else request_headers
-    params_val = (request_params[:65533] + "...") if request_params and len(request_params) > 65533 else request_params
+        body_val = (
+            request_body[:2000] + "..." if len(request_body) > 2000 else request_body
+        )
+    headers_val = (
+        (request_headers[:65533] + "...")
+        if request_headers and len(request_headers) > 65533
+        else request_headers
+    )
+    params_val = (
+        (request_params[:65533] + "...")
+        if request_params and len(request_params) > 65533
+        else request_params
+    )
     sql = text(f"""
     INSERT INTO {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
     (`id`, `api_assignment_id`, `app_client_id`, `ip_address`, `http_method`, `path`, `status_code`, `request_body`, `request_headers`, `request_params`, `created_at`, `duration_ms`)
@@ -77,7 +87,9 @@ def write_starrocks_audit_row(
             sql,
             {
                 "id": str(id),
-                "api_assignment_id": str(api_assignment_id) if api_assignment_id else None,
+                "api_assignment_id": str(api_assignment_id)
+                if api_assignment_id
+                else None,
                 "app_client_id": str(app_client_id) if app_client_id else None,
                 "ip_address": (ip_address or "")[:64],
                 "http_method": (http_method or "GET")[:16],
@@ -102,7 +114,9 @@ def _row_to_dict(row: dict) -> dict:
         "ip_address": row.get("ip_address") or "",
         "http_method": row.get("http_method") or "GET",
         "path": row.get("path") or "",
-        "status_code": int(row["status_code"]) if row.get("status_code") is not None else 0,
+        "status_code": int(row["status_code"])
+        if row.get("status_code") is not None
+        else 0,
         "request_body": row.get("request_body"),
         "request_headers": row.get("request_headers"),
         "request_params": row.get("request_params"),
@@ -178,8 +192,18 @@ def read_starrocks_audit_list(
     params["offset"] = (page - 1) * page_size
 
     count_params = {
-        k: v for k, v in params.items()
-        if k in ("api_assignment_id", "app_client_id", "path_like", "http_method", "ip_address", "time_from", "time_to")
+        k: v
+        for k, v in params.items()
+        if k
+        in (
+            "api_assignment_id",
+            "app_client_id",
+            "path_like",
+            "http_method",
+            "ip_address",
+            "time_from",
+            "time_to",
+        )
         or k.startswith("api_assignment_id_")
     }
     with engine.connect() as conn:
@@ -218,7 +242,7 @@ def read_starrocks_audit_requests_by_day(
     days: int,
 ) -> list[tuple[date, int]]:
     """Query requests grouped by day from StarRocks audit table. Returns list of (date, count)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
     sql = text(f"""
     SELECT DATE(`created_at`) AS day, COUNT(*) AS count
     FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
@@ -247,7 +271,7 @@ def read_starrocks_audit_top_paths(
     limit: int,
 ) -> list[tuple[str, int]]:
     """Query top paths by count from StarRocks audit table. Returns list of (path, count)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
     sql = text(f"""
     SELECT `path`, COUNT(*) AS count
     FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
