@@ -137,7 +137,7 @@ def merge_params(
             if not isinstance(name, str) or not name.strip():
                 continue
             name = name.strip()
-            loc = (param_def.get("location") or "query")
+            loc = param_def.get("location") or "query"
             if isinstance(loc, str):
                 loc = loc.strip().lower()
             else:
@@ -189,7 +189,9 @@ async def parse_params(
     query = dict(request.query_params)
     body = await _read_body(request)
     headers = dict(request.headers)
-    return merge_params(query, body, path_params, headers, http_method, params_definition)
+    return merge_params(
+        query, body, path_params, headers, http_method, params_definition
+    )
 
 
 def _cap_rows(out: dict[str, Any]) -> dict[str, Any]:
@@ -204,7 +206,9 @@ def _cap_rows(out: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict[str, Any]:
+def normalize_api_result(
+    result: Any, execute_engine: str | None = None
+) -> dict[str, Any]:
     """
     Format executor result for API response. All responses use envelope:
     { "success": true|false, "message": str|null, "data": list }.
@@ -227,7 +231,13 @@ def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict
                 if k not in ("data", "success", "message"):
                     out[k] = v
             return _cap_rows(out)
-        raw = result if isinstance(result, list) else [result] if result is not None else []
+        raw = (
+            result
+            if isinstance(result, list)
+            else [result]
+            if result is not None
+            else []
+        )
         return _cap_rows({"success": True, "message": None, "data": raw})
 
     # SCRIPT mode: unwrap envelope to top level
@@ -255,7 +265,12 @@ def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict
                 data = [data] if data is not None else []
             return _cap_rows({"success": True, "message": None, "data": data})
     # Result transform or raw (result already has success, message, data)
-    if isinstance(result, dict) and "success" in result and "message" in result and "data" in result:
+    if (
+        isinstance(result, dict)
+        and "success" in result
+        and "message" in result
+        and "data" in result
+    ):
         data = result["data"]
         if not isinstance(data, list):
             data = [data] if data is not None else []
@@ -270,7 +285,13 @@ def normalize_api_result(result: Any, execute_engine: str | None = None) -> dict
         return _cap_rows(out)
     if isinstance(result, list):
         return _cap_rows({"success": True, "message": None, "data": result})
-    return _cap_rows({"success": True, "message": None, "data": [result] if result is not None else []})
+    return _cap_rows(
+        {
+            "success": True,
+            "message": None,
+            "data": [result] if result is not None else [],
+        }
+    )
 
 
 def get_response_naming(query: dict[str, Any], headers: dict[str, str]) -> str:
@@ -286,6 +307,14 @@ def get_response_naming(query: dict[str, Any], headers: dict[str, str]) -> str:
     return "camel" if h == "camel" else "snake"
 
 
+_JSON_SAFE_TYPES = (bool, int, float, str, type(None))
+
+
+def _row_already_safe(row: dict) -> bool:
+    """True if all values in a dict are JSON-safe primitives (no conversion needed)."""
+    return all(isinstance(v, _JSON_SAFE_TYPES) for v in row.values())
+
+
 def _make_json_safe(obj: Any, camel: bool = False) -> Any:
     """Recursively convert non-JSON-serializable types to safe primitives.
 
@@ -296,7 +325,7 @@ def _make_json_safe(obj: Any, camel: bool = False) -> Any:
     When *camel* is ``True``, dict keys are also converted to camelCase in the
     same pass, avoiding a second recursive traversal.
     """
-    if obj is None or isinstance(obj, (bool, int, float, str)):
+    if isinstance(obj, _JSON_SAFE_TYPES):
         return obj
     if isinstance(obj, datetime):
         return obj.isoformat()
@@ -316,11 +345,22 @@ def _make_json_safe(obj: Any, camel: bool = False) -> Any:
     if isinstance(obj, bytes):
         return obj.decode("utf-8", errors="replace")
     if isinstance(obj, dict):
+        # Fast path: if all values are already primitives and no key conversion needed
+        if not camel and _row_already_safe(obj):
+            return obj
         return {
             (_to_camel_str(k) if camel else k): _make_json_safe(v, camel)
             for k, v in obj.items()
         }
     if isinstance(obj, (list, tuple)):
+        # Fast path for list of dicts (common data rows): skip recursion when safe
+        if (
+            not camel
+            and obj
+            and isinstance(obj[0], dict)
+            and all(isinstance(row, dict) and _row_already_safe(row) for row in obj)
+        ):
+            return list(obj) if isinstance(obj, tuple) else obj
         return [_make_json_safe(item, camel) for item in obj]
     if isinstance(obj, set):
         return [_make_json_safe(item, camel) for item in sorted(obj, key=str)]

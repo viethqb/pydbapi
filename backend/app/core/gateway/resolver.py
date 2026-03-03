@@ -14,23 +14,25 @@ import logging
 import re
 import threading
 import time
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
+from app.core.config import settings
 from app.models_dbapi import ApiAssignment, ApiModule, HttpMethodEnum
 
 _log = logging.getLogger(__name__)
 
-_ROUTE_CACHE_TTL = 30.0  # seconds
+_ROUTE_CACHE_TTL: float = float(settings.GATEWAY_ROUTE_CACHE_TTL_SECONDS)
 
 _RouteEntry = tuple[re.Pattern[str], str, ApiAssignment, ApiModule]
 
 # Two-tier route index: static routes (O(1) dict lookup) and dynamic routes
 # (per-method lists, reduced linear scan).
-_StaticRoutes = dict[tuple[str, str], tuple[ApiAssignment, ApiModule]]  # (method, path) → (api, mod)
+_StaticRoutes = dict[
+    tuple[str, str], tuple[ApiAssignment, ApiModule]
+]  # (method, path) → (api, mod)
 _DynamicEntry = tuple[re.Pattern[str], ApiAssignment, ApiModule]
 _DynamicRoutes = dict[str, list[_DynamicEntry]]  # method → [(regex, api, mod), ...]
 _RouteIndex = tuple[_StaticRoutes, _DynamicRoutes]
@@ -87,7 +89,11 @@ def _build_route_table(
     dynamic: _DynamicRoutes = {}
     for api, mod in rows:
         api_path = (api.path or "").strip("/")
-        method_val = api.http_method.value if hasattr(api.http_method, "value") else str(api.http_method)
+        method_val = (
+            api.http_method.value
+            if hasattr(api.http_method, "value")
+            else str(api.http_method)
+        )
         # Detach from session so cached objects survive beyond the
         # building session's lifetime.  Eagerly-loaded attributes
         # (scalars + datasource) remain accessible.
@@ -164,7 +170,9 @@ def invalidate_route_cache() -> None:
 
 
 def resolve_gateway_api(
-    path: str, method: str, session: Session,
+    path: str,
+    method: str,
+    session: Session,
 ) -> tuple[ApiAssignment, dict[str, str], ApiModule] | None:
     """
     Resolve /api/{path} to (ApiAssignment, path_params, ApiModule).

@@ -1,10 +1,10 @@
 import Editor, { type OnMount } from "@monaco-editor/react"
-import type * as Monaco from "monaco-editor"
+import initRuff, { format as formatPython } from "@wasm-fmt/ruff_fmt/vite"
 import { Braces, ChevronDown } from "lucide-react"
+import type * as Monaco from "monaco-editor"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { format as formatSql } from "sql-formatter"
-import initRuff, { format as formatPython } from "@wasm-fmt/ruff_fmt/vite"
-
+import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { useTheme } from "@/components/theme-provider"
 import useCustomToast from "@/hooks/useCustomToast"
 
 export type ApiContentEditorExecuteEngine = "SQL" | "SCRIPT"
@@ -416,7 +415,7 @@ function registerPythonCompletions(monaco: typeof Monaco) {
           if (m.macro_type === "PYTHON") {
             for (const fn of parsePythonFunctionSignatures(m.content)) {
               const insertParams = fn.params.length > 0
-                ? fn.params.map((p, i) => "$" + "{" + (i + 1) + ":" + p + "}").join(", ")
+                ? fn.params.map((p, i) => `\${${i + 1}:${p}}`).join(", ")
                 : "$1"
               const sigStr = fn.signature ? `(${fn.signature})` : "()"
               suggestions.push({
@@ -446,7 +445,7 @@ function registerPythonCompletions(monaco: typeof Monaco) {
           {
             label: "execute(params=None) (snippet)",
             kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "def execute(params=None):\n    " + "${1:params = params or {}}\n    sql = \"${2:SELECT 1 AS col}\"\n    rows = db.query(sql)\n    return ${3:rows}\n".replace(/\$/g, "\\$"),
+            insertText: `def execute(params=None):\n    ${"${1:params = params or {}}\n    sql = \"${2:SELECT 1 AS col}\"\n    rows = db.query(sql)\n    return ${3:rows}\n".replace(/\$/g, "\\$")}`,
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range,
             detail: "Main entry: params from request, return dict/list",
@@ -637,7 +636,7 @@ export default function ApiContentEditor({
     // This ensures each editor instance has its own cleanup function
     const currentOnChange = onChange
     const currentValue = value ?? ""
-    
+
     return () => {
       // When component unmounts (e.g., switching tabs), sync editor value to form
       // This is critical: even if user didn't type anything, we need to preserve
@@ -845,4 +844,3 @@ export default function ApiContentEditor({
     </div>
   )
 }
-

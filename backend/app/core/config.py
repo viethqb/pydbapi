@@ -1,6 +1,6 @@
 import secrets
 import warnings
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import (
     AnyUrl,
@@ -12,7 +12,6 @@ from pydantic import (
     model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -42,9 +41,9 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
-    BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = (
-        []
-    )
+    BACKEND_CORS_ORIGINS: Annotated[
+        list[AnyUrl] | str, BeforeValidator(parse_cors)
+    ] = []
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -86,7 +85,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # DBAPI Phase 1: External DB connections (pool/runtime for DataSource)
     # -------------------------------------------------------------------------
-    EXTERNAL_DB_POOL_SIZE: int = 5
+    EXTERNAL_DB_POOL_SIZE: int = 10
     EXTERNAL_DB_CONNECT_TIMEOUT: int = 10
     EXTERNAL_DB_STATEMENT_TIMEOUT: int | None = None
     SQL_TEMPLATE_MAX_SIZE: int = 1_000_000  # max template source size (bytes)
@@ -146,12 +145,16 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     GATEWAY_TOKEN_GET_ENABLED: bool = False  # Legacy GET /token/generate (credentials in URL); disabled by default for security
     GATEWAY_JWT_EXPIRE_SECONDS: int = 3600
-    GATEWAY_MAX_RESPONSE_ROWS: int = 10_000  # 0 = no limit; truncates data[] in gateway responses
+    GATEWAY_MAX_RESPONSE_ROWS: int = (
+        10_000  # 0 = no limit; truncates data[] in gateway responses
+    )
     GATEWAY_FIREWALL_DEFAULT_ALLOW: bool = True  # When no rule matches
     GATEWAY_ACCESS_LOG_BODY: bool = False  # Log request_body to AccessRecord
     GATEWAY_CONFIG_CACHE_TTL_SECONDS: int = (
         300  # TTL for cached API config (content, params, validate, transform)
     )
+    GATEWAY_ROUTE_CACHE_TTL_SECONDS: int = 60  # TTL for in-process route table cache
+    ACCESS_LOG_POOL_SIZE: int = 4  # Thread pool size for background access log writes
 
     # -------------------------------------------------------------------------
     # Auth endpoint rate limiting (per IP, per minute, sliding window)

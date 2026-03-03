@@ -27,12 +27,15 @@ from app.models_dbapi import ApiAssignment
 
 logger = logging.getLogger(__name__)
 
-_log_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="access-log")
+_log_pool = ThreadPoolExecutor(
+    max_workers=settings.ACCESS_LOG_POOL_SIZE, thread_name_prefix="access-log"
+)
 
 
 # ---------------------------------------------------------------------------
 # Access-log helper
 # ---------------------------------------------------------------------------
+
 
 class _AccessLogContext:
     """Captures the immutable per-request fields so the log call can be
@@ -149,7 +152,9 @@ def run(
     Returns result dict from executor.
     When gateway_start_time is set, duration_ms is from that time (gateway entry) to log write.
     """
-    start = gateway_start_time if gateway_start_time is not None else time.perf_counter()
+    start = (
+        gateway_start_time if gateway_start_time is not None else time.perf_counter()
+    )
     log_ctx = _AccessLogContext(
         api_assignment_id=api.id,
         app_client_id=app_client_id,

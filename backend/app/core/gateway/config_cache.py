@@ -5,6 +5,8 @@ Caches content, params, param_validates, result_transform by api_assignment_id.
 TTL configurable via GATEWAY_CONFIG_CACHE_TTL_SECONDS.
 """
 
+import collections
+import functools
 import json
 import logging
 import re
@@ -30,8 +32,10 @@ from app.models_dbapi import (
 _LOG = logging.getLogger(__name__)
 _KEY_PREFIX = "gateway:config:"
 
-# In-process L1 cache: {api_assignment_id: (config_dict, expires_at_monotonic)}
-_LOCAL_CACHE: dict[UUID, tuple[dict[str, Any], float]] = {}
+# In-process L1 cache (LRU): {api_assignment_id: (config_dict, expires_at_monotonic)}
+_LOCAL_CACHE: collections.OrderedDict[UUID, tuple[dict[str, Any], float]] = (
+    collections.OrderedDict()
+)
 _LOCAL_LOCK = threading.Lock()
 _LOCAL_TTL = 10.0  # short TTL to stay fresh while avoiding Redis on every request
 _LOCAL_MAX_SIZE = 2048
@@ -48,25 +52,21 @@ def _local_get(api_assignment_id: UUID) -> dict[str, Any] | None:
     config, expires_at = entry
     if time.monotonic() > expires_at:
         return None
+    with _LOCAL_LOCK:
+        if api_assignment_id in _LOCAL_CACHE:
+            _LOCAL_CACHE.move_to_end(api_assignment_id)
     return config
 
 
 def _local_set(api_assignment_id: UUID, config: dict[str, Any]) -> None:
     with _LOCAL_LOCK:
-        if len(_LOCAL_CACHE) >= _LOCAL_MAX_SIZE:
-            now = time.monotonic()
-            expired = [k for k, (_, exp) in _LOCAL_CACHE.items() if now > exp]
-            for k in expired:
-                _LOCAL_CACHE.pop(k, None)
-            if len(_LOCAL_CACHE) >= _LOCAL_MAX_SIZE:
-                # Evict the 25% of entries closest to expiry instead of
-                # clearing everything (avoids thundering herd on Redis/DB).
-                evict_count = _LOCAL_MAX_SIZE // 4
-                by_expiry = sorted(
-                    _LOCAL_CACHE, key=lambda k: _LOCAL_CACHE[k][1]
-                )
-                for k in by_expiry[:evict_count]:
-                    _LOCAL_CACHE.pop(k, None)
+        if api_assignment_id in _LOCAL_CACHE:
+            _LOCAL_CACHE.move_to_end(api_assignment_id)
+        elif len(_LOCAL_CACHE) >= _LOCAL_MAX_SIZE:
+            # LRU eviction: pop from front (least recently used)
+            evict_count = _LOCAL_MAX_SIZE // 4
+            for _ in range(min(evict_count, len(_LOCAL_CACHE))):
+                _LOCAL_CACHE.popitem(last=False)
         _LOCAL_CACHE[api_assignment_id] = (config, time.monotonic() + _LOCAL_TTL)
 
 
@@ -126,12 +126,16 @@ def invalidate_gateway_config(api_assignment_id: UUID) -> None:
         _LOG.debug("Cache invalidate failed for %s: %s", api_assignment_id, e)
 
 
+@functools.lru_cache(maxsize=256)
+def _macro_pattern(macro_name: str) -> re.Pattern[str]:
+    return re.compile(r"\b" + re.escape(macro_name) + r"\b")
+
+
 def _macro_referenced_in_content(macro_name: str, content: str) -> bool:
     """True if macro_name appears in content as a whole word (e.g. call or reference)."""
     if not content or not macro_name:
         return False
-    pattern = r"\b" + re.escape(macro_name) + r"\b"
-    return bool(re.search(pattern, content))
+    return bool(_macro_pattern(macro_name).search(content))
 
 
 def load_macros_for_api(
@@ -181,7 +185,9 @@ def load_macros_for_api(
     jinja_contents: list[str] = []
     python_contents: list[str] = []
     for m in published:
-        content = vc_map.get(m.published_version_id, "") if m.published_version_id else ""
+        content = (
+            vc_map.get(m.published_version_id, "") if m.published_version_id else ""
+        )
         if not content:
             continue
         if m.macro_type == MacroTypeEnum.JINJA:

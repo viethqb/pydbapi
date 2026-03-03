@@ -8,6 +8,7 @@ ApiGroup assigned to the client (app_client_group_link + api_assignment_group_li
 assigned directly (app_client_api_link).
 """
 
+import collections
 import threading
 import time
 from uuid import UUID
@@ -17,14 +18,13 @@ from jwt.exceptions import InvalidTokenError
 from sqlmodel import Session, select
 
 from app.core.config import settings
+from app.core.security import ALGORITHM, TOKEN_TYPE_DASHBOARD
 from app.models_dbapi import (
     ApiAssignmentGroupLink,
     AppClient,
     AppClientApiLink,
     AppClientGroupLink,
 )
-from app.core.security import ALGORITHM, TOKEN_TYPE_DASHBOARD
-
 
 _CLIENT_CACHE_TTL_SEC = 30.0
 _CLIENT_CACHE_LOCK = threading.Lock()
@@ -32,7 +32,9 @@ _CLIENT_CACHE: dict[str, tuple[AppClient | None, float]] = {}
 
 _PERM_CACHE_TTL_SEC = 10.0
 _PERM_CACHE_LOCK = threading.Lock()
-_PERM_CACHE: dict[tuple[UUID, UUID], tuple[bool, float]] = {}
+_PERM_CACHE: collections.OrderedDict[tuple[UUID, UUID], tuple[bool, float]] = (
+    collections.OrderedDict()
+)
 _PERM_CACHE_MAX_SIZE = 10_000
 
 
@@ -121,6 +123,7 @@ def client_can_access_api(
         if entry is not None:
             allowed, expires_at = entry
             if now < expires_at:
+                _PERM_CACHE.move_to_end(cache_key)
                 return allowed
             _PERM_CACHE.pop(cache_key, None)
 
@@ -134,32 +137,26 @@ def client_can_access_api(
     if direct is not None:
         allowed = True
     else:
-        # (1) Group: client's groups intersect with API's groups
-        client_group_ids_stmt = select(AppClientGroupLink.api_group_id).where(
-            AppClientGroupLink.app_client_id == app_client_id
-        )
-        client_group_ids = set(session.exec(client_group_ids_stmt).all())
-        if not client_group_ids:
-            allowed = False
-        else:
-            overlap = session.exec(
-                select(ApiAssignmentGroupLink.api_group_id).where(
-                    ApiAssignmentGroupLink.api_assignment_id == api_assignment_id,
-                    ApiAssignmentGroupLink.api_group_id.in_(client_group_ids),
-                )
-            ).first()
-            allowed = overlap is not None
+        # (1) Group: single query checking if any client group overlaps with API groups
+        overlap = session.exec(
+            select(AppClientGroupLink.api_group_id).where(
+                AppClientGroupLink.app_client_id == app_client_id,
+                AppClientGroupLink.api_group_id.in_(
+                    select(ApiAssignmentGroupLink.api_group_id).where(
+                        ApiAssignmentGroupLink.api_assignment_id == api_assignment_id
+                    )
+                ),
+            )
+        ).first()
+        allowed = overlap is not None
 
     with _PERM_CACHE_LOCK:
         if len(_PERM_CACHE) >= _PERM_CACHE_MAX_SIZE:
-            now_ts = time.monotonic()
-            expired_keys = [
-                k for k, (_, exp) in _PERM_CACHE.items() if now_ts >= exp
-            ]
-            for k in expired_keys:
-                _PERM_CACHE.pop(k, None)
-            if len(_PERM_CACHE) >= _PERM_CACHE_MAX_SIZE:
-                _PERM_CACHE.clear()
+            # LRU eviction: pop from front (least recently used)
+            evict_count = _PERM_CACHE_MAX_SIZE // 4
+            for _ in range(min(evict_count, len(_PERM_CACHE))):
+                _PERM_CACHE.popitem(last=False)
         _PERM_CACHE[cache_key] = (allowed, now + _PERM_CACHE_TTL_SEC)
+        _PERM_CACHE.move_to_end(cache_key)
 
     return allowed
