@@ -8,6 +8,7 @@ import {
   type UserRegister,
   UsersService,
 } from "@/client"
+import { request } from "@/lib/api-request"
 import { handleError } from "@/utils"
 import useCustomToast from "./useCustomToast"
 
@@ -54,6 +55,8 @@ const useAuth = () => {
   })
 
   const logout = () => {
+    // Fire-and-forget: revoke token server-side, don't block navigation
+    request("/api/v1/logout", { method: "POST" }).catch(() => {})
     localStorage.removeItem("access_token")
     navigate({ to: "/login" })
   }

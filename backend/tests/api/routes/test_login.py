@@ -91,3 +91,36 @@ def test_reset_password_invalid_token(
     assert "detail" in response
     assert r.status_code == 400
     assert response["detail"] == "Invalid token"
+
+
+def test_logout(client: TestClient) -> None:
+    """Logout should return 200 and the token should be revoked."""
+    # Login to get a fresh token
+    login_data = {
+        "username": settings.FIRST_SUPERUSER,
+        "password": settings.FIRST_SUPERUSER_PASSWORD,
+    }
+    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    assert r.status_code == 200
+    token = r.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Verify token works before logout
+    r = client.post(f"{settings.API_V1_STR}/login/test-token", headers=headers)
+    assert r.status_code == 200
+
+    # Logout
+    r = client.post(f"{settings.API_V1_STR}/logout", headers=headers)
+    assert r.status_code == 200
+    assert r.json()["message"] == "Logged out"
+
+    # Token should now be revoked
+    r = client.post(f"{settings.API_V1_STR}/login/test-token", headers=headers)
+    assert r.status_code == 401
+    assert r.json()["detail"] == "Token has been revoked"
+
+
+def test_logout_requires_auth(client: TestClient) -> None:
+    """Logout without a token should return 401."""
+    r = client.post(f"{settings.API_V1_STR}/logout")
+    assert r.status_code in (401, 403)

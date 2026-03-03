@@ -1,6 +1,7 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
+import jwt as pyjwt
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -8,11 +9,13 @@ from app import crud
 from app.api.deps import (
     CurrentUser,
     SessionDep,
+    TokenDep,
     require_rate_limit,
 )
 from app.core import security
 from app.core.config import settings
 from app.core.security import TOKEN_TYPE_DASHBOARD, get_password_hash
+from app.core.token_blocklist import revoke_token
 from app.models import Message, NewPassword, Token, UserPublic
 from app.utils import verify_password_reset_token
 
@@ -52,6 +55,24 @@ def test_token(current_user: CurrentUser) -> Any:
     Test access token
     """
     return current_user
+
+
+@router.post("/logout")
+def logout(current_user: CurrentUser, token: TokenDep) -> Message:  # noqa: ARG001
+    """
+    Revoke the current access token (server-side logout).
+    """
+    try:
+        payload = pyjwt.decode(
+            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+        )
+    except pyjwt.exceptions.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid token")
+    jti = payload.get("jti")
+    exp_ts = payload.get("exp")
+    if jti and exp_ts:
+        revoke_token(jti, datetime.fromtimestamp(exp_ts, tz=UTC))
+    return Message(message="Logged out")
 
 
 @router.post(

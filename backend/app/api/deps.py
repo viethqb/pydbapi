@@ -15,6 +15,7 @@ from app.core.db import engine
 from app.core.gateway.ratelimit import check_rate_limit
 from app.core.permission import has_permission
 from app.core.security import TOKEN_TYPE_DASHBOARD
+from app.core.token_blocklist import is_token_revoked
 from app.models import TokenPayload, User
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 
@@ -48,6 +49,11 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only dashboard tokens can access management API",
+        )
+    if token_data.jti and is_token_revoked(token_data.jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
         )
     user = session.get(User, token_data.sub)
     if not user:

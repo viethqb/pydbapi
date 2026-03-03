@@ -3,6 +3,7 @@ import hashlib
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 import jwt
 from cryptography.fernet import Fernet
@@ -39,7 +40,12 @@ def create_access_token(
     token_type: str = TOKEN_TYPE_DASHBOARD,
 ) -> str:
     expire = datetime.now(UTC) + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject), "type": token_type}
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "type": token_type,
+        "jti": str(uuid4()),
+    }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
