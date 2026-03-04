@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router"
 
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -16,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { VersionCommitPublic } from "@/services/overview"
 
 function formatDateTime(iso: string) {
@@ -25,6 +32,16 @@ function formatDateTime(iso: string) {
 
 function shortId(id: string) {
   return id.length > 12 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id
+}
+
+function methodVariant(
+  method: string,
+): "default" | "secondary" | "destructive" | "outline" {
+  if (method === "GET") return "secondary"
+  if (method === "POST") return "default"
+  if (method === "PUT" || method === "PATCH") return "outline"
+  if (method === "DELETE") return "destructive"
+  return "outline"
 }
 
 export function RecentCommitsTable(props: {
@@ -76,22 +93,23 @@ export function RecentCommitsTable(props: {
               {rows.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="max-w-[320px]">
-                    <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      {c.http_method && (
+                        <Badge
+                          variant={methodVariant(c.http_method)}
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          {c.http_method}
+                        </Badge>
+                      )}
                       <Link
                         to="/api-dev/apis/$id"
                         params={{ id: c.api_assignment_id }}
                         className="hover:underline font-medium"
                       >
                         {c.full_path ? (
-                          <span>
-                            {c.http_method && (
-                              <span className="text-muted-foreground font-mono text-xs mr-1">
-                                [{c.http_method}]
-                              </span>
-                            )}
-                            <span className="font-mono text-sm">
-                              {c.full_path}
-                            </span>
+                          <span className="font-mono text-sm">
+                            {c.full_path}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">
@@ -103,10 +121,23 @@ export function RecentCommitsTable(props: {
                   </TableCell>
                   <TableCell className="tabular-nums">{c.version}</TableCell>
                   <TableCell className="max-w-[300px] truncate">
-                    {c.commit_message ?? "-"}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{c.commit_message ?? "-"}</span>
+                        </TooltipTrigger>
+                        {c.commit_message && (
+                          <TooltipContent>
+                            <p className="max-w-sm break-all">
+                              {c.commit_message}
+                            </p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {c.committed_by_email ?? "-"}
+                    {c.committed_by_username ?? "-"}
                   </TableCell>
                   <TableCell>{formatDateTime(c.committed_at)}</TableCell>
                 </TableRow>

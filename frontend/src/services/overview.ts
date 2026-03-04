@@ -32,6 +32,7 @@ export type VersionCommitPublic = {
   commit_message: string | null
   committed_by_id: string | null
   committed_by_email: string | null
+  committed_by_username: string | null
   http_method: string | null
   full_path: string | null
   committed_at: string
@@ -52,11 +53,32 @@ export type RequestsByDayOut = {
 
 export type TopPathPoint = {
   path: string
+  http_method: string
   count: number
+  avg_duration_ms?: number | null
+  success_count: number
+  fail_count: number
 }
 
 export type TopPathsOut = {
   data: TopPathPoint[]
+}
+
+export type StatusBreakdownPoint = {
+  category: string
+  count: number
+}
+
+export type MethodBreakdownPoint = {
+  method: string
+  count: number
+}
+
+export type StatusBreakdownOut = {
+  by_status: StatusBreakdownPoint[]
+  by_method: MethodBreakdownPoint[]
+  total: number
+  avg_duration_ms: number | null
 }
 
 type Opts = Pick<RequestOptions, "signal">
@@ -115,5 +137,16 @@ export const OverviewService = {
       method: "GET",
       signal: opts?.signal,
     })
+  },
+
+  getStatusBreakdown: async (
+    days = 7,
+    opts?: Opts,
+  ): Promise<StatusBreakdownOut> => {
+    const params = new URLSearchParams({ days: String(days) })
+    return request<StatusBreakdownOut>(
+      `/api/v1/overview/status-breakdown?${params}`,
+      { method: "GET", signal: opts?.signal },
+    )
   },
 }

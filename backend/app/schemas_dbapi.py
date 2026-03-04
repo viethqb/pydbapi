@@ -793,6 +793,9 @@ class VersionCommitPublic(SQLModel):
     committed_by_email: str | None = Field(
         default=None, description="Email of user who created this version"
     )
+    committed_by_username: str | None = Field(
+        default=None, description="Username of user who created this version"
+    )
     http_method: str | None = Field(
         default=None, description="HTTP method of the API (GET, POST, etc.)"
     )
@@ -870,13 +873,40 @@ class TopPathPoint(SQLModel):
     """Point for GET /overview/top-paths."""
 
     path: str
+    http_method: str
     count: int
+    avg_duration_ms: float | None = None
+    success_count: int = 0
+    fail_count: int = 0
 
 
 class TopPathsOut(SQLModel):
     """Response for GET /overview/top-paths."""
 
     data: list[TopPathPoint]
+
+
+class StatusBreakdownPoint(SQLModel):
+    """Status category breakdown for GET /overview/status-breakdown."""
+
+    category: str  # "2xx", "3xx", "4xx", "5xx"
+    count: int
+
+
+class MethodBreakdownPoint(SQLModel):
+    """HTTP method breakdown for GET /overview/status-breakdown."""
+
+    method: str  # "GET", "POST", etc.
+    count: int
+
+
+class StatusBreakdownOut(SQLModel):
+    """Response for GET /overview/status-breakdown."""
+
+    by_status: list[StatusBreakdownPoint]
+    by_method: list[MethodBreakdownPoint]
+    total: int
+    avg_duration_ms: float | None
 
 
 # ---------------------------------------------------------------------------

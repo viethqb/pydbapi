@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router"
+import { RefreshCw } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -17,6 +19,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { AccessRecordPublic } from "@/services/overview"
 
 function formatDateTime(iso: string) {
@@ -47,32 +55,55 @@ export function RecentAccessTable(props: {
   rows: AccessRecordPublic[]
   limit?: number
   onLimitChange?: (limit: number) => void
+  autoRefresh?: boolean
+  onAutoRefreshChange?: (enabled: boolean) => void
 }) {
-  const { rows, limit = 20, onLimitChange } = props
+  const {
+    rows,
+    limit = 20,
+    onLimitChange,
+    autoRefresh,
+    onAutoRefreshChange,
+  } = props
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle>Recent access</CardTitle>
-        <Select
-          value={String(limit)}
-          onValueChange={(value) => {
-            const newLimit = Number.parseInt(value, 10)
-            if (!Number.isNaN(newLimit) && onLimitChange) {
-              onLimitChange(newLimit)
-            }
-          }}
-        >
-          <SelectTrigger className="w-[120px]" size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="10">10 records</SelectItem>
-            <SelectItem value="20">20 records</SelectItem>
-            <SelectItem value="50">50 records</SelectItem>
-            <SelectItem value="100">100 records</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {onAutoRefreshChange && (
+            <Button
+              variant={autoRefresh ? "default" : "outline"}
+              size="sm"
+              onClick={() => onAutoRefreshChange(!autoRefresh)}
+              className="gap-1.5"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${autoRefresh ? "animate-spin" : ""}`}
+              />
+              {autoRefresh ? "Auto" : "Auto"}
+            </Button>
+          )}
+          <Select
+            value={String(limit)}
+            onValueChange={(value) => {
+              const newLimit = Number.parseInt(value, 10)
+              if (!Number.isNaN(newLimit) && onLimitChange) {
+                onLimitChange(newLimit)
+              }
+            }}
+          >
+            <SelectTrigger className="w-[120px]" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 records</SelectItem>
+              <SelectItem value="20">20 records</SelectItem>
+              <SelectItem value="50">50 records</SelectItem>
+              <SelectItem value="100">100 records</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
@@ -100,17 +131,28 @@ export function RecentAccessTable(props: {
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-[420px] truncate">
-                    {r.api_assignment_id ? (
-                      <Link
-                        to="/api-dev/apis/$id"
-                        params={{ id: r.api_assignment_id }}
-                        className="hover:underline"
-                      >
-                        {r.path}
-                      </Link>
-                    ) : (
-                      r.path
-                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            {r.api_assignment_id ? (
+                              <Link
+                                to="/api-dev/apis/$id"
+                                params={{ id: r.api_assignment_id }}
+                                className="hover:underline"
+                              >
+                                {r.path}
+                              </Link>
+                            ) : (
+                              r.path
+                            )}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-md break-all">{r.path}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(r.status_code)}>

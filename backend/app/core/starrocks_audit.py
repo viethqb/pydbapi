@@ -236,13 +236,23 @@ def read_starrocks_audit_detail(engine: Engine, log_id: str) -> dict | None:
     return _row_to_dict(row_dict)
 
 
+def _days_cutoff(days: int) -> datetime:
+    """Return midnight UTC of (today - (days-1) days).
+
+    days=1 → today 00:00:00, days=7 → 6 days ago 00:00:00, etc.
+    """
+    today = datetime.now(UTC).date()
+    start_date = today - timedelta(days=days - 1)
+    return datetime(start_date.year, start_date.month, start_date.day, tzinfo=UTC)
+
+
 def read_starrocks_audit_requests_by_day(
     engine: Engine,
     *,
     days: int,
 ) -> list[tuple[date, int]]:
     """Query requests grouped by day from StarRocks audit table. Returns list of (date, count)."""
-    cutoff = datetime.now(UTC) - timedelta(days=days)
+    cutoff = _days_cutoff(days)
     sql = text(f"""
     SELECT DATE(`created_at`) AS day, COUNT(*) AS count
     FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
@@ -269,21 +279,96 @@ def read_starrocks_audit_top_paths(
     *,
     days: int,
     limit: int,
-) -> list[tuple[str, int]]:
-    """Query top paths by count from StarRocks audit table. Returns list of (path, count)."""
-    cutoff = datetime.now(UTC) - timedelta(days=days)
+) -> list[tuple[str, str, int, float | None, int, int]]:
+    """Query top paths by count from StarRocks audit table.
+
+    Returns list of (path, http_method, count, avg_duration_ms, success_count, fail_count).
+    """
+    cutoff = _days_cutoff(days)
     sql = text(f"""
-    SELECT `path`, COUNT(*) AS count
+    SELECT `path`, `http_method`, COUNT(*) AS count,
+           AVG(`duration_ms`) AS avg_duration_ms,
+           SUM(CASE WHEN `status_code` < 400 THEN 1 ELSE 0 END) AS success_count,
+           SUM(CASE WHEN `status_code` >= 400 THEN 1 ELSE 0 END) AS fail_count
     FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
     WHERE `created_at` >= :cutoff
-    GROUP BY `path`
+    GROUP BY `path`, `http_method`
     ORDER BY count DESC
     LIMIT :limit
     """)
     with engine.connect() as conn:
         result = conn.execute(sql, {"cutoff": cutoff, "limit": limit})
         rows = result.fetchall()
-    return [(str(path), int(count or 0)) for path, count in rows]
+    return [
+        (
+            str(path),
+            str(method or "GET"),
+            int(count or 0),
+            round(float(avg_d), 1) if avg_d is not None else None,
+            int(sc or 0),
+            int(fc or 0),
+        )
+        for path, method, count, avg_d, sc, fc in rows
+    ]
+
+
+def read_starrocks_audit_status_breakdown(
+    engine: Engine,
+    *,
+    days: int,
+) -> "StatusBreakdownOut":
+    """Query status/method breakdown from StarRocks audit table."""
+    from app.schemas_dbapi import (
+        MethodBreakdownPoint,
+        StatusBreakdownOut,
+        StatusBreakdownPoint,
+    )
+
+    cutoff = _days_cutoff(days)
+
+    sql_status = text(f"""
+    SELECT FLOOR(`status_code` / 100) AS cat, COUNT(*) AS count
+    FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
+    WHERE `created_at` >= :cutoff
+    GROUP BY FLOOR(`status_code` / 100)
+    ORDER BY cat
+    """)
+    sql_method = text(f"""
+    SELECT `http_method`, COUNT(*) AS count
+    FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
+    WHERE `created_at` >= :cutoff
+    GROUP BY `http_method`
+    ORDER BY count DESC
+    """)
+    sql_agg = text(f"""
+    SELECT COUNT(*) AS total, AVG(`duration_ms`) AS avg_dur
+    FROM {STARROCKS_AUDIT_DATABASE}.{STARROCKS_AUDIT_TABLE}
+    WHERE `created_at` >= :cutoff
+    """)
+
+    with engine.connect() as conn:
+        status_rows = conn.execute(sql_status, {"cutoff": cutoff}).fetchall()
+        method_rows = conn.execute(sql_method, {"cutoff": cutoff}).fetchall()
+        agg_row = conn.execute(sql_agg, {"cutoff": cutoff}).fetchone()
+
+    by_status = [
+        StatusBreakdownPoint(category=f"{int(cat)}xx", count=int(cnt or 0))
+        for cat, cnt in status_rows
+    ]
+    by_method = [
+        MethodBreakdownPoint(method=m, count=int(c or 0)) for m, c in method_rows
+    ]
+    total = int(agg_row[0] or 0) if agg_row else 0
+    avg_dur = (
+        round(float(agg_row[1]), 1) if agg_row and agg_row[1] is not None else None
+    )
+
+    return StatusBreakdownOut(
+        by_status=by_status,
+        by_method=by_method,
+        total=total,
+        avg_duration_ms=avg_dur,
+    )
 
 
 def read_starrocks_audit_recent(

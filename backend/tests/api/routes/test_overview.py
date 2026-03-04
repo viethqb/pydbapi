@@ -271,10 +271,10 @@ def test_get_top_paths_empty(
 def test_get_top_paths_with_data_and_limit(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    create_random_access_record(db, path="/top/a")
-    create_random_access_record(db, path="/top/a")
-    create_random_access_record(db, path="/top/a")
-    create_random_access_record(db, path="/top/b")
+    create_random_access_record(db, path="/top/a", duration_ms=100, status_code=200)
+    create_random_access_record(db, path="/top/a", duration_ms=200, status_code=200)
+    create_random_access_record(db, path="/top/a", duration_ms=300, status_code=500)
+    create_random_access_record(db, path="/top/b", duration_ms=50)
 
     response = client.get(
         f"{_base()}/top-paths",
@@ -284,10 +284,77 @@ def test_get_top_paths_with_data_and_limit(
     assert response.status_code == 200
     payload = response.json()
     assert len(payload["data"]) <= 1
-    assert payload["data"][0]["path"] == "/top/a"
-    assert payload["data"][0]["count"] >= 3
+    top = payload["data"][0]
+    assert top["path"] == "/top/a"
+    assert top["count"] >= 3
+    assert top["http_method"] == "GET"
+    assert top["avg_duration_ms"] is not None
+    assert top["success_count"] >= 2
+    assert top["fail_count"] >= 1
 
 
 def test_get_top_paths_unauthorized(client: TestClient) -> None:
     response = client.get(f"{_base()}/top-paths")
+    assert response.status_code == 401
+
+
+# --- /overview/status-breakdown ---
+
+
+def test_get_status_breakdown_empty(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """GET /overview/status-breakdown returns 200 with empty lists when no data."""
+    response = client.get(
+        f"{_base()}/status-breakdown",
+        headers=superuser_token_headers,
+        params={"days": 7},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "by_status" in data
+    assert "by_method" in data
+    assert isinstance(data["by_status"], list)
+    assert isinstance(data["by_method"], list)
+    assert "total" in data
+    assert "avg_duration_ms" in data
+
+
+def test_get_status_breakdown_with_data(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    """With AccessRecord entries, status-breakdown returns correct groupings."""
+    create_random_access_record(
+        db, path="/sb/ok1", status_code=200, http_method="GET", duration_ms=100
+    )
+    create_random_access_record(
+        db, path="/sb/ok2", status_code=201, http_method="POST", duration_ms=200
+    )
+    create_random_access_record(
+        db, path="/sb/err", status_code=404, http_method="GET", duration_ms=50
+    )
+    create_random_access_record(
+        db, path="/sb/srv", status_code=500, http_method="POST", duration_ms=300
+    )
+
+    response = client.get(
+        f"{_base()}/status-breakdown",
+        headers=superuser_token_headers,
+        params={"days": 7},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] >= 4
+
+    categories = {p["category"] for p in data["by_status"]}
+    assert "2xx" in categories
+    methods = {p["method"] for p in data["by_method"]}
+    assert "GET" in methods
+    assert "POST" in methods
+    assert data["avg_duration_ms"] is not None
+
+
+def test_get_status_breakdown_unauthorized(client: TestClient) -> None:
+    """GET /overview/status-breakdown without auth returns 401."""
+    response = client.get(f"{_base()}/status-breakdown")
     assert response.status_code == 401

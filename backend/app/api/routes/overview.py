@@ -7,6 +7,7 @@ Endpoints: stats, recent-access, recent-commits.
 from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import case
 from sqlmodel import Session as SMSession
 from sqlmodel import func, select
 
@@ -15,6 +16,7 @@ from app.core.access_log_storage import get_log_engine_for_reading
 from app.core.starrocks_audit import (
     read_starrocks_audit_recent,
     read_starrocks_audit_requests_by_day,
+    read_starrocks_audit_status_breakdown,
     read_starrocks_audit_top_paths,
 )
 from app.models import User
@@ -30,11 +32,14 @@ from app.models_dbapi import (
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.schemas_dbapi import (
     AccessRecordPublic,
+    MethodBreakdownPoint,
     OverviewStats,
     RecentAccessOut,
     RecentCommitsOut,
     RequestsByDayOut,
     RequestsByDayPoint,
+    StatusBreakdownOut,
+    StatusBreakdownPoint,
     TopPathPoint,
     TopPathsOut,
     VersionCommitPublic,
@@ -45,6 +50,16 @@ router = APIRouter(prefix="/overview", tags=["overview"])
 # Default limit for recent-access and recent-commits
 RECENT_LIMIT = 20
 CHART_DAYS_DEFAULT = 14
+
+
+def _days_cutoff(days: int) -> datetime:
+    """Return midnight UTC of (today - (days-1) days).
+
+    days=1 → today 00:00:00, days=7 → 6 days ago 00:00:00, etc.
+    """
+    today = datetime.now(UTC).date()
+    start_date = today - timedelta(days=days - 1)
+    return datetime(start_date.year, start_date.month, start_date.day, tzinfo=UTC)
 
 
 def _count(session, model, where=None):
@@ -106,7 +121,7 @@ def get_requests_by_day(
 
     log_session = session if use_main else SMSession(engine)
     try:
-        cutoff = datetime.now(UTC) - timedelta(days=days)
+        cutoff = _days_cutoff(days)
         day_expr = func.date(AccessRecord.created_at).label("day")
         count_expr = func.count().label("count")
         stmt = (
@@ -156,25 +171,127 @@ def get_top_paths(
 
     if use_starrocks_audit and engine is not None:
         points_raw = read_starrocks_audit_top_paths(engine, days=days, limit=limit)
-        points = [TopPathPoint(path=p, count=c) for p, c in points_raw]
+        points = [
+            TopPathPoint(
+                path=p, http_method=m, count=c,
+                avg_duration_ms=avg_d, success_count=sc, fail_count=fc,
+            )
+            for p, m, c, avg_d, sc, fc in points_raw
+        ]
         return TopPathsOut(data=points)
 
     log_session = session if use_main else SMSession(engine)
     try:
-        cutoff = datetime.now(UTC) - timedelta(days=days)
+        cutoff = _days_cutoff(days)
         count_expr = func.count().label("count")
+        avg_dur_expr = func.avg(AccessRecord.duration_ms).label("avg_duration_ms")
+        success_expr = func.sum(
+            case((AccessRecord.status_code < 400, 1), else_=0)
+        ).label("success_count")
+        fail_expr = func.sum(
+            case((AccessRecord.status_code >= 400, 1), else_=0)
+        ).label("fail_count")
         stmt = (
-            select(AccessRecord.path, count_expr)
+            select(
+                AccessRecord.path,
+                AccessRecord.http_method,
+                count_expr,
+                avg_dur_expr,
+                success_expr,
+                fail_expr,
+            )
             .where(AccessRecord.created_at >= cutoff)
-            .group_by(AccessRecord.path)
+            .group_by(AccessRecord.path, AccessRecord.http_method)
             .order_by(count_expr.desc())
             .limit(limit)
         )
         rows = log_session.exec(stmt).all()
         return TopPathsOut(
             data=[
-                TopPathPoint(path=path, count=int(count or 0)) for path, count in rows
+                TopPathPoint(
+                    path=path,
+                    http_method=method or "GET",
+                    count=int(count or 0),
+                    avg_duration_ms=round(float(avg_d), 1)
+                    if avg_d is not None
+                    else None,
+                    success_count=int(sc or 0),
+                    fail_count=int(fc or 0),
+                )
+                for path, method, count, avg_d, sc, fc in rows
             ]
+        )
+    finally:
+        if log_session is not None and log_session is not session:
+            log_session.close()
+
+
+@router.get(
+    "/status-breakdown",
+    response_model=StatusBreakdownOut,
+    dependencies=[
+        Depends(
+            require_permission(ResourceTypeEnum.OVERVIEW, PermissionActionEnum.READ)
+        )
+    ],
+)
+def get_status_breakdown(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001
+    days: int = 7,
+) -> StatusBreakdownOut:
+    """Request counts grouped by status category and HTTP method within the last N days."""
+    days = max(1, min(365, days))
+    engine, use_main, use_starrocks_audit = get_log_engine_for_reading(session)
+
+    if use_starrocks_audit and engine is not None:
+        return read_starrocks_audit_status_breakdown(engine, days=days)
+
+    log_session = session if use_main else SMSession(engine)
+    try:
+        cutoff = _days_cutoff(days)
+
+        # Status category breakdown (2xx, 3xx, 4xx, 5xx)
+        cat_expr = (AccessRecord.status_code / 100).label("cat")
+        count_expr = func.count().label("count")
+        stmt_status = (
+            select(cat_expr, count_expr)
+            .where(AccessRecord.created_at >= cutoff)
+            .group_by(cat_expr)
+            .order_by(cat_expr)
+        )
+        status_rows = log_session.exec(stmt_status).all()
+        by_status = [
+            StatusBreakdownPoint(category=f"{int(cat)}xx", count=int(cnt or 0))
+            for cat, cnt in status_rows
+        ]
+
+        # Method breakdown
+        stmt_method = (
+            select(AccessRecord.http_method, func.count().label("count"))
+            .where(AccessRecord.created_at >= cutoff)
+            .group_by(AccessRecord.http_method)
+            .order_by(func.count().desc())
+        )
+        method_rows = log_session.exec(stmt_method).all()
+        by_method = [
+            MethodBreakdownPoint(method=m, count=int(c or 0)) for m, c in method_rows
+        ]
+
+        # Totals
+        stmt_agg = select(
+            func.count().label("total"),
+            func.avg(AccessRecord.duration_ms).label("avg_dur"),
+        ).where(AccessRecord.created_at >= cutoff)
+        agg_row = log_session.exec(stmt_agg).one()
+        total = int(agg_row[0] or 0)
+        avg_dur = round(float(agg_row[1]), 1) if agg_row[1] is not None else None
+
+        return StatusBreakdownOut(
+            by_status=by_status,
+            by_method=by_method,
+            total=total,
+            avg_duration_ms=avg_dur,
         )
     finally:
         if log_session is not None and log_session is not session:
@@ -286,6 +403,7 @@ def _to_version_commit_public(
             full_path = f"/{api_path}"
 
     committed_by_email = user.email if user else None
+    committed_by_username = user.username if user else None
 
     return VersionCommitPublic(
         id=v.id,
@@ -294,6 +412,7 @@ def _to_version_commit_public(
         commit_message=v.commit_message,
         committed_by_id=v.committed_by_id,
         committed_by_email=committed_by_email,
+        committed_by_username=committed_by_username,
         http_method=http_method,
         full_path=full_path,
         committed_at=v.committed_at,

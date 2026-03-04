@@ -18,6 +18,7 @@ def create_random_access_record(
     path: str | None = None,
     status_code: int = 200,
     request_body: str | None = None,
+    duration_ms: int | None = None,
 ) -> AccessRecord:
     """Create an AccessRecord in the DB."""
     r = AccessRecord(
@@ -28,6 +29,7 @@ def create_random_access_record(
         path=path or f"/api/{random_lower_string()[:8]}",
         status_code=status_code,
         request_body=request_body,
+        duration_ms=duration_ms,
     )
     db.add(r)
     db.commit()

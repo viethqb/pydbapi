@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 import { ErrorBoundary } from "@/components/Common/ErrorBoundary"
-import { DashboardCharts } from "@/components/Dashboard/DashboardCharts"
+import { RequestsByDayChart } from "@/components/Dashboard/DashboardCharts"
 import { RecentAccessTable } from "@/components/Dashboard/RecentAccessTable"
 import { RecentCommitsTable } from "@/components/Dashboard/RecentCommitsTable"
 import { StatsCards } from "@/components/Dashboard/StatsCards"
+import { StatusBreakdownChart } from "@/components/Dashboard/StatusBreakdownChart"
+import { TopPathsTable } from "@/components/Dashboard/TopPathsTable"
 import useAuth from "@/hooks/useAuth"
 import { OverviewService } from "@/services/overview"
 
@@ -26,10 +28,15 @@ function Dashboard() {
   const [topPathsLimit, setTopPathsLimit] = useState(10)
   const [recentAccessLimit, setRecentAccessLimit] = useState(20)
   const [recentCommitsLimit, setRecentCommitsLimit] = useState(20)
+  const [statusDays, setStatusDays] = useState(7)
+  const [autoRefresh, setAutoRefresh] = useState(false)
+
+  const refreshInterval = autoRefresh ? 30_000 : false
 
   const statsQuery = useQuery({
     queryKey: ["overview", "stats"],
     queryFn: ({ signal }) => OverviewService.getStats({ signal }),
+    staleTime: 60_000,
   })
 
   const requestsByDayQuery = useQuery({
@@ -39,21 +46,29 @@ function Dashboard() {
   })
 
   const topPathsQuery = useQuery({
-    queryKey: ["overview", "top-paths", 7, topPathsLimit],
+    queryKey: ["overview", "top-paths", requestsDays, topPathsLimit],
     queryFn: ({ signal }) =>
-      OverviewService.getTopPaths(7, topPathsLimit, { signal }),
+      OverviewService.getTopPaths(requestsDays, topPathsLimit, { signal }),
+  })
+
+  const statusBreakdownQuery = useQuery({
+    queryKey: ["overview", "status-breakdown", statusDays],
+    queryFn: ({ signal }) =>
+      OverviewService.getStatusBreakdown(statusDays, { signal }),
   })
 
   const recentAccessQuery = useQuery({
     queryKey: ["overview", "recent-access", recentAccessLimit],
     queryFn: ({ signal }) =>
       OverviewService.getRecentAccess(recentAccessLimit, { signal }),
+    refetchInterval: refreshInterval,
   })
 
   const recentCommitsQuery = useQuery({
     queryKey: ["overview", "recent-commits", recentCommitsLimit],
     queryFn: ({ signal }) =>
       OverviewService.getRecentCommits(recentCommitsLimit, { signal }),
+    refetchInterval: refreshInterval,
   })
 
   return (
@@ -79,23 +94,52 @@ function Dashboard() {
         </div>
       </ErrorBoundary>
 
-      <ErrorBoundary section="Charts">
-        <div className="space-y-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ErrorBoundary section="Requests by Day">
           {requestsByDayQuery.isError ? (
             <div className="text-sm text-destructive">
-              Failed to load charts: {requestsByDayQuery.error.message}
+              Failed to load chart: {requestsByDayQuery.error.message}
             </div>
-          ) : null}
-          <DashboardCharts
-            isLoading={requestsByDayQuery.isLoading || topPathsQuery.isLoading}
-            requestsByDay={requestsByDayQuery.data?.data ?? []}
-            topPaths={topPathsQuery.data?.data ?? []}
-            requestsDays={requestsDays}
-            onRequestsDaysChange={setRequestsDays}
-            topPathsLimit={topPathsLimit}
-            onTopPathsLimitChange={setTopPathsLimit}
+          ) : (
+            <RequestsByDayChart
+              isLoading={requestsByDayQuery.isLoading}
+              requestsByDay={requestsByDayQuery.data?.data ?? []}
+              requestsDays={requestsDays}
+              onRequestsDaysChange={setRequestsDays}
+            />
+          )}
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Status Breakdown">
+          {statusBreakdownQuery.isError ? (
+            <div className="text-sm text-destructive">
+              Failed to load status breakdown:{" "}
+              {statusBreakdownQuery.error.message}
+            </div>
+          ) : (
+            <StatusBreakdownChart
+              data={statusBreakdownQuery.data}
+              isLoading={statusBreakdownQuery.isLoading}
+              days={statusDays}
+              onDaysChange={setStatusDays}
+            />
+          )}
+        </ErrorBoundary>
+      </div>
+
+      <ErrorBoundary section="Top Paths">
+        {topPathsQuery.isError ? (
+          <div className="text-sm text-destructive">
+            Failed to load top paths: {topPathsQuery.error.message}
+          </div>
+        ) : (
+          <TopPathsTable
+            rows={topPathsQuery.data?.data ?? []}
+            isLoading={topPathsQuery.isLoading}
+            limit={topPathsLimit}
+            onLimitChange={setTopPathsLimit}
           />
-        </div>
+        )}
       </ErrorBoundary>
 
       <div className="space-y-6">
@@ -123,6 +167,8 @@ function Dashboard() {
               rows={recentAccessQuery.data?.data ?? []}
               limit={recentAccessLimit}
               onLimitChange={setRecentAccessLimit}
+              autoRefresh={autoRefresh}
+              onAutoRefreshChange={setAutoRefresh}
             />
           )}
         </ErrorBoundary>

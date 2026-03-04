@@ -18,36 +18,42 @@ const statsItems = [
     label: "DataSources",
     to: "/connection",
     Icon: Database,
+    color: "var(--chart-1)",
   },
   {
     key: "modules",
     label: "Modules",
     to: "/api-dev/modules",
     Icon: Layers,
+    color: "var(--chart-2)",
   },
   {
     key: "groups",
     label: "Groups",
     to: "/system/groups",
     Icon: Users,
+    color: "var(--chart-3)",
   },
   {
     key: "apis_total",
     label: "APIs (total)",
     to: "/api-dev/apis",
     Icon: Code2,
+    color: "var(--chart-4)",
   },
   {
     key: "apis_published",
     label: "APIs (published)",
     to: "/api-repository",
     Icon: Waypoints,
+    color: "var(--chart-5)",
   },
   {
     key: "clients",
     label: "Clients",
     to: "/system/clients",
     Icon: ShieldCheck,
+    color: "var(--chart-1)",
   },
 ] as const
 
@@ -59,7 +65,7 @@ export function StatsCards(props: {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {statsItems.map(({ key, label, to, Icon }) => {
+      {statsItems.map(({ key, label, to, Icon, color }) => {
         return (
           <Link
             key={key}
@@ -69,14 +75,14 @@ export function StatsCards(props: {
             <Card className="transition-colors hover:bg-muted/30">
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-sm font-medium">{label}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon className="h-4 w-4" style={{ color }} />
               </CardHeader>
               <CardContent>
                 {isLoading || !stats ? (
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <div className="text-2xl font-semibold tabular-nums">
-                    {stats[key]}
+                    {stats[key].toLocaleString()}
                   </div>
                 )}
               </CardContent>
