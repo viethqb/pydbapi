@@ -471,11 +471,11 @@ function MacroDetail() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {version.committed_by_email ? (
+                              {version.committed_by_username ? (
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
-                                    {version.committed_by_email}
+                                    {version.committed_by_username}
                                   </span>
                                 </div>
                               ) : (
@@ -758,8 +758,8 @@ function MacroDetail() {
             {selectedVersion
               ? new Date(selectedVersion.committed_at).toLocaleString()
               : ""}
-            {selectedVersion?.committed_by_email &&
-              ` by ${selectedVersion.committed_by_email}`}
+            {selectedVersion?.committed_by_username &&
+              ` by ${selectedVersion.committed_by_username}`}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedVersion(null)}>

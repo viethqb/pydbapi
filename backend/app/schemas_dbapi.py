@@ -274,6 +274,7 @@ class MacroDefVersionCommitPublic(SQLModel):
     commit_message: str | None
     committed_by_id: uuid.UUID | None
     committed_by_email: str | None = None
+    committed_by_username: str | None = None
     committed_at: datetime
 
 
@@ -287,6 +288,7 @@ class MacroDefVersionCommitDetail(SQLModel):
     commit_message: str | None
     committed_by_id: uuid.UUID | None
     committed_by_email: str | None = None
+    committed_by_username: str | None = None
     committed_at: datetime
 
 
@@ -828,6 +830,9 @@ class VersionCommitDetail(SQLModel):
     committed_by_id: uuid.UUID | None
     committed_by_email: str | None = Field(
         default=None, description="Email of user who created this version"
+    )
+    committed_by_username: str | None = Field(
+        default=None, description="Username of user who created this version"
     )
     committed_at: datetime
 

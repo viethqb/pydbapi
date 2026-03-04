@@ -1336,11 +1336,11 @@ function ApiDetail() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {version.committed_by_email ? (
+                              {version.committed_by_username ? (
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
-                                    {version.committed_by_email}
+                                    {version.committed_by_username}
                                   </span>
                                 </div>
                               ) : (
@@ -2330,8 +2330,8 @@ function ApiDetail() {
                   ? new Date(selectedVersion.committed_at).toLocaleString()
                   : ""}
               </p>
-              {selectedVersion?.committed_by_email && (
-                <p>Created by: {selectedVersion.committed_by_email}</p>
+              {selectedVersion?.committed_by_username && (
+                <p>Created by: {selectedVersion.committed_by_username}</p>
               )}
             </div>
           </div>

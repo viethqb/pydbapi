@@ -128,6 +128,7 @@ export type VersionCommitPublic = {
   commit_message: string | null
   committed_by_id: string | null
   committed_by_email: string | null
+  committed_by_username: string | null
   committed_at: string
 }
 

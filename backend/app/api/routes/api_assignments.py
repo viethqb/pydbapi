@@ -877,6 +877,7 @@ def create_version(
         commit_message=version.commit_message,
         committed_by_id=version.committed_by_id,
         committed_by_email=current_user.email,
+        committed_by_username=current_user.username,
         committed_at=version.committed_at,
     )
 
@@ -917,10 +918,10 @@ def list_versions(
 
     # Get user emails for all committed_by_ids
     user_ids = {v.committed_by_id for v in versions if v.committed_by_id}
-    users = {}
+    users: dict = {}
     if user_ids:
         user_rows = session.exec(select(User).where(User.id.in_(user_ids))).all()
-        users = {user.id: user.email for user in user_rows}
+        users = {user.id: user for user in user_rows}
 
     return VersionCommitListOut(
         data=[
@@ -931,7 +932,14 @@ def list_versions(
                 commit_message=v.commit_message,
                 committed_by_id=v.committed_by_id,
                 committed_by_email=(
-                    users.get(v.committed_by_id) if v.committed_by_id else None
+                    users[v.committed_by_id].email
+                    if v.committed_by_id and v.committed_by_id in users
+                    else None
+                ),
+                committed_by_username=(
+                    users[v.committed_by_id].username
+                    if v.committed_by_id and v.committed_by_id in users
+                    else None
                 ),
                 committed_at=v.committed_at,
             )
@@ -963,12 +971,14 @@ def get_version(
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
 
-    # Get user email if committed_by_id exists
+    # Get user info if committed_by_id exists
     committed_by_email = None
+    committed_by_username = None
     if version.committed_by_id:
         user = session.get(User, version.committed_by_id)
         if user:
             committed_by_email = user.email
+            committed_by_username = user.username
 
     return VersionCommitDetail(
         id=version.id,
@@ -981,6 +991,7 @@ def get_version(
         commit_message=version.commit_message,
         committed_by_id=version.committed_by_id,
         committed_by_email=committed_by_email,
+        committed_by_username=committed_by_username,
         committed_at=version.committed_at,
     )
 
