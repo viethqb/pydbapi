@@ -633,14 +633,17 @@ function ApiEdit() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input
-                                    placeholder="users or users/{id}"
-                                    {...field}
-                                  />
+                                  <div className="flex items-center">
+                                    <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 py-2 text-sm text-muted-foreground whitespace-nowrap">
+                                      {window.location.origin}/api/
+                                    </span>
+                                    <Input
+                                      placeholder="users or users/{id}"
+                                      className="rounded-l-none"
+                                      {...field}
+                                    />
+                                  </div>
                                 </FormControl>
-                                <FormDescription className="mt-1">
-                                  {`Path within module (e.g., "users" or "users/{id}")`}
-                                </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}

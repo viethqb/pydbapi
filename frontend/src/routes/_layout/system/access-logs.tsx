@@ -73,10 +73,11 @@ function statusVariant(
   return "outline"
 }
 
-/** Format path as /{module}/{path} (ensure leading slash). */
+/** Format path as /api/{path}. */
 function formatFullPath(path: string | null | undefined): string {
   if (path == null || path === "") return "—"
-  return path.startsWith("/") ? path : `/${path}`
+  const stripped = path.replace(/^\/+/, "")
+  return `/api/${stripped}`
 }
 
 type FullContentPayload =
@@ -174,19 +175,15 @@ function AccessLogsPage() {
     page_size: filters.page_size,
   }
 
-  const moduleById = new Map((modulesList ?? []).map((m) => [m.id, m]))
-  const formatApiFullPath = (api: { module_id: string; path: string }) => {
+  const formatApiFullPath = (api: { path: string }) => {
     const p = (api.path || "").replace(/^\/+|\/+$/g, "")
     return `/api/${p}`
   }
   const formatApiLabel = (api: {
     http_method: string
-    name: string
-    module_id: string
     path: string
   }) => {
-    const modName = moduleById.get(api.module_id)?.name ?? "Unknown module"
-    return `[${api.http_method}] [${modName}] [${api.name}] ${formatApiFullPath(api)}`
+    return `[${api.http_method}] ${formatApiFullPath(api)}`
   }
 
   const modulesFiltered = (modulesList ?? []).filter((m) => {
@@ -202,8 +199,6 @@ function AccessLogsPage() {
     if (!q) return true
     const label = formatApiLabel({
       http_method: a.http_method,
-      name: a.name,
-      module_id: a.module_id,
       path: a.path,
     }).toLowerCase()
     return label.includes(q)
@@ -499,8 +494,6 @@ function AccessLogsPage() {
                           <SelectItem key={api.id} value={api.id}>
                             {formatApiLabel({
                               http_method: api.http_method,
-                              name: api.name,
-                              module_id: api.module_id,
                               path: api.path,
                             })}
                           </SelectItem>

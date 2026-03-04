@@ -141,15 +141,15 @@ export function RecentAccessTable(props: {
                                 params={{ id: r.api_assignment_id }}
                                 className="hover:underline"
                               >
-                                {r.path}
+                                /api/{r.path?.replace(/^\/+/, "") ?? ""}
                               </Link>
                             ) : (
-                              r.path
+                              `/api/${r.path?.replace(/^\/+/, "") ?? ""}`
                             )}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-md break-all">{r.path}</p>
+                          <p className="max-w-md break-all">/api/{r.path?.replace(/^\/+/, "") ?? ""}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

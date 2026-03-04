@@ -228,10 +228,18 @@ def _cleanup_orphaned_scoped_permissions(session: Session) -> None:
             )
 
 
-# Dev: all enforced permissions except DELETE on any resource and all CLIENT permissions
-_DEV_EXCLUDED = {
-    (rt, PermissionActionEnum.DELETE) for rt, _ in _ENFORCED_PERMISSIONS
-} | {(ResourceTypeEnum.CLIENT, action) for action in PermissionActionEnum}
+# Dev: all enforced permissions except DELETE on any resource, all CLIENT permissions,
+# and DATASOURCE is restricted to READ only.
+_DEV_EXCLUDED = (
+    {(rt, PermissionActionEnum.DELETE) for rt, _ in _ENFORCED_PERMISSIONS}
+    | {(ResourceTypeEnum.CLIENT, action) for action in PermissionActionEnum}
+    | {
+        (ResourceTypeEnum.DATASOURCE, PermissionActionEnum.CREATE),
+        (ResourceTypeEnum.DATASOURCE, PermissionActionEnum.UPDATE),
+        (ResourceTypeEnum.DATASOURCE, PermissionActionEnum.EXECUTE),
+        (ResourceTypeEnum.ACCESS_LOG, PermissionActionEnum.UPDATE),
+    }
+)
 
 # Viewer: read-only on all resources
 _VIEWER_ACTIONS = {PermissionActionEnum.READ}
@@ -257,7 +265,7 @@ def seed_roles_and_permissions(session: Session) -> None:
     dev_role = _get_or_create_role(
         session,
         ROLE_DEV,
-        "All permissions except delete and client management",
+        "All permissions except delete, client management, and datasource write",
     )
     viewer_role = _get_or_create_role(
         session, ROLE_VIEWER, "Read-only access to all resources"
@@ -267,10 +275,18 @@ def seed_roles_and_permissions(session: Session) -> None:
     for perm in all_permissions:
         _link_role_permission(session, admin_role.id, perm.id)
 
-    # 4. Dev: all enforced permissions except DELETE on any resource and all CLIENT
+    # 4. Dev: all enforced permissions except excluded set
     for perm in all_permissions:
         if (perm.resource_type, perm.action) not in _DEV_EXCLUDED:
             _link_role_permission(session, dev_role.id, perm.id)
+        else:
+            # Remove stale links that no longer belong to Dev
+            session.exec(
+                delete(RolePermissionLink).where(
+                    RolePermissionLink.role_id == dev_role.id,
+                    RolePermissionLink.permission_id == perm.id,
+                )
+            )
 
     # 5. Viewer: read-only on all resources
     for perm in all_permissions:

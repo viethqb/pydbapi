@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import { type DataSourceCreate, DataSourceService } from "@/services/datasource"
 
 const formSchema = z
@@ -86,6 +88,8 @@ export const Route = createFileRoute("/_layout/connection/create")({
 function ConnectionCreate() {
   const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
+  const canCreate = hasPermission("datasource", "create")
   const [testConnectionSuccess, setTestConnectionSuccess] = useState(false)
 
   const form = useForm<FormValues>({
@@ -177,6 +181,14 @@ function ConnectionCreate() {
           Add a new database connection
         </p>
       </div>
+
+      {!canCreate && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            You do not have permission to create data sources.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -444,7 +456,7 @@ function ConnectionCreate() {
               type="button"
               variant="outline"
               onClick={handleTest}
-              disabled={testMutation.isPending || createMutation.isPending}
+              disabled={!canCreate || testMutation.isPending || createMutation.isPending}
             >
               {testMutation.isPending ? (
                 <>
@@ -466,7 +478,7 @@ function ConnectionCreate() {
             <LoadingButton
               type="submit"
               loading={createMutation.isPending}
-              disabled={testMutation.isPending || !testConnectionSuccess}
+              disabled={!canCreate || testMutation.isPending || !testConnectionSuccess}
             >
               Create Data Source
             </LoadingButton>

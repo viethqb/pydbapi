@@ -40,39 +40,68 @@ export function TopPathsTable(props: {
   isLoading?: boolean
   limit?: number
   onLimitChange?: (limit: number) => void
+  days?: number
+  onDaysChange?: (days: number) => void
 }) {
-  const { rows, isLoading, limit = 10, onLimitChange } = props
+  const { rows, isLoading, limit = 10, onLimitChange, days = 14, onDaysChange } = props
   const [localLimit, setLocalLimit] = useState(String(limit))
+  const [localDays, setLocalDays] = useState(String(days))
 
   useEffect(() => {
     setLocalLimit(String(limit))
   }, [limit])
 
+  useEffect(() => {
+    setLocalDays(String(days))
+  }, [days])
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle>Top paths</CardTitle>
-        <Select
-          value={localLimit}
-          onValueChange={(value) => {
-            setLocalLimit(value)
-            const l = Number.parseInt(value, 10)
-            if (!Number.isNaN(l) && onLimitChange) {
-              onLimitChange(l)
-            }
-          }}
-        >
-          <SelectTrigger className="w-[100px]" size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="5">Top 5</SelectItem>
-            <SelectItem value="10">Top 10</SelectItem>
-            <SelectItem value="15">Top 15</SelectItem>
-            <SelectItem value="20">Top 20</SelectItem>
-            <SelectItem value="50">Top 50</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select
+            value={localDays}
+            onValueChange={(value) => {
+              setLocalDays(value)
+              const d = Number.parseInt(value, 10)
+              if (!Number.isNaN(d) && onDaysChange) {
+                onDaysChange(d)
+              }
+            }}
+          >
+            <SelectTrigger className="w-[140px]" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Today</SelectItem>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={localLimit}
+            onValueChange={(value) => {
+              setLocalLimit(value)
+              const l = Number.parseInt(value, 10)
+              if (!Number.isNaN(l) && onLimitChange) {
+                onLimitChange(l)
+              }
+            }}
+          >
+            <SelectTrigger className="w-[100px]" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">Top 5</SelectItem>
+              <SelectItem value="10">Top 10</SelectItem>
+              <SelectItem value="15">Top 15</SelectItem>
+              <SelectItem value="20">Top 20</SelectItem>
+              <SelectItem value="50">Top 50</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -105,10 +134,10 @@ export function TopPathsTable(props: {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span>{r.path}</span>
+                          <span>/api/{r.path.replace(/^\/+/, "")}</span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-md break-all">{r.path}</p>
+                          <p className="max-w-md break-all">/api/{r.path.replace(/^\/+/, "")}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

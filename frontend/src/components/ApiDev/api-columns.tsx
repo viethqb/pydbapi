@@ -53,21 +53,14 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
   {
     accessorKey: "path",
     header: "Path",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.path}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "full_path",
-    header: "Full Path",
     cell: ({ row }) => {
       const api = row.original
       const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-      const fullPath = `/api/${apiPath}`
-
-      return <span className="font-mono text-sm">{fullPath}</span>
+      return (
+        <span className="font-mono text-sm">
+          /api/{apiPath}
+        </span>
+      )
     },
   },
   {

@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_layout/")({
 function Dashboard() {
   const { user: currentUser } = useAuth()
   const [requestsDays, setRequestsDays] = useState(14)
+  const [topPathsDays, setTopPathsDays] = useState(14)
   const [topPathsLimit, setTopPathsLimit] = useState(10)
   const [recentAccessLimit, setRecentAccessLimit] = useState(20)
   const [recentCommitsLimit, setRecentCommitsLimit] = useState(20)
@@ -46,9 +47,9 @@ function Dashboard() {
   })
 
   const topPathsQuery = useQuery({
-    queryKey: ["overview", "top-paths", requestsDays, topPathsLimit],
+    queryKey: ["overview", "top-paths", topPathsDays, topPathsLimit],
     queryFn: ({ signal }) =>
-      OverviewService.getTopPaths(requestsDays, topPathsLimit, { signal }),
+      OverviewService.getTopPaths(topPathsDays, topPathsLimit, { signal }),
   })
 
   const statusBreakdownQuery = useQuery({
@@ -138,6 +139,8 @@ function Dashboard() {
             isLoading={topPathsQuery.isLoading}
             limit={topPathsLimit}
             onLimitChange={setTopPathsLimit}
+            days={topPathsDays}
+            onDaysChange={setTopPathsDays}
           />
         )}
       </ErrorBoundary>

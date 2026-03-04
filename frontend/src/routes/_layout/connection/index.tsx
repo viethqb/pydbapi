@@ -165,13 +165,18 @@ function ConnectionList() {
             Manage your database connections
           </p>
         </div>
-        {canCreate && (
+        {canCreate ? (
           <Link to="/connection/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Create Data Source
             </Button>
           </Link>
+        ) : (
+          <Button disabled>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Data Source
+          </Button>
         )}
       </div>
 

@@ -620,7 +620,7 @@ function ApiRepositoryDetail() {
                         variant="outline"
                         className="font-mono font-normal"
                       >
-                        {apiDetail.path}
+                        /api/{apiDetail.path.replace(/^\/+/, "")}
                       </Badge>
                     </TableCell>
                   </TableRow>
