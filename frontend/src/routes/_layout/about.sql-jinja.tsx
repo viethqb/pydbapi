@@ -155,6 +155,23 @@ const FILTERS: Array<{ name: string; description: string; example: string }> = [
     description: "Serializes to JSON string for JSONB/JSON columns.",
     example: "{{ payload | json }}",
   },
+  {
+    name: "fromjson",
+    description: "Parses a JSON string into a dict/list for use in templates.",
+    example: '{% set f = param | fromjson %}',
+  },
+  {
+    name: "compare",
+    description:
+      'Numeric comparison from JSON: {"combinator": ">", "values": "100"} \u2192 > 100.0. Supports >, >=, <, <=, =, !=, between.',
+    example: "{{ duration_ms | compare }}",
+  },
+  {
+    name: "sql_ident",
+    description:
+      "Output a safe SQL identifier (column/table name) without quoting. Rejects invalid characters.",
+    example: "{{ col | sql_ident }}",
+  },
 ]
 
 export const Route = createFileRoute("/_layout/about/sql-jinja")({
@@ -558,6 +575,110 @@ FROM items
 ORDER BY created_at DESC
 LIMIT {{ limit | sql_int }} OFFSET {{ offset | sql_int }};`}
             />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-3">
+              Comparison Filter (compare)
+            </h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              The{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                compare
+              </code>{" "}
+              filter converts a JSON comparison object into a safe SQL expression.
+              Pass parameters as a JSON string with{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                combinator
+              </code>{" "}
+              and{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                values
+              </code>{" "}
+              keys.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">Supported Operators</h4>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {[">", ">=", "<", "<=", "=", "!=", "between"].map((op) => (
+                    <Badge key={op} variant="outline" className="font-mono">
+                      {op}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Parameter Format</h4>
+                <CodeBlock
+                  code={`{# Single comparison: {"combinator": ">", "values": "100"} #}
+{# Between:           {"combinator": "between", "values": "100,500"} #}
+
+{# Parameter can be a JSON string or an object #}`}
+                />
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Usage</h4>
+                <CodeBlock
+                  code={`{% set limit = limit | sql_int %}
+{% set offset = offset | sql_int %}
+
+SELECT *
+FROM orders
+{% where %}
+  {% if status %}AND status = {{ status | sql_string }}{% endif %}
+  {% if amount %}AND amount {{ amount | compare }}{% endif %}
+  {% if duration_ms %}AND duration_ms {{ duration_ms | compare }}{% endif %}
+{% endwhere %}
+ORDER BY created_at DESC
+{{ paginate(limit, offset) }};`}
+                />
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Output Examples</h4>
+                <CodeBlock
+                  code={`{# Input: {"combinator": ">", "values": "100"} #}
+AND amount > 100.0
+
+{# Input: {"combinator": "<=", "values": "999.99"} #}
+AND amount <= 999.99
+
+{# Input: {"combinator": "between", "values": "100,500"} #}
+AND amount BETWEEN 100.0 AND 500.0`}
+                />
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">
+                  Dynamic Columns with sql_ident + for Loop
+                </h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Use{" "}
+                  <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                    sql_ident
+                  </code>{" "}
+                  to safely output column names in a loop — avoids
+                  repeating the same pattern for many compare parameters:
+                </p>
+                <CodeBlock
+                  code={`{% set compare_fields = [
+  ("duration_ms", duration_ms),
+  ("total_amount", total_amount),
+  ("balance", balance),
+  ("request_count", request_count)
+] %}
+
+SELECT *
+FROM my_table
+{% where %}
+  {% if status %}AND status = {{ status | sql_string }}{% endif %}
+  {% for col, val in compare_fields %}
+    {% if val %}AND {{ col | sql_ident }} {{ val | compare }}{% endif %}
+  {% endfor %}
+{% endwhere %}
+ORDER BY created_at DESC;`}
+                />
+              </div>
+            </div>
           </div>
 
           <div>

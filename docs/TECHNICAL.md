@@ -230,13 +230,77 @@ All filters handle `None` → `NULL`. Always use a filter on user-provided value
 | `sql_like_start` | `'prefix%'` | `{{ q \| sql_like_start }}` |
 | `sql_like_end` | `'%suffix'` | `{{ q \| sql_like_end }}` |
 | `json` | `'{"key": "val"}'` (JSON string) | `{{ payload \| json }}` |
+| `fromjson` | Parses JSON string → dict/list | `{% set f = param \| fromjson %}` |
+| `compare` | `> 100.0` or `BETWEEN 100.0 AND 500.0` | `{{ duration_ms \| compare }}` |
+| `sql_ident` | `column_name` (safe identifier, no quoting) | `{{ col \| sql_ident }}` |
 
 ### 10.3 Extensions
 
 - **`{% where %}...{% endwhere %}`** — Generates a `WHERE` clause only if at least one inner condition is present. Automatically strips the leading `AND` or `OR` (case-insensitive) from the first condition. Outputs nothing if all inner blocks are empty.
 - **`{% set %}...{% endset %}`** — Set local template variables with optional default values.
 
-### 10.4 Multi-Statement SQL
+### 10.4 Comparison Filters (`compare`, `sql_ident`, `fromjson`)
+
+These filters work together to support dynamic numeric comparison queries from structured JSON parameters.
+
+#### `compare`
+
+Converts a JSON comparison object into a safe SQL expression. Accepts a JSON string or dict with `combinator` and `values` keys.
+
+**Supported operators:** `>`, `>=`, `<`, `<=`, `=`, `!=`, `between`
+
+```sql
+{# Parameter data type should be "object" for best compatibility #}
+
+{% if duration_ms %}AND duration_ms {{ duration_ms | compare }}{% endif %}
+```
+
+| Input | Output |
+|-------|--------|
+| `{"combinator": ">", "values": "100"}` | `> 100.0` |
+| `{"combinator": "<=", "values": "999.99"}` | `<= 999.99` |
+| `{"combinator": "between", "values": "100,500"}` | `BETWEEN 100.0 AND 500.0` |
+| `None` or invalid | `` (empty string) |
+
+- Operators are **whitelisted** — unknown operators return empty (no SQL injection).
+- Values are parsed as `float` — non-numeric values return empty.
+- Also accepts `value` as an alias for the `values` key.
+
+#### `sql_ident`
+
+Outputs a SQL identifier (column/table name) without quoting. Only allows safe characters: `[A-Za-z_][A-Za-z0-9_.]*`. Invalid input returns empty string.
+
+Use `sql_ident` with `compare` in a `for` loop to avoid repeating the same pattern for many compare parameters:
+
+```sql
+{% set compare_fields = [
+  ("duration_ms", duration_ms),
+  ("total_amount", total_amount),
+  ("balance", balance)
+] %}
+
+SELECT * FROM my_table
+{% where %}
+  {% if status %}AND status = {{ status | sql_string }}{% endif %}
+  {% for col, val in compare_fields %}
+    {% if val %}AND {{ col | sql_ident }} {{ val | compare }}{% endif %}
+  {% endfor %}
+{% endwhere %}
+ORDER BY created_at DESC;
+```
+
+#### `fromjson`
+
+Parses a JSON string into a Python dict/list for manual field access in templates. Returns `None` on invalid input.
+
+```sql
+{% set f = my_param | fromjson %}
+{% if f %}AND col {{ f.combinator }} {{ f['values'] | sql_float }}{% endif %}
+```
+
+> **Note:** The `compare` filter handles JSON parsing internally, so `fromjson` is only needed when you want to access individual fields of a JSON parameter manually.
+
+### 10.5 Multi-Statement SQL
 
 Separate multiple SQL statements with `;`. The engine splits on semicolons (respecting string quotes, `$$` dollar-quoting, and comments) and executes each statement sequentially.
 
@@ -265,7 +329,7 @@ SELECT COUNT(*) AS total FROM items
 
 Result: `[[{id, name, price}, ...], [{total: 42}]]`. Use a **result transform** to reshape this into `{data: [...], total: 42}`.
 
-### 10.5 Execution
+### 10.6 Execution
 
 Rendered SQL runs via the connection pool for the configured data source. Supported databases: PostgreSQL (psycopg), MySQL (pymysql), Trino (trino). Compatible-protocol DBs (StarRocks, RisingWave) work via the corresponding type.
 
@@ -349,3 +413,11 @@ The executor checks for results in this order:
 | Result transform error | 400 |
 | DataSource inactive / execution error | 500 |
 | Success | 200 |
+
+---
+
+## See Also
+
+- [OVERVIEW.md](./OVERVIEW.md) — End-to-end flow, features, and concepts
+- [EXAMPLES.md](./EXAMPLES.md) — Cookbook-style recipes for SQL and Script APIs
+- [ENV_REFERENCE.md](./ENV_REFERENCE.md) — Environment variable reference

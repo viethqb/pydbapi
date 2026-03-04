@@ -8,11 +8,15 @@ knows the value has already been sanitised and will not double-escape it.
 """
 
 import json
+import re
 from datetime import date, datetime
 from typing import Any
 
 # Single-quote escape for SQL strings
 _SQL_QUOTE_ESCAPE = str.maketrans({"'": "''"})
+
+# Safe SQL identifier pattern: letters, digits, underscore, dot (for schema.table.column)
+_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +186,99 @@ def sql_like_end(value: Any) -> SqlSafe:
     return _safe(f"'%{_escape_like(s)}'")
 
 
+def sql_ident(value: Any) -> SqlSafe:
+    """
+    Output a safe SQL identifier (column/table name) without quoting.
+
+    Only allows ``[A-Za-z_][A-Za-z0-9_.]*`` — rejects anything else
+    to prevent SQL injection.  None or invalid → empty string.
+    """
+    if value is None:
+        return _safe("")
+    s = str(value).strip()
+    if not s or not _IDENT_RE.match(s):
+        return _safe("")
+    return _safe(s)
+
+
+def fromjson(value: Any) -> Any:
+    """
+    Parse a JSON string into a Python object (dict/list).
+    Returns None if parsing fails or value is None.
+    """
+    if value is None:
+        return None
+    if isinstance(value, (dict, list)):
+        return value
+    try:
+        return json.loads(str(value))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+
+# Allowed comparison operators (whitelist to prevent SQL injection)
+_COMPARE_OPS = frozenset({">", ">=", "<", "<=", "=", "!="})
+
+
+def compare(value: Any) -> SqlSafe:
+    """
+    Parse a comparison filter (JSON string or dict) and return a SQL
+    comparison expression.
+
+    Input format::
+
+        {"combinator": ">", "values": "100"}
+        {"combinator": "between", "values": "100,500"}
+
+    Accepts either a JSON string or an already-parsed dict.
+
+    Returns ``SqlSafe`` fragments like ``> 100.0`` or
+    ``BETWEEN 100.0 AND 500.0``.  Returns empty string for ``None``
+    or invalid input so ``{% if %}`` guards work naturally.
+    """
+    if value is None:
+        return _safe("")
+
+    # Parse JSON string → dict if needed
+    fp = value
+    if isinstance(fp, str):
+        try:
+            fp = json.loads(fp)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return _safe("")
+
+    if not isinstance(fp, dict):
+        return _safe("")
+
+    combinator = fp.get("combinator", "").strip()
+    raw_values = fp.get("values", fp.get("value", ""))
+
+    if not combinator or raw_values is None:
+        return _safe("")
+
+    raw_values = str(raw_values).strip()
+
+    if combinator.lower() == "between":
+        parts = [p.strip() for p in raw_values.split(",")]
+        if len(parts) != 2:
+            return _safe("")
+        try:
+            lo = str(float(parts[0]))
+            hi = str(float(parts[1]))
+        except (TypeError, ValueError):
+            return _safe("")
+        return _safe(f"BETWEEN {lo} AND {hi}")
+
+    if combinator in _COMPARE_OPS:
+        try:
+            v = str(float(raw_values))
+        except (TypeError, ValueError):
+            return _safe("")
+        return _safe(f"{combinator} {v}")
+
+    return _safe("")
+
+
 def _json_filter(value: Any) -> SqlSafe:
     """
     JSON/JSONB: serialize to string and single-quote escape. None -> 'NULL'.
@@ -246,4 +343,7 @@ SQL_FILTERS: dict[str, Any] = {
     "sql_like_start": sql_like_start,
     "sql_like_end": sql_like_end,
     "json": _json_filter,
+    "fromjson": fromjson,
+    "compare": compare,
+    "sql_ident": sql_ident,
 }

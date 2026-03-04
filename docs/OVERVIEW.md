@@ -94,8 +94,9 @@ Optional camelCase response keys: add `?naming=camel` or header `X-Response-Nami
 #### SQL Engine (Jinja2)
 
 - Template rendering with parameters from query, header, body, and path.
-- Custom filters: `sql_string`, `sql_int`, `sql_float`, `sql_bool`, `sql_date`, `sql_datetime`, `in_list`, `sql_like`, `sql_like_start`, `sql_like_end`, `json`.
+- Custom filters: `sql_string`, `sql_int`, `sql_float`, `sql_bool`, `sql_date`, `sql_datetime`, `in_list`, `sql_like`, `sql_like_start`, `sql_like_end`, `json`, `fromjson`, `compare`, `sql_ident`.
 - Custom tags: `{% where %}` for conditional WHERE clauses (auto-strips leading AND/OR), `{% set %}` for local variables.
+- **Comparison filters:** `compare` converts JSON objects (`{"combinator": ">", "values": "100"}`) into safe SQL expressions (`> 100.0`). Combine with `sql_ident` and `{% for %}` to handle many comparison parameters dynamically without repeating code.
 - **Multi-statement SQL:** Separate statements with `;`. Each SELECT returns its own result set. Useful for data + count queries:
   ```sql
   SELECT * FROM items WHERE status = {{ status | sql_int }} LIMIT 20;
@@ -156,5 +157,6 @@ Optional camelCase response keys: add `?naming=camel` or header `X-Response-Nami
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — System architecture, diagrams, data model
 - [TECHNICAL.md](./TECHNICAL.md) — Gateway internals, engines, parameters, limits
+- [EXAMPLES.md](./EXAMPLES.md) — Cookbook-style recipes for SQL and Script APIs
 - [ENV_REFERENCE.md](./ENV_REFERENCE.md) — Complete environment variable reference
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — Common issues and solutions

@@ -131,7 +131,7 @@ services:
       - GATEWAY_ACCESS_LOG_BODY=${GATEWAY_ACCESS_LOG_BODY:-true}
       - GATEWAY_TOKEN_GET_ENABLED=true
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
-      - LOG_JSON=${LOG_JSON:-true}
+      - LOG_JSON=${LOG_JSON:-false}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost/health"]
       interval: 15s
