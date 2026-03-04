@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
 import {
+  type ApiAccessTypeEnum,
   type ApiAssignmentListIn,
   ApiAssignmentsService,
   type ExecuteEngineEnum,
@@ -63,6 +64,7 @@ function ApisList() {
     name__ilike: null,
     http_method: null,
     execute_engine: null,
+    access_type: null,
   })
 
   // Query for list
@@ -303,6 +305,26 @@ function ApisList() {
                   <SelectItem value="all">All Engines</SelectItem>
                   <SelectItem value="SQL">SQL</SelectItem>
                   <SelectItem value="SCRIPT">SCRIPT</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.access_type || "all"}
+                onValueChange={(value) =>
+                  setFilters({
+                    ...filters,
+                    access_type:
+                      value === "all" ? null : (value as ApiAccessTypeEnum),
+                    page: 1,
+                  })
+                }
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Access" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Access</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
                 </SelectContent>
               </Select>
             </div>

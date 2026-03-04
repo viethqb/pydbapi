@@ -175,6 +175,11 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str
     FIRST_SUPERUSER_EMAIL: str | None = None
 
+    # Seed example APIs and sample data on startup (default: false)
+    SEED_EXAMPLE_DATA: bool = False
+    STARROCKS_HOST: str = "starrocks"
+    STARROCKS_PORT: int = 9030
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (

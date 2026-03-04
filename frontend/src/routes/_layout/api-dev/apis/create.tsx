@@ -75,7 +75,7 @@ import { ModulesService } from "@/services/modules"
 
 const paramSchema = z.object({
   name: z.string().min(1, "Parameter name is required"),
-  location: z.enum(["query", "header", "body"]),
+  location: z.enum(["query", "header", "body", "path"]),
   data_type: z.string().optional().nullable(),
   is_required: z.boolean().default(false),
   default_value: z.string().optional().nullable(),
@@ -930,6 +930,9 @@ function ApiCreate() {
                                                     </SelectItem>
                                                     <SelectItem value="body">
                                                       Body
+                                                    </SelectItem>
+                                                    <SelectItem value="path">
+                                                      Path
                                                     </SelectItem>
                                                   </SelectContent>
                                                 </Select>

@@ -318,6 +318,19 @@ def init() -> None:
                 e,
             )
             session.rollback()
+    # Optionally seed example APIs and sample data
+    from app.core.config import settings
+
+    if settings.SEED_EXAMPLE_DATA:
+        with Session(engine) as session:
+            try:
+                from app.seed_examples import seed_example_data
+
+                seed_example_data(session)
+                session.commit()
+            except Exception as e:
+                logger.warning("Seed example data failed: %s", e)
+                session.rollback()
 
 
 def main() -> None:

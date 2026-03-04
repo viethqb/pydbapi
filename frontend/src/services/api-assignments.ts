@@ -56,6 +56,7 @@ export type ApiAssignmentListIn = {
   name__ilike?: string | null
   http_method?: HttpMethodEnum | null
   execute_engine?: ExecuteEngineEnum | null
+  access_type?: ApiAccessTypeEnum | null
   /** Filter by exact list of IDs (for bulk fetch) */
   ids?: string[] | null
 }
@@ -67,7 +68,7 @@ export type ApiAssignmentListOut = {
 
 export type ApiParameter = {
   name: string
-  location: "query" | "header" | "body"
+  location: "query" | "header" | "body" | "path"
   data_type?: string | null
   is_required?: boolean
   validate_type?: "regex" | "python" | null

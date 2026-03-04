@@ -199,6 +199,8 @@ def _list_filters(stmt: Any, body: ApiAssignmentListIn) -> Any:
         stmt = stmt.where(ApiAssignment.http_method == body.http_method)
     if body.execute_engine is not None:
         stmt = stmt.where(ApiAssignment.execute_engine == body.execute_engine)
+    if body.access_type is not None:
+        stmt = stmt.where(ApiAssignment.access_type == body.access_type)
     return stmt
 
 

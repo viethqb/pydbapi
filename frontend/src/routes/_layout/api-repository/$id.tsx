@@ -53,11 +53,75 @@ export const Route = createFileRoute("/_layout/api-repository/$id")({
   }),
 })
 
+function KeyValueTable({
+  data,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: {
+  data: Array<{ key: string; value: string }>
+  onAdd: () => void
+  onUpdate: (index: number, field: "key" | "value", value: string) => void
+  onRemove: (index: number) => void
+}) {
+  const safeData = Array.isArray(data) ? data : []
+  return (
+    <div className="space-y-2">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[200px]">Key</TableHead>
+            <TableHead>Value</TableHead>
+            <TableHead className="w-[50px]" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {safeData.map((item, index) => (
+            <TableRow key={index}>
+              <TableCell>
+                <Input
+                  value={item.key}
+                  onChange={(e) => onUpdate(index, "key", e.target.value)}
+                  placeholder="Key"
+                />
+              </TableCell>
+              <TableCell>
+                <Input
+                  value={item.value}
+                  onChange={(e) => onUpdate(index, "value", e.target.value)}
+                  placeholder="Value"
+                />
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRemove(index)}
+                  disabled={safeData.length === 1}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Button variant="outline" size="sm" onClick={onAdd} className="w-full">
+        <Plus className="mr-2 h-4 w-4" />
+        Add Row
+      </Button>
+    </div>
+  )
+}
+
 function ApiRepositoryDetail() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [pathParams, setPathParams] = useState<
+    Array<{ key: string; value: string }>
+  >([])
   const [queryParams, setQueryParams] = useState<
     Array<{ key: string; value: string }>
   >([])
@@ -146,17 +210,19 @@ function ApiRepositoryDetail() {
       !apiDetail?.api_context?.params ||
       !Array.isArray(apiDetail.api_context.params)
     ) {
-      return { query: {}, header: {}, body: {} }
+      return { query: {}, header: {}, body: {}, path: {} }
     }
 
     const defaults: {
       query: Record<string, string>
       header: Record<string, string>
       body: Record<string, unknown>
+      path: Record<string, string>
     } = {
       query: {},
       header: {},
       body: {},
+      path: {},
     }
 
     apiDetail.api_context.params.forEach(
@@ -168,6 +234,8 @@ function ApiRepositoryDetail() {
         if (defaultValue) {
           if (location === "query" || location === "header") {
             defaults[location][param.name] = defaultValue
+          } else if (location === "path") {
+            defaults.path[param.name] = defaultValue
           } else if (location === "body") {
             try {
               defaults.body[param.name] = JSON.parse(defaultValue)
@@ -185,6 +253,22 @@ function ApiRepositoryDetail() {
   // Initialize form values with defaults
   useEffect(() => {
     if (apiDetail && defaultValues) {
+      // Extract path param names from URL pattern (e.g., {id} → "id")
+      const pathPattern = apiDetail.path || ""
+      const pathParamNames = Array.from(
+        pathPattern.matchAll(/\{(\w+)\}/g),
+        (m) => m[1],
+      )
+
+      // Build path params: use defaults if available, otherwise empty
+      if (pathParamNames.length > 0) {
+        const pathArray = pathParamNames.map((name) => ({
+          key: name,
+          value: defaultValues.path[name] || "",
+        }))
+        setPathParams(pathArray)
+      }
+
       // Convert query params to key-value array
       const queryArray = Object.entries(defaultValues.query).map(
         ([key, value]) => ({
@@ -251,9 +335,17 @@ function ApiRepositoryDetail() {
     const currentApiDetail = apiDetail
     if (!currentModule || !currentApiDetail) return ""
     const baseUrl = import.meta.env.VITE_API_URL || window.location.origin
-    const apiPath = currentApiDetail.path.startsWith("/")
+    let apiPath = currentApiDetail.path.startsWith("/")
       ? currentApiDetail.path.slice(1)
       : currentApiDetail.path
+
+    // Replace path params like {id} with actual values
+    pathParams
+      .filter((p) => p.key && p.value)
+      .forEach(({ key, value }) => {
+        apiPath = apiPath.replace(`{${key}}`, encodeURIComponent(value))
+      })
+
     let url = `${baseUrl}/api/${apiPath}`
     const validParams = queryParams.filter((p) => p.key && p.value)
     if (validParams.length > 0) {
@@ -264,7 +356,7 @@ function ApiRepositoryDetail() {
       url = urlObj.toString()
     }
     return url
-  }, [module, apiDetail, queryParams])
+  }, [module, apiDetail, queryParams, pathParams])
 
   if (isLoading) {
     return (
@@ -479,67 +571,7 @@ function ApiRepositoryDetail() {
     setter((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // Key-value table component
-  const KeyValueTable = ({
-    data,
-    onAdd,
-    onUpdate,
-    onRemove,
-  }: {
-    data: Array<{ key: string; value: string }>
-    onAdd: () => void
-    onUpdate: (index: number, field: "key" | "value", value: string) => void
-    onRemove: (index: number) => void
-  }) => {
-    const safeData = Array.isArray(data) ? data : []
-    return (
-      <div className="space-y-2">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[200px]">Key</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead className="w-[50px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {safeData.map((item, index) => (
-              <TableRow key={`${index}-${item.key}-${item.value}`}>
-                <TableCell>
-                  <Input
-                    value={item.key}
-                    onChange={(e) => onUpdate(index, "key", e.target.value)}
-                    placeholder="Key"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    value={item.value}
-                    onChange={(e) => onUpdate(index, "value", e.target.value)}
-                    placeholder="Value"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemove(index)}
-                    disabled={safeData.length === 1}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Button variant="outline" size="sm" onClick={onAdd} className="w-full">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Row
-        </Button>
-      </div>
-    )
-  }
+  // KeyValueTable is defined outside the component to avoid re-mount on re-render
 
   const tokenBodyValid = (() => {
     try {
@@ -1114,8 +1146,23 @@ function ApiRepositoryDetail() {
                       </div>
                     </div>
 
-                    {/* Query Params, Headers, Body */}
+                    {/* Path Params, Query Params, Headers, Body */}
                     <div className="space-y-4">
+                      {pathParams.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium">Path Params</div>
+                          <KeyValueTable
+                            data={pathParams}
+                            onAdd={() => addKeyValue(setPathParams)}
+                            onUpdate={(index, field, value) =>
+                              updateKeyValue(setPathParams, index, field, value)
+                            }
+                            onRemove={(index) =>
+                              removeKeyValue(setPathParams, index)
+                            }
+                          />
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <div className="text-sm font-medium">Query Params</div>
                         <KeyValueTable

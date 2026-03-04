@@ -92,6 +92,7 @@ services:
       - DOMAIN=${DOMAIN:-localhost}
       - FRONTEND_HOST=${FRONTEND_HOST:-http://localhost}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-}
+      - SEED_EXAMPLE_DATA=${SEED_EXAMPLE_DATA:-false}
 
   app:
     container_name: app

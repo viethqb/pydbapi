@@ -142,6 +142,16 @@ Controls the connection pool for **external data sources** (not the app database
 
 ---
 
+## Seed Data
+
+| Variable | Type | Default | Required | Description |
+|----------|------|---------|----------|-------------|
+| `SEED_EXAMPLE_DATA` | bool | `False` | No | Seed example APIs, sample tables, and demo data on startup. Creates two modules ("Examples (PostgreSQL)" and optionally "Examples (StarRocks)"), ~19 API endpoints each, macros, a sample client, and a group. Idempotent — skipped if already seeded. |
+| `STARROCKS_HOST` | string | `starrocks` | No | StarRocks hostname for auto-detecting and seeding StarRocks examples. |
+| `STARROCKS_PORT` | int | `9030` | No | StarRocks MySQL-protocol port. |
+
+---
+
 ## First Superuser
 
 Created automatically on first startup by the prestart seed.

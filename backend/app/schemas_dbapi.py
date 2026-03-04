@@ -585,6 +585,7 @@ class ApiAssignmentListIn(SQLModel):
     name__ilike: str | None = Field(default=None, max_length=255)
     http_method: HttpMethodEnum | None = None
     execute_engine: ExecuteEngineEnum | None = None
+    access_type: ApiAccessTypeEnum | None = None
     ids: list[uuid.UUID] | None = Field(
         default=None, description="Filter by exact list of IDs (for bulk fetch)"
     )
