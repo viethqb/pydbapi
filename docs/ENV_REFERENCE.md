@@ -88,6 +88,15 @@ Redis is used for config caching, rate limiting, and concurrent-request limiting
 
 ---
 
+## Logging
+
+| Variable | Type | Default | Required | Description |
+|----------|------|---------|----------|-------------|
+| `LOG_LEVEL` | string | `INFO` | No | Root log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). |
+| `LOG_JSON` | bool | `False` | No | Emit JSON log lines. Automatically enabled in `staging` and `production` environments. |
+
+---
+
 ## Auth Rate Limits
 
 Separate rate limits for authentication endpoints to prevent brute-force attacks.

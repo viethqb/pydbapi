@@ -138,6 +138,18 @@ spec:
                   name: pydbapi-config
                   key: GATEWAY_JWT_EXPIRE_SECONDS
 
+            # Logging
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-config
+                  key: LOG_LEVEL
+            - name: LOG_JSON
+              valueFrom:
+                configMapKeyRef:
+                  name: pydbapi-config
+                  key: LOG_JSON
+
           resources:
             requests:
               cpu: "100m"

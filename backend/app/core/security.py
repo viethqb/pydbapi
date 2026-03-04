@@ -5,8 +5,16 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
+import bcrypt as _bcrypt
 import jwt
 from cryptography.fernet import Fernet
+
+# passlib 1.7.x reads bcrypt.__about__.__version__ which was removed in bcrypt 4.x.
+# Patch it before passlib imports bcrypt so the "(trapped) error reading bcrypt version"
+# warning is silenced.
+if not hasattr(_bcrypt, "__about__"):
+    _bcrypt.__about__ = type("about", (), {"__version__": _bcrypt.__version__})()
+
 from passlib.context import CryptContext
 
 from app.core.config import settings

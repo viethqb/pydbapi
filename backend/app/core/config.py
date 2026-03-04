@@ -162,6 +162,12 @@ class Settings(BaseSettings):
     AUTH_RATE_LIMIT_RESET_PASSWORD: int = 5  # POST /reset-password/
     AUTH_RATE_LIMIT_TOKEN_GENERATE: int = 10  # POST|GET /token/generate
 
+    # -------------------------------------------------------------------------
+    # Logging
+    # -------------------------------------------------------------------------
+    LOG_LEVEL: str = "INFO"
+    LOG_JSON: bool = False  # auto-True in staging/production via logging_config
+
     RESET_TOKEN_EXPIRE_HOURS: int = 1
 
     TEST_USER: str = "testuser"

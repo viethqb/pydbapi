@@ -24,6 +24,7 @@ dependencies = [
     "trino>=0.328.0",
     "cryptography>=42.0.0",
     "restrictedpython>=7.0",
+    "structlog>=24.1.0",
 ]
 
 [dependency-groups]

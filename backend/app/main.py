@@ -11,6 +11,10 @@ from app.api.main import api_router
 from app.api.routes.gateway import router as gateway_router
 from app.api.routes.token import router as token_router
 from app.core.config import settings
+from app.core.logging_config import configure_logging
+from app.core.middleware import RequestContextMiddleware
+
+configure_logging()
 
 _logger = logging.getLogger(__name__)
 
@@ -110,6 +114,8 @@ if settings.all_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+app.add_middleware(RequestContextMiddleware)
 
 # All routes under /api — specific routes FIRST (higher priority)
 app.include_router(api_router, prefix=settings.API_V1_STR)

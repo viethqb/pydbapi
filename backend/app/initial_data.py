@@ -6,6 +6,7 @@ import uuid
 from sqlmodel import Session, delete, select
 
 from app.core.db import engine, init_db
+from app.core.logging_config import configure_logging
 from app.models import User
 from app.models_permission import (
     Permission,
@@ -16,7 +17,7 @@ from app.models_permission import (
     UserRoleLink,
 )
 
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 # Fixed roles

@@ -401,6 +401,8 @@ class ApiGroupListOut(SQLModel):
 class ApiParameter(SQLModel):
     """Parameter definition for API validation."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     name: str = Field(..., min_length=1, max_length=255, description="Parameter name")
     location: str = Field(..., description="Parameter location: query, header, or body")
     data_type: str | None = Field(
@@ -415,8 +417,9 @@ class ApiParameter(SQLModel):
     validate_type: str | None = Field(
         default=None, max_length=32, description="Validation type: 'regex' or 'python'"
     )
-    validate: str | None = Field(
+    validate_rule: str | None = Field(
         default=None,
+        alias="validate",
         description="Validation: regex pattern (if validate_type='regex') or Python function code (if validate_type='python')",
     )
     validate_message: str | None = Field(

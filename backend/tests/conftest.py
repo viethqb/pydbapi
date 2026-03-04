@@ -10,11 +10,16 @@ from app.core.db import engine, init_db
 from app.main import app
 from app.models import User
 from app.models_dbapi import (
+    AccessLogConfig,
+    AccessRecord,
     ApiGroup,
+    ApiMacroDef,
     ApiModule,
     AppClient,
     DataSource,
+    MacroDefVersionCommit,
 )
+from app.models_permission import Role, RolePermissionLink, UserRoleLink
 from tests.utils.user import authentication_token_from_username
 from tests.utils.utils import get_superuser_token_headers
 
@@ -31,16 +36,21 @@ def db() -> Generator[Session, None, None]:
     with Session(engine) as session:
         init_db(session)
         yield session
-        statement = delete(User)
-        session.execute(statement)
-        statement = delete(DataSource)
-        session.execute(statement)
-        statement = delete(ApiModule)
-        session.execute(statement)
-        statement = delete(ApiGroup)
-        session.execute(statement)
-        statement = delete(AppClient)
-        session.execute(statement)
+        # Teardown in FK-aware order (children first)
+        for model in (
+            AccessRecord,
+            AccessLogConfig,
+            MacroDefVersionCommit,
+            ApiMacroDef,
+            UserRoleLink,
+            RolePermissionLink,
+            User,
+            DataSource,
+            ApiModule,
+            ApiGroup,
+            AppClient,
+        ):
+            session.execute(delete(model))
         session.commit()
 
 

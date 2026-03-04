@@ -130,6 +130,8 @@ services:
       - CONCURRENT_DEBUG=${CONCURRENT_DEBUG:-0}
       - GATEWAY_ACCESS_LOG_BODY=${GATEWAY_ACCESS_LOG_BODY:-true}
       - GATEWAY_TOKEN_GET_ENABLED=true
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - LOG_JSON=${LOG_JSON:-true}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost/health"]
       interval: 15s
