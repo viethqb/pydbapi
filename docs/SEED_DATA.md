@@ -1,6 +1,6 @@
 # Seed Example Data
 
-pyDBAPI can automatically seed sample tables, demo data, and ~19 ready-to-use API endpoints on startup. This is useful for evaluating the platform, onboarding new developers, or running demos without manual setup.
+pyDBAPI can automatically seed sample tables, demo data, and ~20 ready-to-use API endpoints on startup. This is useful for evaluating the platform, onboarding new developers, or running demos without manual setup.
 
 ---
 
@@ -16,7 +16,7 @@ docker compose up -d
 
 3. Open `http://localhost` and log in. You will see two new modules in **API Dev**:
 
-   - **Examples (PostgreSQL)** — 19 APIs backed by the app's own PostgreSQL
+   - **Examples (PostgreSQL)** — 20 APIs backed by the app's own PostgreSQL
    - **Examples (StarRocks)** — 18 APIs (auto-created only if StarRocks is running)
 
 4. Try an API immediately:
@@ -62,7 +62,8 @@ All endpoints are published and immediately live on the gateway.
 | 2.4 | Filter Products | `examples/pg/products/filter` | GET | SQL | Combined filters with `{% where %}` |
 | 3.1 | Slow Requests | `examples/pg/requests/slow` | GET | SQL | Compare filter on duration |
 | 3.2 | Metrics Multi-Compare | `examples/pg/metrics` | GET | SQL | Loop-based compare on multiple columns |
-| 3.3 | Metrics Script | `examples/pg/metrics/script` | GET | Script | Same compare logic in Python |
+| 3.3 | Metrics OR Operation | `examples/pg/metrics/any` | GET | SQL | `{% where operation="OR" %}` — match any condition |
+| 3.4 | Metrics Script | `examples/pg/metrics/script` | GET | Script | Same compare logic in Python |
 | 4 | Items with Count | `examples/pg/items` | GET | SQL | Multi-statement (data + count) with result transform |
 | 5 | Sorted Products | `examples/pg/products/sorted` | GET | SQL | Dynamic ORDER BY with `sql_ident` |
 | 7.1 | Active Users | `examples/pg/users/active` | GET | Script | Basic `db.query` usage |
@@ -71,7 +72,7 @@ All endpoints are published and immediately live on the gateway.
 | 7.4 | Transfer | `examples/pg/transfer` | POST | Script | Explicit transaction with `tx.begin/commit` |
 | 9 | Private Orders | `examples/pg/orders/private` | GET | SQL | Private API requiring client auth |
 
-StarRocks APIs use the same definitions under `examples/sr/` (18 endpoints — Transfer is skipped because StarRocks does not support multi-statement transactions).
+StarRocks APIs use the same definitions under `examples/sr/` (19 endpoints — Transfer is skipped because StarRocks does not support multi-statement transactions).
 
 ### Macros
 
@@ -143,7 +144,10 @@ curl 'http://localhost/api/examples/pg/requests/slow?duration_ms={"combinator":"
 # 3.2 Metrics with status filter
 curl "http://localhost/api/examples/pg/metrics?status=success"
 
-# 3.3 Same logic via Script engine
+# 3.3 Metrics OR operation (match any condition)
+curl 'http://localhost/api/examples/pg/metrics/any?operation=OR&status=error&duration_ms={"combinator":">","value":"500"}'
+
+# 3.4 Same logic via Script engine
 curl "http://localhost/api/examples/pg/metrics/script?status=success"
 ```
 

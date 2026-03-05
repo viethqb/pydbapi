@@ -32,6 +32,50 @@ class TestSQLTemplateEngineRender:
         assert "WHERE" in out and "a = 1" in out
         assert out.strip().startswith("SELECT")
 
+    def test_where_operation_and(self):
+        e = SQLTemplateEngine()
+        t = 'SELECT * FROM t {% where operation="AND" %}\n  AND a = 1\n  AND b = 2\n{% endwhere %}'
+        out = e.render(t, {})
+        assert "WHERE a = 1 AND b = 2" in out
+
+    def test_where_operation_or(self):
+        e = SQLTemplateEngine()
+        t = 'SELECT * FROM t {% where operation="OR" %}\n  AND a = 1\n  AND b = 2\n{% endwhere %}'
+        out = e.render(t, {})
+        assert "WHERE a = 1 OR b = 2" in out
+
+    def test_where_operation_or_single_condition(self):
+        e = SQLTemplateEngine()
+        t = 'SELECT * FROM t {% where operation="OR" %}\n  AND a = 1\n{% endwhere %}'
+        out = e.render(t, {})
+        assert "WHERE a = 1" in out
+
+    def test_where_operation_or_empty(self):
+        e = SQLTemplateEngine()
+        t = 'SELECT * FROM t {% where operation="OR" %}{% endwhere %}'
+        out = e.render(t, {})
+        assert "WHERE" not in out
+
+    def test_where_default_operation_is_and(self):
+        e = SQLTemplateEngine()
+        t = "SELECT * FROM t {% where %}\n  AND a = 1\n  AND b = 2\n{% endwhere %}"
+        out = e.render(t, {})
+        assert "WHERE a = 1" in out
+        assert "AND b = 2" in out
+
+    def test_where_operation_or_with_conditional(self):
+        e = SQLTemplateEngine()
+        t = (
+            '{% where operation="OR" %}\n'
+            "{% if x %}AND x = {{ x }}{% endif %}\n"
+            "{% if y %}AND y = {{ y }}{% endif %}\n"
+            "{% endwhere %}"
+        )
+        out = e.render(t, {"x": 1, "y": 2})
+        assert "WHERE" in out
+        assert "OR" in out
+        assert "AND" not in out.split("WHERE", 1)[1]
+
 
 class TestSQLTemplateEngineAutoEscape:
     """Verify the finalize auto-escape prevents SQL injection."""

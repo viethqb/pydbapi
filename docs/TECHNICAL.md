@@ -237,6 +237,7 @@ All filters handle `None` → `NULL`. Always use a filter on user-provided value
 ### 10.3 Extensions
 
 - **`{% where %}...{% endwhere %}`** — Generates a `WHERE` clause only if at least one inner condition is present. Automatically strips the leading `AND` or `OR` (case-insensitive) from the first condition. Outputs nothing if all inner blocks are empty.
+  - **`operation` parameter** (optional): Controls how conditions are joined. Default is `"AND"`. Use `{% where operation="OR" %}` to join conditions with `OR` instead of `AND`. Conditions are still written with `AND` prefix — the tag replaces the connectors automatically.
 - **`{% set %}...{% endset %}`** — Set local template variables with optional default values.
 
 ### 10.4 Comparison Filters (`compare`, `sql_ident`, `fromjson`)

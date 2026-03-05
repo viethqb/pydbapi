@@ -523,7 +523,42 @@ def _api_defs(
             None,
             None,
         ),
-        # 3.3 Metrics Script
+        # 3.3 Metrics OR Operation
+        (
+            "Metrics OR Operation",
+            f"{prefix}/metrics/any",
+            _GET,
+            _SQL,
+            (
+                "{% set compare_fields = [\n"
+                '  ("duration_ms", duration_ms),\n'
+                '  ("total_amount", total_amount),\n'
+                '  ("row_count", row_count)\n'
+                "] %}\n"
+                "\n"
+                "SELECT id, path, status, duration_ms, total_amount, row_count\n"
+                "FROM metrics\n"
+                '{% where operation=operation %}\n'
+                "  {% if status %}AND status = {{ status | sql_string }}{% endif %}\n"
+                "  {% for col, val in compare_fields %}\n"
+                "    {% if val %}AND {{ col | sql_ident }} {{ val | compare }}{% endif %}\n"
+                "  {% endfor %}\n"
+                "{% endwhere %}\n"
+                "ORDER BY created_at DESC\n"
+                "LIMIT 100;"
+            ),
+            [
+                _p("status", "query", "string", default="success", description="Filter by status"),
+                _p("duration_ms", "query", "object", description="Duration filter (compare object)"),
+                _p("total_amount", "query", "object", description="Total amount filter (compare object)"),
+                _p("row_count", "query", "object", description="Row count filter (compare object)"),
+                _p("operation", "query", "string", default="OR", description="Condition join: AND (match all) or OR (match any)"),
+            ],
+            _PUBLIC,
+            None,
+            None,
+        ),
+        # 3.4 Metrics Script
         (
             "Metrics Script",
             f"{prefix}/metrics/script",

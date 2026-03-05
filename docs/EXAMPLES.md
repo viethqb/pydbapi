@@ -368,7 +368,71 @@ LIMIT 100;
 curl 'http://localhost/api/metrics?status=success&duration_ms={"combinator":"<=","values":"200"}&row_count={"combinator":">=","values":"10"}'
 ```
 
-### 3.3 Python Script Equivalent
+### 3.3 OR Operation — Match Any Condition
+
+Use `{% where operation="OR" %}` to join conditions with `OR` instead of `AND`. Useful for "match any" filters where a row should appear if it satisfies at least one criterion.
+
+**Path:** `metrics/any` | **Method:** GET
+
+**Parameters:**
+
+| Name         | Location | Type   | Required |
+|--------------|----------|--------|----------|
+| status       | query    | string | no       |
+| duration_ms  | query    | object | no       |
+| total_amount | query    | object | no       |
+| row_count    | query    | object | no       |
+| operation    | query    | string | no       |
+
+**SQL content:**
+
+```sql
+{% set compare_fields = [
+  ("duration_ms", duration_ms),
+  ("total_amount", total_amount),
+  ("row_count", row_count)
+] %}
+
+SELECT id, path, status, duration_ms, total_amount, row_count
+FROM metrics
+{% where operation=operation %}
+  {% if status %}AND status = {{ status | sql_string }}{% endif %}
+  {% for col, val in compare_fields %}
+    {% if val %}AND {{ col | sql_ident }} {{ val | compare }}{% endif %}
+  {% endfor %}
+{% endwhere %}
+ORDER BY created_at DESC
+LIMIT 100;
+```
+
+Write conditions with `AND` prefix as usual — when `operation="OR"`, the tag automatically replaces `AND` connectors with `OR`.
+
+**Request (OR — match any):**
+
+```bash
+curl 'http://localhost/api/metrics/any?operation=OR&status=error&duration_ms={"combinator":">","values":"500"}'
+```
+
+**Rendered SQL:**
+
+```sql
+SELECT id, path, status, duration_ms, total_amount, row_count
+FROM metrics
+WHERE status = 'error'
+  OR duration_ms > 500.0
+ORDER BY created_at DESC
+LIMIT 100;
+```
+
+**Request (AND — match all, default):**
+
+```bash
+curl 'http://localhost/api/metrics/any?operation=AND&status=success&duration_ms={"combinator":"<=","values":"200"}'
+```
+
+> **Tip:** The `operation` parameter can be hardcoded (`{% where operation="OR" %}`) or dynamic (`{% where operation=operation %}`). When dynamic, pass it as a request parameter; omitting it defaults to `AND`.
+
+### 3.4 Python Script Equivalent
 
 The same comparison logic in a Script engine API using parameterized queries.
 
