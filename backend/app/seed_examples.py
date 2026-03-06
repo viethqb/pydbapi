@@ -830,7 +830,7 @@ def _api_defs(
                 "    grand_total = sum(float(r.get('total_value', 0)) for r in rows)\n"
                 "    total_products = sum(int(r.get('count', 0)) for r in rows)\n"
                 "    return {\n"
-                '        "categories": rows,\n'
+                '        "data": rows,\n'
                 '        "grand_total": grand_total,\n'
                 '        "total_products": total_products,\n'
                 '        "category_count": len(rows),\n'
