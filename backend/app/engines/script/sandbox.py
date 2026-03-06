@@ -8,8 +8,10 @@ and context objects (db, http, cache, env, log, req, tx, ds).
 Blocked: open, exec, eval, __import__, compile, os, subprocess, etc.
 """
 
+import hashlib
 import json
 from datetime import date, datetime, time, timedelta
+from functools import lru_cache
 from typing import Any
 
 from RestrictedPython import compile_restricted
@@ -49,16 +51,25 @@ def _make_extra_globals() -> dict[str, Any]:
     }
 
 
+@lru_cache(maxsize=512)
+def _compile_cached(script_hash: str, script: str, filename: str) -> Any:
+    """Cached compilation keyed by content hash. The hash arg ensures
+    cache correctness; the actual script is compiled."""
+    code = compile_restricted(script, filename, "exec")
+    if code is None:
+        raise SyntaxError("RestrictedPython: compile failed")
+    return code
+
+
 def compile_script(script: str, filename: str = "<script>") -> Any:
     """
     Compile script with RestrictedPython. Raises SyntaxError or other on failure.
 
     Returns a code object suitable for exec(bytecode, globals, locals).
+    Uses an LRU cache keyed by script content hash to avoid repeated compilation.
     """
-    code = compile_restricted(script, filename, "exec")
-    if code is None:
-        raise SyntaxError("RestrictedPython: compile failed")
-    return code
+    script_hash = hashlib.sha256(script.encode()).hexdigest()
+    return _compile_cached(script_hash, script, filename)
 
 
 def build_restricted_globals(context_dict: dict[str, Any]) -> dict[str, Any]:
