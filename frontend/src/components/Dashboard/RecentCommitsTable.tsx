@@ -109,7 +109,7 @@ export function RecentCommitsTable(props: {
                       >
                         {c.full_path ? (
                           <span className="font-mono text-sm">
-                            {c.full_path}
+                            /api{c.full_path}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">
