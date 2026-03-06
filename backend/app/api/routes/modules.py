@@ -43,7 +43,6 @@ def _to_public(m: ApiModule) -> ApiModulePublic:
         id=m.id,
         name=m.name,
         description=m.description,
-        path_prefix=m.path_prefix,
         sort_order=m.sort_order,
         is_active=m.is_active,
         created_at=m.created_at,

@@ -394,13 +394,8 @@ def _to_version_commit_public(
 
     if api and module:
         http_method = api.http_method.value if api.http_method else None
-        # Build full path: /{module_path_prefix}/{api_path} (gateway pattern, not full URL)
-        module_prefix = (module.path_prefix or "/").strip("/")
         api_path = api.path.strip("/")
-        if module_prefix:
-            full_path = f"/{module_prefix}/{api_path}"
-        else:
-            full_path = f"/{api_path}"
+        full_path = f"/{api_path}"
 
     committed_by_email = user.email if user else None
     committed_by_username = user.username if user else None

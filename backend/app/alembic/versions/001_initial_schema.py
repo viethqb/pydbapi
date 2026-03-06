@@ -45,9 +45,6 @@ def upgrade():
         sa.Column(
             "description", sqlmodel.sql.sqltypes.AutoString(length=512), nullable=True
         ),
-        sa.Column(
-            "path_prefix", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False
-        ),
         sa.Column("sort_order", sa.Integer(), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),

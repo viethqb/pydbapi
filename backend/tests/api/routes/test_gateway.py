@@ -313,7 +313,7 @@ def _test_gateway_proxy_200_impl(client: TestClient, db: Session) -> None:
     db.flush()
 
     # Module /public (for permissions); api.path="gw-proxy-ping" -> URL: /api/gw-proxy-ping
-    mod = create_random_module(db, path_prefix="/public", is_active=True)
+    mod = create_random_module(db, is_active=True)
     ds = create_random_datasource(db)
     api = create_random_assignment(
         db,
@@ -364,7 +364,7 @@ def test_gateway_proxy_401_without_auth(client: TestClient, db: Session) -> None
 
     app.dependency_overrides[get_db] = _ov
     try:
-        mod = create_random_module(db, path_prefix="/a", is_active=True)
+        mod = create_random_module(db, is_active=True)
         ds = create_random_datasource(db)
         create_random_assignment(
             db,
@@ -433,7 +433,7 @@ def test_gateway_proxy_404_path(client: TestClient, db: Session) -> None:
         )
         db.add(c)
         db.commit()
-        create_random_module(db, path_prefix="/m", is_active=True)
+        create_random_module(db, is_active=True)
         db.commit()
 
         tr = client.post(

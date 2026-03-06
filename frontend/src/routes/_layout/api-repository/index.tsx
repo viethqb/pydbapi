@@ -24,7 +24,6 @@ import { ModulesService } from "@/services/modules"
 
 type ApiRepositoryTableData = ApiAssignmentPublic & {
   module_name?: string
-  module_path_prefix?: string
 }
 
 const repositoryColumns: ColumnDef<ApiRepositoryTableData>[] = [
@@ -141,18 +140,11 @@ function ApiRepository() {
   const moduleMap = new Map(
     Array.isArray(modulesData) ? modulesData.map((m) => [m.id, m.name]) : [],
   )
-  const modulePathPrefixMap = new Map(
-    Array.isArray(modulesData)
-      ? modulesData.map((m) => [m.id, m.path_prefix])
-      : [],
-  )
-
   const tableData: ApiRepositoryTableData[] = (
     Array.isArray(data?.data) ? data.data : []
   ).map((api) => ({
     ...api,
     module_name: moduleMap.get(api.module_id),
-    module_path_prefix: modulePathPrefixMap.get(api.module_id),
   }))
 
   const page = filters.page ?? 1

@@ -166,7 +166,6 @@ class ApiModuleCreate(SQLModel):
 
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=512)
-    path_prefix: str = Field(default="/", max_length=255)
     sort_order: int = Field(default=0)
     is_active: bool = Field(default=True)
 
@@ -177,7 +176,6 @@ class ApiModuleUpdate(SQLModel):
     id: uuid.UUID
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
-    path_prefix: str | None = Field(default=None, max_length=255)
     sort_order: int | None = None
     is_active: bool | None = None
 
@@ -188,7 +186,6 @@ class ApiModulePublic(SQLModel):
     id: uuid.UUID
     name: str
     description: str | None
-    path_prefix: str
     sort_order: int
     is_active: bool
     created_at: datetime

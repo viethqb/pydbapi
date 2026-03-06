@@ -190,8 +190,7 @@ function AccessLogsPage() {
     const q = moduleSearch.trim().toLowerCase()
     if (!q) return true
     return (
-      m.name.toLowerCase().includes(q) ||
-      (m.path_prefix || "").toLowerCase().includes(q)
+      m.name.toLowerCase().includes(q)
     )
   })
   const apisFiltered = (apiList?.data ?? []).filter((a) => {
@@ -416,7 +415,7 @@ function AccessLogsPage() {
                       <SelectItem value="__all__">All modules</SelectItem>
                       {modulesFiltered.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
-                          {m.name} ({m.path_prefix})
+                          {m.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

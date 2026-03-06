@@ -2,7 +2,7 @@
 Gateway resolver (Phase 4, Task 4.1).
 
 URL pattern: /api/{path} — module is only for grouping/permissions, not in URL.
-Resolves incoming path directly against api.path (module.path_prefix is ignored).
+Resolves incoming path directly against api.path.
 
 Uses an in-process route table cache to avoid N+1 DB queries and repeated
 regex compilation on every request.  Call ``invalidate_route_cache()`` when
@@ -215,65 +215,3 @@ def resolve_gateway_api(
     return None
 
 
-# ---------------------------------------------------------------------------
-# Legacy helpers (kept for backward compat / tests)
-# ---------------------------------------------------------------------------
-
-
-def _slug(s: str) -> str:
-    return re.sub(r"[^a-z0-9\-]", "-", (s or "").lower()).strip("-") or "default"
-
-
-def _module_gateway_key(m: ApiModule) -> str:
-    raw = (m.path_prefix or "/").strip("/")
-    return raw if raw else _slug(m.name)
-
-
-def resolve_module(segment: str, session: Session) -> ApiModule | None:
-    if not segment or not isinstance(segment, str):
-        return None
-    segment = segment.strip()
-    if not segment:
-        return None
-    stmt = (
-        select(ApiModule)
-        .where(ApiModule.is_active.is_(True))
-        .order_by(ApiModule.sort_order.asc(), ApiModule.id.asc())
-    )
-    for m in session.exec(stmt).all():
-        if _module_gateway_key(m) == segment:
-            return m
-    return None
-
-
-def resolve_api_assignment(
-    module_id: UUID,
-    path: str,
-    method: str,
-    session: Session,
-) -> tuple[ApiAssignment, dict[str, str]] | None:
-    if not path or not isinstance(path, str):
-        return None
-    path = path.strip().strip("/")
-    try:
-        method_enum = HttpMethodEnum((method or "GET").upper())
-    except ValueError:
-        return None
-    stmt = (
-        select(ApiAssignment)
-        .where(
-            ApiAssignment.module_id == module_id,
-            ApiAssignment.is_published.is_(True),
-            ApiAssignment.http_method == method_enum,
-        )
-        .order_by(ApiAssignment.sort_order.asc(), ApiAssignment.id.asc())
-    )
-    for api in session.exec(stmt).all():
-        try:
-            rx = path_to_regex(api.path)
-            m = rx.match(path)
-            if m:
-                return (api, m.groupdict())
-        except re.error:
-            continue
-    return None

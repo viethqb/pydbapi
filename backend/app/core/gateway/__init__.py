@@ -18,9 +18,7 @@ from app.core.gateway.request_response import (
 from app.core.gateway.resolver import (
     invalidate_route_cache,
     path_to_regex,
-    resolve_api_assignment,
     resolve_gateway_api,
-    resolve_module,
 )
 from app.core.gateway.runner import run as run_api
 
@@ -39,9 +37,7 @@ __all__ = [
     "parse_params",
     "path_to_regex",
     "release_concurrent_slot",
-    "resolve_api_assignment",
     "resolve_gateway_api",
-    "resolve_module",
     "run_api",
     "verify_gateway_client",
 ]

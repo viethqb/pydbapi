@@ -39,15 +39,6 @@ export const moduleColumns: ColumnDef<ModuleTableData>[] = [
     },
   },
   {
-    accessorKey: "path_prefix",
-    header: "Path Prefix",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.path_prefix}
-      </span>
-    ),
-  },
-  {
     accessorKey: "is_active",
     header: "Status",
     cell: ({ row }) => {

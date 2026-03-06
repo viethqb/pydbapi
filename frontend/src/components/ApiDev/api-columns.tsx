@@ -16,7 +16,6 @@ import type { ApiAssignmentPublic } from "@/services/api-assignments"
 
 export type ApiTableData = ApiAssignmentPublic & {
   module_name?: string
-  module_path_prefix?: string
   datasource_name?: string
   onDelete?: (id: string) => void
   onPublish?: (id: string) => void

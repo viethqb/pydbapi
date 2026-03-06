@@ -303,7 +303,6 @@ erDiagram
     ApiModule {
         uuid id PK
         string name
-        string path_prefix
         bool is_active
         int sort_order
     }

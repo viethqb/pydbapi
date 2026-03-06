@@ -125,7 +125,6 @@ class ApiModule(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(max_length=255, index=True)
     description: str | None = Field(default=None, max_length=512)
-    path_prefix: str = Field(max_length=255, default="/")
     sort_order: int = Field(default=0)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_utc_now)

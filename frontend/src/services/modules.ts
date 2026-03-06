@@ -5,7 +5,6 @@ export type ApiModulePublic = {
   id: string
   name: string
   description: string | null
-  path_prefix: string
   sort_order: number
   is_active: boolean
   created_at: string
@@ -27,7 +26,6 @@ export type ApiModuleListOut = {
 export type ApiModuleCreate = {
   name: string
   description?: string | null
-  path_prefix?: string
   sort_order?: number
   is_active?: boolean
 }
@@ -36,7 +34,6 @@ export type ApiModuleUpdate = {
   id: string
   name?: string | null
   description?: string | null
-  path_prefix?: string | null
   sort_order?: number | null
   is_active?: boolean | null
 }

@@ -207,12 +207,6 @@ function ModuleDetail() {
           <div className="flex items-center gap-12 flex-wrap">
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                Path Prefix
-              </p>
-              <p className="font-mono text-sm">{module.path_prefix}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
                 Status
               </p>
               <Badge variant={module.is_active ? "default" : "outline"}>

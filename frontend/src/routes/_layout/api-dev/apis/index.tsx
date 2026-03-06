@@ -88,11 +88,6 @@ function ApisList() {
   const moduleMap = new Map(
     Array.isArray(modulesData) ? modulesData.map((m) => [m.id, m.name]) : [],
   )
-  const modulePathPrefixMap = new Map(
-    Array.isArray(modulesData)
-      ? modulesData.map((m) => [m.id, m.path_prefix])
-      : [],
-  )
   const datasourceMap = new Map(
     Array.isArray(datasourcesData?.data)
       ? datasourcesData.data.map((ds) => [ds.id, ds.name])
@@ -145,7 +140,6 @@ function ApisList() {
   ).map((api) => ({
     ...api,
     module_name: moduleMap.get(api.module_id),
-    module_path_prefix: modulePathPrefixMap.get(api.module_id),
     datasource_name: api.datasource_id
       ? datasourceMap.get(api.datasource_id)
       : undefined,

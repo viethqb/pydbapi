@@ -11,7 +11,6 @@ def create_random_module(
     *,
     name: str | None = None,
     description: str | None = None,
-    path_prefix: str = "/",
     sort_order: int = 0,
     is_active: bool = True,
 ) -> ApiModule:
@@ -19,7 +18,6 @@ def create_random_module(
     m = ApiModule(
         name=name or f"mod-{random_lower_string()}",
         description=description,
-        path_prefix=path_prefix,
         sort_order=sort_order,
         is_active=is_active,
     )

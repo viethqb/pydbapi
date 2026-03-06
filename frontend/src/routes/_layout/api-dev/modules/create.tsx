@@ -15,7 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -37,7 +36,6 @@ import { type ApiModuleCreate, ModulesService } from "@/services/modules"
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().max(512).optional().nullable(),
-  path_prefix: z.string().max(255).default("/"),
   is_active: z.boolean().default(true),
 })
 
@@ -64,7 +62,6 @@ function ModuleCreate() {
     defaultValues: {
       name: "",
       description: null,
-      path_prefix: "/",
       is_active: true,
     },
   })
@@ -84,7 +81,6 @@ function ModuleCreate() {
     createMutation.mutate({
       name: values.name,
       description: values.description || null,
-      path_prefix: values.path_prefix,
       is_active: values.is_active,
     })
   }
@@ -117,26 +113,6 @@ function ModuleCreate() {
                             <FormControl>
                               <Input placeholder="My Module" {...field} />
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableHead className="w-[180px]">Path Prefix</TableHead>
-                    <TableCell>
-                      <FormField
-                        control={form.control}
-                        name="path_prefix"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input placeholder="/api/v1" {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              URL prefix for all APIs in this module
-                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

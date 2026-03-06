@@ -56,19 +56,6 @@ class ResourceNamesOut(BaseModel):
     clients: list[ResourceName]
 
 
-def _full_path(path_prefix: str, path: str) -> str:
-    """Build full path from module prefix and assignment path."""
-    prefix = (path_prefix or "/").strip().rstrip("/")
-    part = (path or "").strip().lstrip("/")
-    if not prefix and not part:
-        return "/"
-    if not prefix:
-        return f"/{part}"
-    if not part:
-        return f"/{prefix}"
-    return f"/{prefix}/{part}"
-
-
 @router.get(
     "/resource-names",
     response_model=ResourceNamesOut,
@@ -87,17 +74,13 @@ def get_resource_names(
     macro_rows = session.exec(select(ApiMacroDef.id, ApiMacroDef.name)).all()
     client_rows = session.exec(select(AppClient.id, AppClient.name)).all()
 
-    api_rows = session.exec(
-        select(ApiAssignment, ApiModule).join(
-            ApiModule, ApiAssignment.module_id == ApiModule.id
-        )
-    ).all()
+    api_rows = session.exec(select(ApiAssignment)).all()
     api_assignments = [
         ResourceName(
             id=a.id,
-            name=f"{a.http_method.value} {_full_path(m.path_prefix, a.path)}",
+            name=f"{a.http_method.value} /{(a.path or '').strip('/')}",
         )
-        for a, m in api_rows
+        for a in api_rows
     ]
 
     return ResourceNamesOut(

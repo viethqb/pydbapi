@@ -195,10 +195,8 @@ def _resolve_display_names(
     if api_assignment_id:
         api = main_session.get(ApiAssignment, api_assignment_id)
         if api and api.module:
-            prefix = (api.module.path_prefix or "/").strip("/")
             p = (api.path or "").strip("/")
-            full_path = f"/{prefix}/{p}".replace("//", "/").strip("/") or "/"
-            api_display = f"{getattr(api, 'http_method', None) or 'GET'} /{full_path}"
+            api_display = f"{getattr(api, 'http_method', None) or 'GET'} /{p}"
         elif api:
             api_display = (
                 getattr(api, "name", None)

@@ -110,7 +110,6 @@ def test_create_module(
     payload = {
         "name": "new-module",
         "description": "A module",
-        "path_prefix": "/api",
         "sort_order": 1,
         "is_active": True,
     }
@@ -122,7 +121,6 @@ def test_create_module(
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == payload["name"]
-    assert data["path_prefix"] == payload["path_prefix"]
     assert "id" in data
 
 

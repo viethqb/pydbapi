@@ -52,7 +52,6 @@ type ApiWithMeta = ApiAssignmentPublic & {
 }
 
 function buildApiPath(
-  _module: { path_prefix: string; name: string } | null,
   api: { path: string },
 ): string {
   const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
@@ -120,7 +119,7 @@ function ClientDetailPage() {
         return {
           ...api,
           moduleName: mod?.name ?? "-",
-          fullPath: buildApiPath(mod, api),
+          fullPath: buildApiPath(api),
         }
       })
     },

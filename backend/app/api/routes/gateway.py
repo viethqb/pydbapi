@@ -2,7 +2,7 @@
 Gateway (Phase 4, Task 4.1): dynamic /api/{path:path}.
 
 Module is only for grouping/permissions — it does NOT appear in the URL.
-URL pattern: /api/{path} where path = module.path_prefix + api.path.
+URL pattern: /api/{path} where path matches api.path directly.
 
 Flow: pre-read body (async) → worker thread → firewall → resolve → auth →
 concurrent → rate limit → config → merge_params → runner → return.
