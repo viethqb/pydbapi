@@ -759,6 +759,84 @@ def _api_defs(
             None,
             None,
         ),
+        # 8. Create Order (param validation)
+        (
+            "Create Order (validated)",
+            f"{prefix}/orders/validated",
+            _POST,
+            _SQL,
+            (
+                "INSERT INTO orders (customer_id, status, total)\n"
+                "VALUES ({{ customer_id | sql_int }}, {{ status | sql_int }}, {{ total | sql_float }})"
+            )
+            + ("\nRETURNING id, customer_id, status, total;" if not is_sr else ";"),
+            [
+                _p("customer_id", "body", "integer", required=True, default=1, description="Customer ID"),
+                _p("status", "body", "integer", required=True, default=1, description="Order status (1=pending, 2=processing, 3=completed)"),
+                _p("total", "body", "number", required=True, default=29.99, description="Order total (must be > 0 and <= 99999)"),
+            ],
+            _PUBLIC,
+            # param_validates
+            [
+                {
+                    "name": "status",
+                    "validation_script": (
+                        "def validate(value, params=None):\n"
+                        "    return value in (1, 2, 3)"
+                    ),
+                    "message_when_fail": "status must be 1 (pending), 2 (processing), or 3 (completed)",
+                },
+                {
+                    "name": "total",
+                    "validation_script": (
+                        "def validate(value, params=None):\n"
+                        "    return value is not None and float(value) > 0 and float(value) <= 99999"
+                    ),
+                    "message_when_fail": "total must be a positive number up to 99999",
+                },
+            ],
+            None,
+        ),
+        # 8.2 Products Summary (result transform)
+        (
+            "Products Summary",
+            f"{prefix}/products/summary",
+            _GET,
+            _SQL,
+            (
+                "SELECT category, COUNT(*) AS count, "
+                + ("ROUND(AVG(price), 2)" if is_sr else "ROUND(AVG(price)::numeric, 2)")
+                + " AS avg_price, "
+                + ("ROUND(SUM(price), 2)" if is_sr else "ROUND(SUM(price)::numeric, 2)")
+                + " AS total_value\n"
+                "FROM products\n"
+                "{% where %}\n"
+                "  {% if active is defined and active is not none %}AND active = {{ active | sql_bool }}{% endif %}\n"
+                "{% endwhere %}\n"
+                "GROUP BY category\n"
+                "ORDER BY total_value DESC;"
+            ),
+            [
+                _p("active", "query", "boolean", default=True, description="Filter by active status"),
+            ],
+            _PUBLIC,
+            None,
+            # result_transform
+            (
+                "def transform(result, params=None):\n"
+                '    rows = result.get("data", result) if isinstance(result, dict) else result\n'
+                "    if isinstance(rows, list) and len(rows) > 0 and isinstance(rows[0], list):\n"
+                "        rows = rows[0]\n"
+                "    grand_total = sum(float(r.get('total_value', 0)) for r in rows)\n"
+                "    total_products = sum(int(r.get('count', 0)) for r in rows)\n"
+                "    return {\n"
+                '        "categories": rows,\n'
+                '        "grand_total": grand_total,\n'
+                '        "total_products": total_products,\n'
+                '        "category_count": len(rows),\n'
+                "    }"
+            ),
+        ),
         # 9. Private Orders
         (
             "Private Orders",
