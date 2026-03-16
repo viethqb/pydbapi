@@ -331,8 +331,12 @@ def test_normalize_api_result_script_mode_wrap() -> None:
 
 
 def test_normalize_api_result_script_mode_preserves_extra_keys() -> None:
-    """SCRIPT mode: extra keys (total, limit, offset) are preserved in envelope."""
-    result = {"data": [{"id": 1}], "total": 42, "limit": 20, "offset": 0}
+    """SCRIPT mode: extra keys (total, limit, offset) are preserved in envelope.
+
+    ApiExecutor wraps script return in {"data": <script_return>}, so the input
+    is {"data": {"data": [...], "total": 42, ...}}.
+    """
+    result = {"data": {"data": [{"id": 1}], "total": 42, "limit": 20, "offset": 0}}
     out = normalize_api_result(result, "SCRIPT")
     assert out == {
         "success": True,
