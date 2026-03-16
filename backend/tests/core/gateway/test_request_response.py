@@ -330,6 +330,20 @@ def test_normalize_api_result_script_mode_wrap() -> None:
     assert out == {"success": True, "message": None, "data": [1, 2, 3]}
 
 
+def test_normalize_api_result_script_mode_preserves_extra_keys() -> None:
+    """SCRIPT mode: extra keys (total, limit, offset) are preserved in envelope."""
+    result = {"data": [{"id": 1}], "total": 42, "limit": 20, "offset": 0}
+    out = normalize_api_result(result, "SCRIPT")
+    assert out == {
+        "success": True,
+        "message": None,
+        "data": [{"id": 1}],
+        "total": 42,
+        "limit": 20,
+        "offset": 0,
+    }
+
+
 def test_normalize_api_result_already_envelope() -> None:
     """Result transform returned envelope directly (SCRIPT path)."""
     result = {"success": False, "message": "error", "data": []}

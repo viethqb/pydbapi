@@ -260,11 +260,15 @@ def normalize_api_result(
                 out = dict(inner)
                 out["data"] = data
                 return _cap_rows(out)
-            # Script returned something else -> wrap
+            # Script returned something else -> wrap, preserving extra keys
             data = result["data"]
             if not isinstance(data, list):
                 data = [data] if data is not None else []
-            return _cap_rows({"success": True, "message": None, "data": data})
+            out = {"success": True, "message": None, "data": data}
+            for k, v in result.items():
+                if k not in ("data", "success", "message"):
+                    out[k] = v
+            return _cap_rows(out)
     # Result transform or raw (result already has success, message, data)
     if (
         isinstance(result, dict)
