@@ -148,6 +148,16 @@ CREATE TABLE IF NOT EXISTS sample_users (
     email VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE
 );
+
+CREATE TABLE IF NOT EXISTS contacts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    age INTEGER,
+    city VARCHAR(255),
+    email VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT NOW()
+);
 """
 
 _PG_SEED = """\
@@ -205,6 +215,17 @@ INSERT INTO sample_users (username, email, is_active) VALUES
   ('bob',     'bob@example.com',     TRUE),
   ('charlie', 'charlie@example.com', FALSE),
   ('diana',   'diana@example.com',   TRUE)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO contacts (name, age, city, email, status, created_at) VALUES
+  ('John',    30, 'New York',     'john@example.com',    'active',   '2025-01-15'),
+  ('Jane',    28, 'Los Angeles',  'jane@example.com',    'active',   '2025-02-20'),
+  ('Bob',     35, 'New York',     'bob@example.com',     'inactive', '2025-03-10'),
+  ('Alice',   22, 'Chicago',      'alice@example.com',   'active',   '2025-04-05'),
+  ('Charlie', 40, 'New York',     'charlie@example.com', 'active',   '2025-05-12'),
+  ('Diana',   26, 'Los Angeles',  'diana@example.com',   'active',   '2025-06-18'),
+  ('Eve',     31, 'Chicago',      'eve@example.com',     'inactive', '2025-07-22'),
+  ('Frank',   45, 'Boston',       'frank@example.com',   'active',   '2025-08-30')
 ON CONFLICT DO NOTHING;
 """
 
@@ -854,6 +875,137 @@ def _api_defs(
             None,
             None,
         ),
+        # 10. Search Contacts (nested filter / sort / pagination)
+        (
+            "Search Contacts",
+            f"{prefix}/contacts/search",
+            _POST,
+            _SCRIPT,
+            (
+                "ALLOWED_FIELDS = {'name', 'age', 'city', 'email', 'status', 'created_at'}\n"
+                "OPERATORS = {\n"
+                "    'eq': '=', 'neq': '!=',\n"
+                "    'gt': '>', 'gte': '>=',\n"
+                "    'lt': '<', 'lte': '<=',\n"
+                "    'like': 'LIKE',\n"
+                "    'in': 'IN',\n"
+                "    'is_null': 'IS NULL', 'is_not_null': 'IS NOT NULL',\n"
+                "}\n"
+                + (
+                    ""
+                    if is_sr
+                    else "OPERATORS['ilike'] = 'ILIKE'\n"
+                )
+                + "\n"
+                "def execute(params=None):\n"
+                "    if not params:\n"
+                "        params = {}\n"
+                "    values = []\n"
+                "\n"
+                "    def build_condition(node):\n"
+                "        if 'field' in node:\n"
+                "            field = node['field']\n"
+                "            operator = node.get('operator', 'eq')\n"
+                "            value = node.get('value')\n"
+                "            if field not in ALLOWED_FIELDS:\n"
+                "                return 'TRUE'\n"
+                + (
+                    # StarRocks: ilike → LOWER(field) LIKE LOWER(%s)
+                    "            if operator == 'ilike':\n"
+                    "                values.append(value)\n"
+                    "                return 'LOWER(' + field + ') LIKE LOWER(%s)'\n"
+                    if is_sr
+                    else ""
+                )
+                + "            op = OPERATORS.get(operator)\n"
+                "            if not op:\n"
+                "                return 'TRUE'\n"
+                "            if operator in ('is_null', 'is_not_null'):\n"
+                "                return field + ' ' + op\n"
+                "            if operator == 'in':\n"
+                "                if not isinstance(value, list) or len(value) == 0:\n"
+                "                    return 'FALSE'\n"
+                "                placeholders = ', '.join(['%s'] * len(value))\n"
+                "                for v in value:\n"
+                "                    values.append(v)\n"
+                "                return field + ' IN (' + placeholders + ')'\n"
+                "            values.append(value)\n"
+                "            return field + ' ' + op + ' %s'\n"
+                "        logic = node.get('logic', 'and').upper()\n"
+                "        if logic not in ('AND', 'OR'):\n"
+                "            logic = 'AND'\n"
+                "        conditions = node.get('conditions', [])\n"
+                "        if not conditions:\n"
+                "            return 'TRUE'\n"
+                "        parts = []\n"
+                "        for cond in conditions:\n"
+                "            parts.append(build_condition(cond))\n"
+                "        return '(' + (' ' + logic + ' ').join(parts) + ')'\n"
+                "\n"
+                "    filter_obj = params.get('filter')\n"
+                "    where_clause = ''\n"
+                "    if filter_obj:\n"
+                "        where_clause = 'WHERE ' + build_condition(filter_obj)\n"
+                "\n"
+                "    sort_obj = params.get('sort')\n"
+                "    order_clause = ''\n"
+                "    if sort_obj:\n"
+                "        sort_field = sort_obj.get('field', 'id')\n"
+                "        sort_order = sort_obj.get('order', 'asc').upper()\n"
+                "        if sort_field in ALLOWED_FIELDS and sort_order in ('ASC', 'DESC'):\n"
+                "            order_clause = 'ORDER BY ' + sort_field + ' ' + sort_order\n"
+                "\n"
+                "    limit = params.get('limit', 20)\n"
+                "    if limit > 100:\n"
+                "        limit = 100\n"
+                "    offset = params.get('offset', 0)\n"
+                "\n"
+                "    sql = 'SELECT * FROM contacts ' + where_clause + ' ' + order_clause + ' LIMIT %s OFFSET %s'\n"
+                "    values.append(limit)\n"
+                "    values.append(offset)\n"
+                "\n"
+                "    count_sql = 'SELECT COUNT(*) AS total FROM contacts ' + where_clause\n"
+                "    count_values = list(values[:-2])\n"
+                "\n"
+                "    rows = db.query(sql, values)\n"
+                "    count_result = db.query(count_sql, count_values)\n"
+                "    total = count_result[0]['total'] if count_result else 0\n"
+                "\n"
+                "    return {\n"
+                "        'data': rows,\n"
+                "        'total': total,\n"
+                "        'limit': limit,\n"
+                "        'offset': offset,\n"
+                "    }"
+            ),
+            [
+                _p("filter", "body", "object", description="Nested filter with logic (and/or) and conditions"),
+                _p("sort", "body", "object", description="Sort object with field and order (asc/desc)"),
+                _p("offset", "body", "integer", default=0, description="Number of rows to skip"),
+                _p("limit", "body", "integer", default=20, description="Max rows to return (max 100)"),
+            ],
+            _PUBLIC,
+            # param_validates
+            [
+                {
+                    "name": "limit",
+                    "validation_script": (
+                        "def validate(value, params=None):\n"
+                        "    return 1 <= value <= 100"
+                    ),
+                    "message_when_fail": "limit must be between 1 and 100",
+                },
+                {
+                    "name": "offset",
+                    "validation_script": (
+                        "def validate(value, params=None):\n"
+                        "    return value >= 0"
+                    ),
+                    "message_when_fail": "offset must be >= 0",
+                },
+            ],
+            None,
+        ),
     ]
 
     # 7.4 Transfer (transactions) — only for PostgreSQL (not StarRocks)
@@ -1279,6 +1431,19 @@ CREATE TABLE IF NOT EXISTS sample_users (
 DUPLICATE KEY(id)
 DISTRIBUTED BY HASH(id) BUCKETS 1
 PROPERTIES("replication_num"="1");
+
+CREATE TABLE IF NOT EXISTS contacts (
+    id INT,
+    name VARCHAR(255),
+    age INT,
+    city VARCHAR(255),
+    email VARCHAR(255),
+    status VARCHAR(50),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=OLAP
+DUPLICATE KEY(id)
+DISTRIBUTED BY HASH(id) BUCKETS 1
+PROPERTIES("replication_num"="1");
 """
 
 _SR_SEED_STATEMENTS = [
@@ -1303,6 +1468,14 @@ _SR_SEED_STATEMENTS = [
     "INSERT INTO example_db.sample_users (id, username, email, is_active) SELECT 1,'alice','alice@example.com',TRUE WHERE NOT EXISTS (SELECT 1 FROM example_db.sample_users WHERE id=1)",
     "INSERT INTO example_db.sample_users (id, username, email, is_active) SELECT 2,'bob','bob@example.com',TRUE WHERE NOT EXISTS (SELECT 1 FROM example_db.sample_users WHERE id=2)",
     "INSERT INTO example_db.sample_users (id, username, email, is_active) SELECT 3,'charlie','charlie@example.com',FALSE WHERE NOT EXISTS (SELECT 1 FROM example_db.sample_users WHERE id=3)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 1,'John',30,'New York','john@example.com','active' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=1)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 2,'Jane',28,'Los Angeles','jane@example.com','active' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=2)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 3,'Bob',35,'New York','bob@example.com','inactive' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=3)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 4,'Alice',22,'Chicago','alice@example.com','active' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=4)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 5,'Charlie',40,'New York','charlie@example.com','active' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=5)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 6,'Diana',26,'Los Angeles','diana@example.com','active' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=6)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 7,'Eve',31,'Chicago','eve@example.com','inactive' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=7)",
+    "INSERT INTO example_db.contacts (id, name, age, city, email, status) SELECT 8,'Frank',45,'Boston','frank@example.com','active' WHERE NOT EXISTS (SELECT 1 FROM example_db.contacts WHERE id=8)",
 ]
 
 

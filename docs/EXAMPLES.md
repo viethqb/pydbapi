@@ -17,6 +17,7 @@ Cookbook-style recipes for building APIs with pyDBAPI. Each example shows the SQ
 7. [Script Engine Examples](#7-script-engine-examples)
 8. [Result Transforms](#8-result-transforms)
 9. [Private API with Client Auth](#9-private-api-with-client-auth)
+10. [Nested Filter / Sort / Pagination (Script)](#10-nested-filter--sort--pagination-script)
 
 ---
 
@@ -861,6 +862,207 @@ curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
 ```
 
 Without a valid token, the gateway returns `401 Unauthorized`. Without access to the specific API, it returns `403 Forbidden`.
+
+---
+
+## 10. Nested Filter / Sort / Pagination (Script)
+
+A flexible search endpoint that accepts recursive nested filters with `and`/`or` logic, dynamic sorting, and pagination — all via a JSON POST body.
+
+**Path:** `contacts/search` | **Method:** POST | **Engine:** Script
+
+**Parameters:**
+
+| Name   | Location | Type    | Required | Default | Description                                |
+|--------|----------|---------|----------|---------|--------------------------------------------|
+| filter | body     | object  | no       |         | Nested filter with logic (and/or) and conditions |
+| sort   | body     | object  | no       |         | Sort object with field and order (asc/desc)       |
+| offset | body     | integer | no       | 0       | Number of rows to skip                            |
+| limit  | body     | integer | no       | 20      | Max rows to return (max 100)                      |
+
+**Parameter validation:**
+
+| Name   | Rule               | Error message                  |
+|--------|--------------------|--------------------------------|
+| limit  | `1 <= value <= 100`| "limit must be between 1 and 100" |
+| offset | `value >= 0`       | "offset must be >= 0"          |
+
+### Filter structure
+
+The `filter` field supports two node types that can be nested arbitrarily:
+
+**Leaf condition** — compares a single field:
+
+```json
+{ "field": "name", "operator": "eq", "value": "John" }
+```
+
+**Group node** — combines conditions with `and` / `or` logic:
+
+```json
+{
+  "logic": "or",
+  "conditions": [
+    { "field": "age", "operator": "gt", "value": 25 },
+    { "field": "city", "operator": "eq", "value": "New York" }
+  ]
+}
+```
+
+**Supported operators:**
+
+| Operator     | SQL              | Value required |
+|-------------|------------------|----------------|
+| `eq`        | `=`              | yes            |
+| `neq`       | `!=`             | yes            |
+| `gt`        | `>`              | yes            |
+| `gte`       | `>=`             | yes            |
+| `lt`        | `<`              | yes            |
+| `lte`       | `<=`             | yes            |
+| `like`      | `LIKE`           | yes            |
+| `ilike`     | `ILIKE`          | yes            |
+| `in`        | `IN (...)`       | yes (array)    |
+| `is_null`   | `IS NULL`        | no             |
+| `is_not_null`| `IS NOT NULL`   | no             |
+
+### Request example
+
+```bash
+curl -X POST http://localhost/api/contacts/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filter": {
+      "logic": "and",
+      "conditions": [
+        { "field": "name", "operator": "eq", "value": "John" },
+        {
+          "logic": "or",
+          "conditions": [
+            { "field": "age", "operator": "gt", "value": 25 },
+            { "field": "city", "operator": "eq", "value": "New York" }
+          ]
+        }
+      ]
+    },
+    "sort": { "field": "created_at", "order": "desc" },
+    "offset": 0,
+    "limit": 20
+  }'
+```
+
+**Generated SQL (parameterized):**
+
+```sql
+SELECT * FROM contacts
+WHERE (name = %s AND (age > %s OR city = %s))
+ORDER BY created_at DESC
+LIMIT %s OFFSET %s
+-- values: ['John', 25, 'New York', 20, 0]
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    { "id": 1, "name": "John", "age": 30, "city": "New York", "email": "john@example.com", "status": "active", "created_at": "2025-01-15T00:00:00" }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+### Script content
+
+```python
+ALLOWED_FIELDS = {'name', 'age', 'city', 'email', 'status', 'created_at'}
+OPERATORS = {
+    'eq': '=', 'neq': '!=',
+    'gt': '>', 'gte': '>=',
+    'lt': '<', 'lte': '<=',
+    'like': 'LIKE', 'ilike': 'ILIKE',
+    'in': 'IN',
+    'is_null': 'IS NULL', 'is_not_null': 'IS NOT NULL',
+}
+
+def execute(params=None):
+    if not params:
+        params = {}
+    values = []
+
+    def build_condition(node):
+        if 'field' in node:
+            field = node['field']
+            operator = node.get('operator', 'eq')
+            value = node.get('value')
+            if field not in ALLOWED_FIELDS:
+                return 'TRUE'
+            op = OPERATORS.get(operator)
+            if not op:
+                return 'TRUE'
+            if operator in ('is_null', 'is_not_null'):
+                return field + ' ' + op
+            if operator == 'in':
+                if not isinstance(value, list) or len(value) == 0:
+                    return 'FALSE'
+                placeholders = ', '.join(['%s'] * len(value))
+                for v in value:
+                    values.append(v)
+                return field + ' IN (' + placeholders + ')'
+            values.append(value)
+            return field + ' ' + op + ' %s'
+        logic = node.get('logic', 'and').upper()
+        if logic not in ('AND', 'OR'):
+            logic = 'AND'
+        conditions = node.get('conditions', [])
+        if not conditions:
+            return 'TRUE'
+        parts = []
+        for cond in conditions:
+            parts.append(build_condition(cond))
+        return '(' + (' ' + logic + ' ').join(parts) + ')'
+
+    filter_obj = params.get('filter')
+    where_clause = ''
+    if filter_obj:
+        where_clause = 'WHERE ' + build_condition(filter_obj)
+
+    sort_obj = params.get('sort')
+    order_clause = ''
+    if sort_obj:
+        sort_field = sort_obj.get('field', 'id')
+        sort_order = sort_obj.get('order', 'asc').upper()
+        if sort_field in ALLOWED_FIELDS and sort_order in ('ASC', 'DESC'):
+            order_clause = 'ORDER BY ' + sort_field + ' ' + sort_order
+
+    limit = params.get('limit', 20)
+    if limit > 100:
+        limit = 100
+    offset = params.get('offset', 0)
+
+    sql = 'SELECT * FROM contacts ' + where_clause + ' ' + order_clause + ' LIMIT %s OFFSET %s'
+    values.append(limit)
+    values.append(offset)
+
+    count_sql = 'SELECT COUNT(*) AS total FROM contacts ' + where_clause
+    count_values = list(values[:-2])
+
+    rows = db.query(sql, values)
+    count_result = db.query(count_sql, count_values)
+    total = count_result[0]['total'] if count_result else 0
+
+    return {
+        'data': rows,
+        'total': total,
+        'limit': limit,
+        'offset': offset,
+    }
+```
+
+> **Security:** Field names are validated against `ALLOWED_FIELDS` — unknown fields resolve to `TRUE` (ignored). All values use `%s` parameterized queries to prevent SQL injection. Sort field and order are also whitelisted.
 
 ---
 
