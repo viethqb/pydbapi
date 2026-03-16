@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,12 +13,21 @@ from app.api.main import api_router
 from app.api.routes.gateway import router as gateway_router
 from app.api.routes.token import router as token_router
 from app.core.config import settings
-from app.core.logging_config import configure_logging
+from app.core.logging_config import configure_logging, reconfigure_logging
 from app.core.middleware import RequestContextMiddleware
 
 configure_logging()
 
 _logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Uvicorn resets the root logger — restore our structlog handler.
+    reconfigure_logging()
+    _logger.info("Application startup complete")
+    yield
+    _logger.info("Application shutdown")
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -31,6 +42,7 @@ app = FastAPI(
     docs_url="/api/docs" if _enable_docs else None,
     redoc_url="/api/redoc" if _enable_docs else None,
     generate_unique_id_function=custom_generate_unique_id,
+    lifespan=lifespan,
 )
 
 
