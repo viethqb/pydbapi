@@ -52,6 +52,7 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
   user: "User",
   overview: "Overview",
   access_log: "Access log",
+  report_module: "Report module",
 }
 
 function RoleDetailViewPage() {
@@ -197,6 +198,7 @@ function RoleDetailViewPage() {
       "user",
       "overview",
       "access_log",
+      "report_module",
     ]
 
     return order

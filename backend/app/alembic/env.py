@@ -20,6 +20,7 @@ fileConfig(config.config_file_name)
 
 import app.models_dbapi  # noqa: F401 - register DBAPI tables in SQLModel.metadata
 import app.models_permission  # noqa: F401 - register permission tables
+import app.models_report  # noqa: F401 - register report engine tables
 from app.models import SQLModel  # noqa
 from app.core.config import settings  # noqa
 

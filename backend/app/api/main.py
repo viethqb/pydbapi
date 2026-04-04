@@ -12,6 +12,8 @@ from app.api.routes import (
     overview,
     permissions,
     private,
+    report_executions,
+    report_modules,
     roles,
     users,
     utils,
@@ -32,6 +34,8 @@ api_router.include_router(overview.router)
 api_router.include_router(access_logs.router)
 api_router.include_router(roles.router)
 api_router.include_router(permissions.router)
+api_router.include_router(report_modules.router)
+api_router.include_router(report_executions.router)
 
 
 if settings.ENVIRONMENT == "local":

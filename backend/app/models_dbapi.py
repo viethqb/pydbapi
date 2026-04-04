@@ -36,6 +36,7 @@ class ProductTypeEnum(str, Enum):
     POSTGRES = "postgres"
     MYSQL = "mysql"
     TRINO = "trino"
+    MINIO = "minio"
 
 
 class HttpMethodEnum(str, Enum):

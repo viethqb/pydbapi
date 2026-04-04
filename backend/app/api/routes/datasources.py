@@ -69,18 +69,33 @@ DATASOURCE_TYPES: list[str] = [
     ProductTypeEnum.POSTGRES.value,
     ProductTypeEnum.MYSQL.value,
     ProductTypeEnum.TRINO.value,
+    ProductTypeEnum.MINIO.value,
 ]
 
 # Default driver label per type (Phase 2: single option; Phase 3: no driver layer, can remove later)
 DRIVERS_BY_TYPE: dict[str, list[str]] = {
     ProductTypeEnum.POSTGRES.value: ["default"],
     ProductTypeEnum.MYSQL.value: ["default"],
+    ProductTypeEnum.MINIO.value: ["default"],
     ProductTypeEnum.TRINO.value: ["default"],
 }
 
 
 def _test_connection(datasource: DataSource | DataSourcePreTestIn) -> tuple[bool, str]:
-    """Connect, run SELECT 1, close. Uses core.pool (Phase 3)."""
+    """Connect, run SELECT 1 (or list_buckets for MinIO), close."""
+    from app.models_dbapi import ProductTypeEnum
+
+    # MinIO: test via minio client instead of DB connect
+    if datasource.product_type == ProductTypeEnum.MINIO:
+        try:
+            from app.engines.excel.minio_client import get_minio_client
+
+            client = get_minio_client(datasource)
+            client.list_buckets()
+            return True, "MinIO connection successful"
+        except Exception as e:
+            return False, str(e)
+
     conn = None
     try:
         conn = connect(datasource)

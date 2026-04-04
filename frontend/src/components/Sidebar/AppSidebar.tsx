@@ -40,14 +40,18 @@ export function AppSidebar() {
 
   const items: Item[] = (() => {
     const canAccessLogs = hasPermission("access_log", "read")
+    const canReportModule = hasPermission("report_module", "read")
     const filter = (
       item: (typeof baseNavItems)[number] | typeof securityNavItem,
     ) =>
       toMainItem(item, (sub) => {
         if (sub.path === "/system/access-logs") return canAccessLogs
+        if (sub.path?.startsWith("/report-management/")) return canReportModule
         return true
       })
-    const base = baseNavItems.map(filter)
+    const base = baseNavItems
+      .map(filter)
+      .filter((item) => item.submenu !== undefined || item.path !== undefined)
     if (currentUser?.is_superuser) {
       return [
         ...base,

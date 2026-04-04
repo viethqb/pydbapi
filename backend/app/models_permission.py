@@ -35,6 +35,7 @@ class ResourceTypeEnum(str, Enum):
     USER = "user"
     OVERVIEW = "overview"
     ACCESS_LOG = "access_log"
+    REPORT_MODULE = "report_module"
 
 
 class PermissionActionEnum(str, Enum):

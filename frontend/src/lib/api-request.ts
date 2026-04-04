@@ -11,7 +11,7 @@ import { OpenAPI } from "@/client"
 
 export const API_BASE = OpenAPI.BASE ?? import.meta.env.VITE_API_URL ?? ""
 
-async function getAuthToken(): Promise<string | null> {
+export async function getAuthToken(): Promise<string | null> {
   if (!OpenAPI.TOKEN) return null
   if (typeof OpenAPI.TOKEN === "function") {
     return OpenAPI.TOKEN({} as { url: string })

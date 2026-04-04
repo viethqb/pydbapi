@@ -33,6 +33,7 @@ from app.models_dbapi import (
     AppClientApiLink,
     AppClientGroupLink,
 )
+from app.models_report import ReportModuleClientLink
 from app.models_permission import PermissionActionEnum, ResourceTypeEnum
 from app.schemas_dbapi import (
     AppClientCreate,
@@ -158,6 +159,8 @@ def create_client(
         session.add(AppClientGroupLink(app_client_id=c.id, api_group_id=gid))
     for aid in body.api_assignment_ids or []:
         session.add(AppClientApiLink(app_client_id=c.id, api_assignment_id=aid))
+    for rmid in body.report_module_ids or []:
+        session.add(ReportModuleClientLink(app_client_id=c.id, report_module_id=rmid))
     session.commit()
     session.refresh(c)
     return _to_public(c)
@@ -184,7 +187,7 @@ def update_client(
     if not c:
         raise HTTPException(status_code=404, detail="AppClient not found")
     update = body.model_dump(
-        exclude_unset=True, exclude={"id", "group_ids", "api_assignment_ids"}
+        exclude_unset=True, exclude={"id", "group_ids", "api_assignment_ids", "report_module_ids"}
     )
     c.sqlmodel_update(update)
     session.add(c)
@@ -200,6 +203,12 @@ def update_client(
         )
         for aid in body.api_assignment_ids or []:
             session.add(AppClientApiLink(app_client_id=c.id, api_assignment_id=aid))
+    if "report_module_ids" in body.model_fields_set:
+        session.exec(
+            delete(ReportModuleClientLink).where(ReportModuleClientLink.app_client_id == c.id)
+        )
+        for rmid in body.report_module_ids or []:
+            session.add(ReportModuleClientLink(app_client_id=c.id, report_module_id=rmid))
     session.commit()
     session.refresh(c)
     return _to_public(c)
@@ -272,11 +281,16 @@ def _to_detail(c: AppClient, session: SessionDep) -> AppClientDetail:
     group_ids = [link.api_group_id for link in (c.group_links or [])]
     api_assignment_ids = [link.api_assignment_id for link in (c.api_links or [])]
 
+    # Report module IDs
+    report_module_links = session.exec(
+        select(ReportModuleClientLink).where(ReportModuleClientLink.app_client_id == c.id)
+    ).all()
+    report_module_ids = [link.report_module_id for link in report_module_links]
+
     # Compute effective APIs (same logic as gateway auth)
     effective_ids: set[uuid.UUID] = set(api_assignment_ids)
 
     if group_ids:
-        # APIs reachable via the client's groups
         group_api_stmt = select(ApiAssignmentGroupLink.api_assignment_id).where(
             ApiAssignmentGroupLink.api_group_id.in_(group_ids)
         )
@@ -296,6 +310,7 @@ def _to_detail(c: AppClient, session: SessionDep) -> AppClientDetail:
         updated_at=c.updated_at,
         group_ids=group_ids,
         api_assignment_ids=api_assignment_ids,
+        report_module_ids=report_module_ids,
         effective_api_assignment_ids=sorted(effective_ids),
     )
 

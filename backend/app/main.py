@@ -25,8 +25,23 @@ _logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Uvicorn resets the root logger — restore our structlog handler.
     reconfigure_logging()
+
+    # Report engine: recover orphaned executions + start worker
+    try:
+        from app.engines.excel.job_queue import recover_orphaned_executions, start_worker, stop_worker
+        recover_orphaned_executions()
+        start_worker()
+    except Exception as e:
+        _logger.warning("Report worker startup failed: %s", e)
+
     _logger.info("Application startup complete")
     yield
+
+    try:
+        from app.engines.excel.job_queue import stop_worker
+        stop_worker()
+    except Exception:
+        pass
     _logger.info("Application shutdown")
 
 

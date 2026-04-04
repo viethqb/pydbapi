@@ -23,6 +23,7 @@ import { Route as LayoutApiRepositoryIndexRouteImport } from './routes/_layout/a
 import { Route as LayoutApiDevIndexRouteImport } from './routes/_layout/api-dev/index'
 import { Route as LayoutAdminIndexRouteImport } from './routes/_layout/admin/index'
 import { Route as LayoutSystemAccessLogsRouteImport } from './routes/_layout/system/access-logs'
+import { Route as LayoutReportManagementInfoRouteImport } from './routes/_layout/report-management/info'
 import { Route as LayoutConnectionCreateRouteImport } from './routes/_layout/connection/create'
 import { Route as LayoutConnectionIdRouteImport } from './routes/_layout/connection/$id'
 import { Route as LayoutApiRepositoryIdRouteImport } from './routes/_layout/api-repository/$id'
@@ -32,6 +33,9 @@ import { Route as LayoutAboutPythonScriptRouteImport } from './routes/_layout/ab
 import { Route as LayoutSystemGroupsIndexRouteImport } from './routes/_layout/system/groups/index'
 import { Route as LayoutSystemClientsIndexRouteImport } from './routes/_layout/system/clients/index'
 import { Route as LayoutSecurityRolesIndexRouteImport } from './routes/_layout/security/roles/index'
+import { Route as LayoutReportManagementTemplatesIndexRouteImport } from './routes/_layout/report-management/templates/index'
+import { Route as LayoutReportManagementModulesIndexRouteImport } from './routes/_layout/report-management/modules/index'
+import { Route as LayoutReportManagementExecutionsIndexRouteImport } from './routes/_layout/report-management/executions/index'
 import { Route as LayoutApiDevModulesIndexRouteImport } from './routes/_layout/api-dev/modules/index'
 import { Route as LayoutApiDevMacroDefsIndexRouteImport } from './routes/_layout/api-dev/macro-defs/index'
 import { Route as LayoutApiDevApisIndexRouteImport } from './routes/_layout/api-dev/apis/index'
@@ -40,6 +44,10 @@ import { Route as LayoutSystemGroupsIdRouteImport } from './routes/_layout/syste
 import { Route as LayoutSystemClientsCreateRouteImport } from './routes/_layout/system/clients/create'
 import { Route as LayoutSystemClientsIdRouteImport } from './routes/_layout/system/clients/$id'
 import { Route as LayoutSecurityRolesIdRouteImport } from './routes/_layout/security/roles/$id'
+import { Route as LayoutReportManagementTemplatesCreateRouteImport } from './routes/_layout/report-management/templates/create'
+import { Route as LayoutReportManagementTemplatesTidRouteImport } from './routes/_layout/report-management/templates/$tid'
+import { Route as LayoutReportManagementModulesCreateRouteImport } from './routes/_layout/report-management/modules/create'
+import { Route as LayoutReportManagementModulesIdRouteImport } from './routes/_layout/report-management/modules/$id'
 import { Route as LayoutConnectionIdEditRouteImport } from './routes/_layout/connection/$id/edit'
 import { Route as LayoutApiDevModulesCreateRouteImport } from './routes/_layout/api-dev/modules/create'
 import { Route as LayoutApiDevModulesIdRouteImport } from './routes/_layout/api-dev/modules/$id'
@@ -125,6 +133,12 @@ const LayoutSystemAccessLogsRoute = LayoutSystemAccessLogsRouteImport.update({
   path: '/system/access-logs',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutReportManagementInfoRoute =
+  LayoutReportManagementInfoRouteImport.update({
+    id: '/report-management/info',
+    path: '/report-management/info',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutConnectionCreateRoute = LayoutConnectionCreateRouteImport.update({
   id: '/connection/create',
   path: '/connection/create',
@@ -172,6 +186,24 @@ const LayoutSecurityRolesIndexRoute =
     path: '/security/roles/',
     getParentRoute: () => LayoutRoute,
   } as any)
+const LayoutReportManagementTemplatesIndexRoute =
+  LayoutReportManagementTemplatesIndexRouteImport.update({
+    id: '/report-management/templates/',
+    path: '/report-management/templates/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutReportManagementModulesIndexRoute =
+  LayoutReportManagementModulesIndexRouteImport.update({
+    id: '/report-management/modules/',
+    path: '/report-management/modules/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutReportManagementExecutionsIndexRoute =
+  LayoutReportManagementExecutionsIndexRouteImport.update({
+    id: '/report-management/executions/',
+    path: '/report-management/executions/',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutApiDevModulesIndexRoute =
   LayoutApiDevModulesIndexRouteImport.update({
     id: '/api-dev/modules/',
@@ -215,6 +247,30 @@ const LayoutSecurityRolesIdRoute = LayoutSecurityRolesIdRouteImport.update({
   path: '/security/roles/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutReportManagementTemplatesCreateRoute =
+  LayoutReportManagementTemplatesCreateRouteImport.update({
+    id: '/report-management/templates/create',
+    path: '/report-management/templates/create',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutReportManagementTemplatesTidRoute =
+  LayoutReportManagementTemplatesTidRouteImport.update({
+    id: '/report-management/templates/$tid',
+    path: '/report-management/templates/$tid',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutReportManagementModulesCreateRoute =
+  LayoutReportManagementModulesCreateRouteImport.update({
+    id: '/report-management/modules/create',
+    path: '/report-management/modules/create',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutReportManagementModulesIdRoute =
+  LayoutReportManagementModulesIdRouteImport.update({
+    id: '/report-management/modules/$id',
+    path: '/report-management/modules/$id',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutConnectionIdEditRoute = LayoutConnectionIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -306,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
+  '/report-management/info': typeof LayoutReportManagementInfoRoute
   '/system/access-logs': typeof LayoutSystemAccessLogsRoute
   '/admin/': typeof LayoutAdminIndexRoute
   '/api-dev/': typeof LayoutApiDevIndexRoute
@@ -320,6 +377,10 @@ export interface FileRoutesByFullPath {
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/report-management/modules/$id': typeof LayoutReportManagementModulesIdRoute
+  '/report-management/modules/create': typeof LayoutReportManagementModulesCreateRoute
+  '/report-management/templates/$tid': typeof LayoutReportManagementTemplatesTidRoute
+  '/report-management/templates/create': typeof LayoutReportManagementTemplatesCreateRoute
   '/security/roles/$id': typeof LayoutSecurityRolesIdRoute
   '/system/clients/$id': typeof LayoutSystemClientsIdRouteWithChildren
   '/system/clients/create': typeof LayoutSystemClientsCreateRoute
@@ -328,6 +389,9 @@ export interface FileRoutesByFullPath {
   '/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
+  '/report-management/executions/': typeof LayoutReportManagementExecutionsIndexRoute
+  '/report-management/modules/': typeof LayoutReportManagementModulesIndexRoute
+  '/report-management/templates/': typeof LayoutReportManagementTemplatesIndexRoute
   '/security/roles/': typeof LayoutSecurityRolesIndexRoute
   '/system/clients/': typeof LayoutSystemClientsIndexRoute
   '/system/groups/': typeof LayoutSystemGroupsIndexRoute
@@ -351,6 +415,7 @@ export interface FileRoutesByTo {
   '/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/connection/create': typeof LayoutConnectionCreateRoute
+  '/report-management/info': typeof LayoutReportManagementInfoRoute
   '/system/access-logs': typeof LayoutSystemAccessLogsRoute
   '/admin': typeof LayoutAdminIndexRoute
   '/api-dev': typeof LayoutApiDevIndexRoute
@@ -365,6 +430,10 @@ export interface FileRoutesByTo {
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/report-management/modules/$id': typeof LayoutReportManagementModulesIdRoute
+  '/report-management/modules/create': typeof LayoutReportManagementModulesCreateRoute
+  '/report-management/templates/$tid': typeof LayoutReportManagementTemplatesTidRoute
+  '/report-management/templates/create': typeof LayoutReportManagementTemplatesCreateRoute
   '/security/roles/$id': typeof LayoutSecurityRolesIdRoute
   '/system/clients/$id': typeof LayoutSystemClientsIdRouteWithChildren
   '/system/clients/create': typeof LayoutSystemClientsCreateRoute
@@ -373,6 +442,9 @@ export interface FileRoutesByTo {
   '/api-dev/apis': typeof LayoutApiDevApisIndexRoute
   '/api-dev/macro-defs': typeof LayoutApiDevMacroDefsIndexRoute
   '/api-dev/modules': typeof LayoutApiDevModulesIndexRoute
+  '/report-management/executions': typeof LayoutReportManagementExecutionsIndexRoute
+  '/report-management/modules': typeof LayoutReportManagementModulesIndexRoute
+  '/report-management/templates': typeof LayoutReportManagementTemplatesIndexRoute
   '/security/roles': typeof LayoutSecurityRolesIndexRoute
   '/system/clients': typeof LayoutSystemClientsIndexRoute
   '/system/groups': typeof LayoutSystemGroupsIndexRoute
@@ -399,6 +471,7 @@ export interface FileRoutesById {
   '/_layout/api-repository/$id': typeof LayoutApiRepositoryIdRoute
   '/_layout/connection/$id': typeof LayoutConnectionIdRouteWithChildren
   '/_layout/connection/create': typeof LayoutConnectionCreateRoute
+  '/_layout/report-management/info': typeof LayoutReportManagementInfoRoute
   '/_layout/system/access-logs': typeof LayoutSystemAccessLogsRoute
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/api-dev/': typeof LayoutApiDevIndexRoute
@@ -413,6 +486,10 @@ export interface FileRoutesById {
   '/_layout/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/_layout/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/_layout/connection/$id/edit': typeof LayoutConnectionIdEditRoute
+  '/_layout/report-management/modules/$id': typeof LayoutReportManagementModulesIdRoute
+  '/_layout/report-management/modules/create': typeof LayoutReportManagementModulesCreateRoute
+  '/_layout/report-management/templates/$tid': typeof LayoutReportManagementTemplatesTidRoute
+  '/_layout/report-management/templates/create': typeof LayoutReportManagementTemplatesCreateRoute
   '/_layout/security/roles/$id': typeof LayoutSecurityRolesIdRoute
   '/_layout/system/clients/$id': typeof LayoutSystemClientsIdRouteWithChildren
   '/_layout/system/clients/create': typeof LayoutSystemClientsCreateRoute
@@ -421,6 +498,9 @@ export interface FileRoutesById {
   '/_layout/api-dev/apis/': typeof LayoutApiDevApisIndexRoute
   '/_layout/api-dev/macro-defs/': typeof LayoutApiDevMacroDefsIndexRoute
   '/_layout/api-dev/modules/': typeof LayoutApiDevModulesIndexRoute
+  '/_layout/report-management/executions/': typeof LayoutReportManagementExecutionsIndexRoute
+  '/_layout/report-management/modules/': typeof LayoutReportManagementModulesIndexRoute
+  '/_layout/report-management/templates/': typeof LayoutReportManagementTemplatesIndexRoute
   '/_layout/security/roles/': typeof LayoutSecurityRolesIndexRoute
   '/_layout/system/clients/': typeof LayoutSystemClientsIndexRoute
   '/_layout/system/groups/': typeof LayoutSystemGroupsIndexRoute
@@ -447,6 +527,7 @@ export interface FileRouteTypes {
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
+    | '/report-management/info'
     | '/system/access-logs'
     | '/admin/'
     | '/api-dev/'
@@ -461,6 +542,10 @@ export interface FileRouteTypes {
     | '/api-dev/modules/$id'
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
+    | '/report-management/modules/$id'
+    | '/report-management/modules/create'
+    | '/report-management/templates/$tid'
+    | '/report-management/templates/create'
     | '/security/roles/$id'
     | '/system/clients/$id'
     | '/system/clients/create'
@@ -469,6 +554,9 @@ export interface FileRouteTypes {
     | '/api-dev/apis/'
     | '/api-dev/macro-defs/'
     | '/api-dev/modules/'
+    | '/report-management/executions/'
+    | '/report-management/modules/'
+    | '/report-management/templates/'
     | '/security/roles/'
     | '/system/clients/'
     | '/system/groups/'
@@ -492,6 +580,7 @@ export interface FileRouteTypes {
     | '/api-repository/$id'
     | '/connection/$id'
     | '/connection/create'
+    | '/report-management/info'
     | '/system/access-logs'
     | '/admin'
     | '/api-dev'
@@ -506,6 +595,10 @@ export interface FileRouteTypes {
     | '/api-dev/modules/$id'
     | '/api-dev/modules/create'
     | '/connection/$id/edit'
+    | '/report-management/modules/$id'
+    | '/report-management/modules/create'
+    | '/report-management/templates/$tid'
+    | '/report-management/templates/create'
     | '/security/roles/$id'
     | '/system/clients/$id'
     | '/system/clients/create'
@@ -514,6 +607,9 @@ export interface FileRouteTypes {
     | '/api-dev/apis'
     | '/api-dev/macro-defs'
     | '/api-dev/modules'
+    | '/report-management/executions'
+    | '/report-management/modules'
+    | '/report-management/templates'
     | '/security/roles'
     | '/system/clients'
     | '/system/groups'
@@ -539,6 +635,7 @@ export interface FileRouteTypes {
     | '/_layout/api-repository/$id'
     | '/_layout/connection/$id'
     | '/_layout/connection/create'
+    | '/_layout/report-management/info'
     | '/_layout/system/access-logs'
     | '/_layout/admin/'
     | '/_layout/api-dev/'
@@ -553,6 +650,10 @@ export interface FileRouteTypes {
     | '/_layout/api-dev/modules/$id'
     | '/_layout/api-dev/modules/create'
     | '/_layout/connection/$id/edit'
+    | '/_layout/report-management/modules/$id'
+    | '/_layout/report-management/modules/create'
+    | '/_layout/report-management/templates/$tid'
+    | '/_layout/report-management/templates/create'
     | '/_layout/security/roles/$id'
     | '/_layout/system/clients/$id'
     | '/_layout/system/clients/create'
@@ -561,6 +662,9 @@ export interface FileRouteTypes {
     | '/_layout/api-dev/apis/'
     | '/_layout/api-dev/macro-defs/'
     | '/_layout/api-dev/modules/'
+    | '/_layout/report-management/executions/'
+    | '/_layout/report-management/modules/'
+    | '/_layout/report-management/templates/'
     | '/_layout/security/roles/'
     | '/_layout/system/clients/'
     | '/_layout/system/groups/'
@@ -679,6 +783,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSystemAccessLogsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/report-management/info': {
+      id: '/_layout/report-management/info'
+      path: '/report-management/info'
+      fullPath: '/report-management/info'
+      preLoaderRoute: typeof LayoutReportManagementInfoRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/connection/create': {
       id: '/_layout/connection/create'
       path: '/connection/create'
@@ -742,6 +853,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSecurityRolesIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/report-management/templates/': {
+      id: '/_layout/report-management/templates/'
+      path: '/report-management/templates'
+      fullPath: '/report-management/templates/'
+      preLoaderRoute: typeof LayoutReportManagementTemplatesIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/report-management/modules/': {
+      id: '/_layout/report-management/modules/'
+      path: '/report-management/modules'
+      fullPath: '/report-management/modules/'
+      preLoaderRoute: typeof LayoutReportManagementModulesIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/report-management/executions/': {
+      id: '/_layout/report-management/executions/'
+      path: '/report-management/executions'
+      fullPath: '/report-management/executions/'
+      preLoaderRoute: typeof LayoutReportManagementExecutionsIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/api-dev/modules/': {
       id: '/_layout/api-dev/modules/'
       path: '/api-dev/modules'
@@ -796,6 +928,34 @@ declare module '@tanstack/react-router' {
       path: '/security/roles/$id'
       fullPath: '/security/roles/$id'
       preLoaderRoute: typeof LayoutSecurityRolesIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/report-management/templates/create': {
+      id: '/_layout/report-management/templates/create'
+      path: '/report-management/templates/create'
+      fullPath: '/report-management/templates/create'
+      preLoaderRoute: typeof LayoutReportManagementTemplatesCreateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/report-management/templates/$tid': {
+      id: '/_layout/report-management/templates/$tid'
+      path: '/report-management/templates/$tid'
+      fullPath: '/report-management/templates/$tid'
+      preLoaderRoute: typeof LayoutReportManagementTemplatesTidRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/report-management/modules/create': {
+      id: '/_layout/report-management/modules/create'
+      path: '/report-management/modules/create'
+      fullPath: '/report-management/modules/create'
+      preLoaderRoute: typeof LayoutReportManagementModulesCreateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/report-management/modules/$id': {
+      id: '/_layout/report-management/modules/$id'
+      path: '/report-management/modules/$id'
+      fullPath: '/report-management/modules/$id'
+      preLoaderRoute: typeof LayoutReportManagementModulesIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/connection/$id/edit': {
@@ -1014,6 +1174,7 @@ interface LayoutRouteChildren {
   LayoutApiRepositoryIdRoute: typeof LayoutApiRepositoryIdRoute
   LayoutConnectionIdRoute: typeof LayoutConnectionIdRouteWithChildren
   LayoutConnectionCreateRoute: typeof LayoutConnectionCreateRoute
+  LayoutReportManagementInfoRoute: typeof LayoutReportManagementInfoRoute
   LayoutSystemAccessLogsRoute: typeof LayoutSystemAccessLogsRoute
   LayoutApiDevIndexRoute: typeof LayoutApiDevIndexRoute
   LayoutApiRepositoryIndexRoute: typeof LayoutApiRepositoryIndexRoute
@@ -1024,6 +1185,10 @@ interface LayoutRouteChildren {
   LayoutApiDevMacroDefsCreateRoute: typeof LayoutApiDevMacroDefsCreateRoute
   LayoutApiDevModulesIdRoute: typeof LayoutApiDevModulesIdRouteWithChildren
   LayoutApiDevModulesCreateRoute: typeof LayoutApiDevModulesCreateRoute
+  LayoutReportManagementModulesIdRoute: typeof LayoutReportManagementModulesIdRoute
+  LayoutReportManagementModulesCreateRoute: typeof LayoutReportManagementModulesCreateRoute
+  LayoutReportManagementTemplatesTidRoute: typeof LayoutReportManagementTemplatesTidRoute
+  LayoutReportManagementTemplatesCreateRoute: typeof LayoutReportManagementTemplatesCreateRoute
   LayoutSecurityRolesIdRoute: typeof LayoutSecurityRolesIdRoute
   LayoutSystemClientsIdRoute: typeof LayoutSystemClientsIdRouteWithChildren
   LayoutSystemClientsCreateRoute: typeof LayoutSystemClientsCreateRoute
@@ -1031,6 +1196,9 @@ interface LayoutRouteChildren {
   LayoutApiDevApisIndexRoute: typeof LayoutApiDevApisIndexRoute
   LayoutApiDevMacroDefsIndexRoute: typeof LayoutApiDevMacroDefsIndexRoute
   LayoutApiDevModulesIndexRoute: typeof LayoutApiDevModulesIndexRoute
+  LayoutReportManagementExecutionsIndexRoute: typeof LayoutReportManagementExecutionsIndexRoute
+  LayoutReportManagementModulesIndexRoute: typeof LayoutReportManagementModulesIndexRoute
+  LayoutReportManagementTemplatesIndexRoute: typeof LayoutReportManagementTemplatesIndexRoute
   LayoutSecurityRolesIndexRoute: typeof LayoutSecurityRolesIndexRoute
   LayoutSystemClientsIndexRoute: typeof LayoutSystemClientsIndexRoute
   LayoutSystemGroupsIndexRoute: typeof LayoutSystemGroupsIndexRoute
@@ -1044,6 +1212,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiRepositoryIdRoute: LayoutApiRepositoryIdRoute,
   LayoutConnectionIdRoute: LayoutConnectionIdRouteWithChildren,
   LayoutConnectionCreateRoute: LayoutConnectionCreateRoute,
+  LayoutReportManagementInfoRoute: LayoutReportManagementInfoRoute,
   LayoutSystemAccessLogsRoute: LayoutSystemAccessLogsRoute,
   LayoutApiDevIndexRoute: LayoutApiDevIndexRoute,
   LayoutApiRepositoryIndexRoute: LayoutApiRepositoryIndexRoute,
@@ -1054,6 +1223,13 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiDevMacroDefsCreateRoute: LayoutApiDevMacroDefsCreateRoute,
   LayoutApiDevModulesIdRoute: LayoutApiDevModulesIdRouteWithChildren,
   LayoutApiDevModulesCreateRoute: LayoutApiDevModulesCreateRoute,
+  LayoutReportManagementModulesIdRoute: LayoutReportManagementModulesIdRoute,
+  LayoutReportManagementModulesCreateRoute:
+    LayoutReportManagementModulesCreateRoute,
+  LayoutReportManagementTemplatesTidRoute:
+    LayoutReportManagementTemplatesTidRoute,
+  LayoutReportManagementTemplatesCreateRoute:
+    LayoutReportManagementTemplatesCreateRoute,
   LayoutSecurityRolesIdRoute: LayoutSecurityRolesIdRoute,
   LayoutSystemClientsIdRoute: LayoutSystemClientsIdRouteWithChildren,
   LayoutSystemClientsCreateRoute: LayoutSystemClientsCreateRoute,
@@ -1061,6 +1237,12 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiDevApisIndexRoute: LayoutApiDevApisIndexRoute,
   LayoutApiDevMacroDefsIndexRoute: LayoutApiDevMacroDefsIndexRoute,
   LayoutApiDevModulesIndexRoute: LayoutApiDevModulesIndexRoute,
+  LayoutReportManagementExecutionsIndexRoute:
+    LayoutReportManagementExecutionsIndexRoute,
+  LayoutReportManagementModulesIndexRoute:
+    LayoutReportManagementModulesIndexRoute,
+  LayoutReportManagementTemplatesIndexRoute:
+    LayoutReportManagementTemplatesIndexRoute,
   LayoutSecurityRolesIndexRoute: LayoutSecurityRolesIndexRoute,
   LayoutSystemClientsIndexRoute: LayoutSystemClientsIndexRoute,
   LayoutSystemGroupsIndexRoute: LayoutSystemGroupsIndexRoute,

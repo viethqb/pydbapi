@@ -60,6 +60,11 @@ _ENFORCED_PERMISSIONS: list[tuple[ResourceTypeEnum, PermissionActionEnum]] = [
     (ResourceTypeEnum.OVERVIEW,        PermissionActionEnum.READ),
     (ResourceTypeEnum.ACCESS_LOG,      PermissionActionEnum.READ),
     (ResourceTypeEnum.ACCESS_LOG,      PermissionActionEnum.UPDATE),
+    (ResourceTypeEnum.REPORT_MODULE,   PermissionActionEnum.READ),
+    (ResourceTypeEnum.REPORT_MODULE,   PermissionActionEnum.CREATE),
+    (ResourceTypeEnum.REPORT_MODULE,   PermissionActionEnum.UPDATE),
+    (ResourceTypeEnum.REPORT_MODULE,   PermissionActionEnum.DELETE),
+    (ResourceTypeEnum.REPORT_MODULE,   PermissionActionEnum.EXECUTE),
 ]
 # fmt: on
 _ENFORCED_SET = set(_ENFORCED_PERMISSIONS)
@@ -330,6 +335,16 @@ def init() -> None:
                 session.commit()
             except Exception as e:
                 logger.warning("Seed example data failed: %s", e)
+                session.rollback()
+
+        # Seed report examples (requires MinIO to be running)
+        with Session(engine) as session:
+            try:
+                from app.seed_report_examples import seed_report_examples
+
+                seed_report_examples(session)
+            except Exception as e:
+                logger.warning("Seed report examples failed: %s", e)
                 session.rollback()
 
 

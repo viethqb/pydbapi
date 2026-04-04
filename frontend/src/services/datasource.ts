@@ -2,7 +2,7 @@ import type { DataSourcePublic } from "@/components/DataSource/columns"
 import { request } from "@/lib/api-request"
 
 // Types matching backend schemas
-export type ProductTypeEnum = "postgres" | "mysql" | "trino"
+export type ProductTypeEnum = "postgres" | "mysql" | "trino" | "minio"
 
 export type DataSourceListIn = {
   page?: number

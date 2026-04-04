@@ -17,6 +17,7 @@ export type AppClientPublic = {
 export type AppClientDetail = AppClientPublic & {
   group_ids: string[]
   api_assignment_ids: string[]
+  report_module_ids: string[]
   /** Union of direct api_assignment_ids + APIs reachable via assigned groups. Matches gateway auth logic. */
   effective_api_assignment_ids: string[]
 }
@@ -44,6 +45,7 @@ export type AppClientCreate = {
   is_active?: boolean
   group_ids?: string[] | null
   api_assignment_ids?: string[] | null
+  report_module_ids?: string[] | null
 }
 
 export type AppClientUpdate = {
@@ -56,6 +58,7 @@ export type AppClientUpdate = {
   is_active?: boolean | null
   group_ids?: string[] | null
   api_assignment_ids?: string[] | null
+  report_module_ids?: string[] | null
 }
 
 export type AppClientRegenerateSecretOut = {

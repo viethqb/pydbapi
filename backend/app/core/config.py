@@ -163,6 +163,16 @@ class Settings(BaseSettings):
     AUTH_RATE_LIMIT_TOKEN_GENERATE: int = 10  # POST|GET /token/generate
 
     # -------------------------------------------------------------------------
+    # Report engine
+    # -------------------------------------------------------------------------
+    LIBREOFFICE_PATH: str = "/usr/bin/libreoffice"
+    REPORT_RECALC_TIMEOUT: int = 120
+    REPORT_TEMP_DIR: str = "/tmp/reports"
+    REPORT_OUTPUT_URL_EXPIRY: int = 3600
+    REPORT_MAX_ROWS_PER_SHEET: int = 1_048_576  # Excel xlsx max rows
+    REPORT_SQL_CHUNK_SIZE: int = 50_000  # Rows per SQL query chunk for pagination
+
+    # -------------------------------------------------------------------------
     # Logging
     # -------------------------------------------------------------------------
     LOG_LEVEL: str = "INFO"

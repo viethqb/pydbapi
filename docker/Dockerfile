@@ -54,6 +54,7 @@ RUN apt-get update && \
         nginx \
         supervisor \
         curl \
+        libreoffice-calc \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python venv from backend build

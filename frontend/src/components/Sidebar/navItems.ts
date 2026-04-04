@@ -3,6 +3,7 @@ import {
   BookOpen,
   Code2,
   Database,
+  FileSpreadsheet,
   LayoutDashboard,
   Settings,
   Shield,
@@ -33,6 +34,16 @@ export const baseNavItems: NavItem[] = [
     ],
   },
   { icon: BookOpen, title: "API Repository", path: "/api-repository" },
+  {
+    icon: FileSpreadsheet,
+    title: "Report Management",
+    submenu: [
+      { title: "Modules", path: "/report-management/modules" },
+      { title: "Templates", path: "/report-management/templates" },
+      { title: "Executions", path: "/report-management/executions" },
+      { title: "API Info", path: "/report-management/info" },
+    ],
+  },
   {
     icon: Settings,
     title: "System",

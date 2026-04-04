@@ -664,10 +664,14 @@ class AppClientCreate(SQLModel):
         default=None,
         description="Direct APIs (outside groups) the client can call; stored in app_client_api_link",
     )
+    report_module_ids: list[uuid.UUID] | None = Field(
+        default=None,
+        description="Report modules the client can generate reports for; stored in report_module_client_link",
+    )
 
 
 class AppClientUpdate(SQLModel):
-    """Body for POST /clients/update; id required. client_id and client_secret not updated here. If group_ids or api_assignment_ids is set, replace links."""
+    """Body for POST /clients/update; id required. client_id and client_secret not updated here."""
 
     id: uuid.UUID
     name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -688,6 +692,7 @@ class AppClientUpdate(SQLModel):
     is_active: bool | None = None
     group_ids: list[uuid.UUID] | None = None
     api_assignment_ids: list[uuid.UUID] | None = None
+    report_module_ids: list[uuid.UUID] | None = None
 
 
 class AppClientPublic(SQLModel):
@@ -720,6 +725,7 @@ class AppClientDetail(SQLModel):
     updated_at: datetime
     group_ids: list[uuid.UUID] = Field(default_factory=list)
     api_assignment_ids: list[uuid.UUID] = Field(default_factory=list)
+    report_module_ids: list[uuid.UUID] = Field(default_factory=list)
     effective_api_assignment_ids: list[uuid.UUID] = Field(
         default_factory=list,
         description="Union of direct api_assignment_ids + APIs reachable via assigned groups (ApiAssignmentGroupLink). "

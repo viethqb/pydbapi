@@ -48,7 +48,7 @@ import { type DataSourceCreate, DataSourceService } from "@/services/datasource"
 const formSchema = z
   .object({
     name: z.string().min(1, "Name is required").max(255),
-    product_type: z.enum(["postgres", "mysql", "trino"]),
+    product_type: z.enum(["postgres", "mysql", "trino", "minio"]),
     host: z.string().min(1, "Host is required").max(255),
     port: z.number().int().min(1).max(65535),
     database: z.string().min(1, "Database is required").max(255),
@@ -242,6 +242,7 @@ function ConnectionCreate() {
                                 </SelectItem>
                                 <SelectItem value="mysql">MySQL</SelectItem>
                                 <SelectItem value="trino">Trino</SelectItem>
+                                <SelectItem value="minio">MinIO</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />

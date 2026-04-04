@@ -45,6 +45,7 @@ import type { ApiAssignmentPublic } from "@/services/api-assignments"
 import { ApiAssignmentsService } from "@/services/api-assignments"
 import { type AppClientUpdate, ClientsService } from "@/services/clients"
 import { GroupsService } from "@/services/groups"
+import { ReportModuleService } from "@/services/report"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -67,6 +68,7 @@ const formSchema = z.object({
   is_active: z.boolean().default(true),
   group_ids: z.array(z.string()).default([]),
   api_assignment_ids: z.array(z.string()).default([]),
+  report_module_ids: z.array(z.string()).default([]),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -108,6 +110,11 @@ function EditClientPage() {
       }),
   })
 
+  const { data: reportModulesData } = useQuery({
+    queryKey: ["report-modules-for-client"],
+    queryFn: () => ReportModuleService.list({ page: 1, page_size: 100 }),
+  })
+
   const [groupSearch, setGroupSearch] = useState("")
   const [apiSearch, setApiSearch] = useState("")
 
@@ -146,6 +153,7 @@ function EditClientPage() {
       is_active: true,
       group_ids: [],
       api_assignment_ids: [],
+      report_module_ids: [],
     },
   })
 
@@ -165,6 +173,7 @@ function EditClientPage() {
         is_active: client.is_active,
         group_ids: client.group_ids ?? [],
         api_assignment_ids: client.api_assignment_ids ?? [],
+        report_module_ids: client.report_module_ids ?? [],
       })
     }
   }, [client, form])
@@ -205,6 +214,8 @@ function EditClientPage() {
       group_ids: values.group_ids.length > 0 ? values.group_ids : [],
       api_assignment_ids:
         values.api_assignment_ids.length > 0 ? values.api_assignment_ids : [],
+      report_module_ids:
+        values.report_module_ids.length > 0 ? values.report_module_ids : [],
     })
   }
 
@@ -732,6 +743,125 @@ function EditClientPage() {
                             </FormControl>
                             <FormDescription>
                               APIs accessible directly (outside groups)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Report Modules</TableHead>
+                    <TableCell>
+                      <FormField
+                        control={form.control}
+                        name="report_module_ids"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <div className="flex min-h-[40px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-pointer">
+                                    <div className="flex flex-wrap gap-1 flex-1">
+                                      {field.value && field.value.length > 0 ? (
+                                        field.value.map((modId) => {
+                                          const mod = reportModulesData?.data?.find(
+                                            (m) => m.id === modId,
+                                          )
+                                          if (!mod) return null
+                                          return (
+                                            <Badge
+                                              key={mod.id}
+                                              variant="secondary"
+                                              className="mr-1"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                field.onChange(
+                                                  field.value.filter(
+                                                    (id) => id !== modId,
+                                                  ),
+                                                )
+                                              }}
+                                            >
+                                              {mod.name}
+                                              <button
+                                                type="button"
+                                                className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                                onMouseDown={(e) => {
+                                                  e.preventDefault()
+                                                  e.stopPropagation()
+                                                }}
+                                                onClick={(e) => {
+                                                  e.preventDefault()
+                                                  e.stopPropagation()
+                                                  field.onChange(
+                                                    field.value.filter(
+                                                      (id) => id !== modId,
+                                                    ),
+                                                  )
+                                                }}
+                                              >
+                                                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                              </button>
+                                            </Badge>
+                                          )
+                                        })
+                                      ) : (
+                                        <span className="text-muted-foreground">
+                                          Select report modules...
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  className="w-[400px] max-h-[300px] overflow-y-auto"
+                                  align="start"
+                                >
+                                  {(reportModulesData?.data ?? []).map((mod) => {
+                                    const isSelected = field.value?.includes(mod.id)
+                                    return (
+                                      <DropdownMenuItem
+                                        key={mod.id}
+                                        onSelect={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            field.onChange(
+                                              field.value.filter(
+                                                (id) => id !== mod.id,
+                                              ),
+                                            )
+                                          } else {
+                                            field.onChange([
+                                              ...(field.value || []),
+                                              mod.id,
+                                            ])
+                                          }
+                                        }}
+                                      >
+                                        <Checkbox
+                                          checked={isSelected}
+                                          className="mr-2"
+                                        />
+                                        <span>{mod.name}</span>
+                                        {mod.description && (
+                                          <span className="text-xs text-muted-foreground ml-2">
+                                            — {mod.description}
+                                          </span>
+                                        )}
+                                      </DropdownMenuItem>
+                                    )
+                                  })}
+                                  {(reportModulesData?.data ?? []).length === 0 && (
+                                    <DropdownMenuItem disabled>
+                                      No report modules available
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </FormControl>
+                            <FormDescription>
+                              Report modules this client can generate reports for
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
