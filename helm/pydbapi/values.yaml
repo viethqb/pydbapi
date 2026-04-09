@@ -1,0 +1,177 @@
+# Default values for pydbapi.
+# All env vars map to backend/app/core/config.py Settings class.
+
+replicaCount: 1
+
+image:
+  repository: viet1846/pydbapi
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -- Use a pre-created Secret instead of creating one from values below.
+# When set, all secret values (secretKey, database.password, redis.password,
+# auth.firstSuperuser*, etc.) are ignored — the existing Secret must contain
+# all required keys.
+existingSecret: ""
+
+# ---------------------------------------------------------------------------
+# App core
+# ---------------------------------------------------------------------------
+app:
+  environment: local                          # local | staging | production
+  domain: pydbapi.local
+  frontendHost: "http://pydbapi.local"
+  backendCorsOrigins: "http://pydbapi.local"
+  accessTokenExpireMinutes: "1440"            # 60*24 = 1 day
+  secretKey: ""                               # Required (→ Secret)
+  encryptionKey: ""                           # Optional (→ Secret); falls back to secretKey
+  trustedProxyCount: "0"                      # 0 = ignore X-Forwarded-For
+  seedExampleData: "false"
+
+# ---------------------------------------------------------------------------
+# External PostgreSQL (user must provision)
+# ---------------------------------------------------------------------------
+database:
+  host: ""                    # Required: e.g. "my-postgres.default.svc.cluster.local"
+  port: "5432"
+  user: postgres              # → Secret
+  password: ""                # Required (→ Secret)
+  db: pydbapi_db              # → Secret
+  poolSize: "10"              # connection pool for DataSource runtime
+  connectTimeout: "10"        # seconds
+  # statementTimeout: ""      # seconds; empty = no limit
+
+# ---------------------------------------------------------------------------
+# External Redis (user must provision)
+# ---------------------------------------------------------------------------
+redis:
+  host: ""                    # Required: e.g. "my-redis.default.svc.cluster.local"
+  port: "6379"
+  db: "0"
+  password: ""                # Optional (→ Secret); empty = no auth
+  # url: ""                   # Optional (→ Secret); overrides host/port/db/password
+  ssl: "false"
+  connectTimeout: "2.0"       # TCP connect timeout (seconds)
+  socketTimeout: "2.0"        # per-command socket timeout (seconds)
+  cacheEnabled: "true"
+
+# ---------------------------------------------------------------------------
+# SQL engine
+# ---------------------------------------------------------------------------
+sql:
+  templateMaxSize: "1000000"                  # max template source (bytes)
+  renderedMaxSize: "10000000"                 # max rendered SQL output (bytes)
+
+# ---------------------------------------------------------------------------
+# Script engine (RestrictedPython sandbox)
+# ---------------------------------------------------------------------------
+script:
+  # execTimeout: ""                           # seconds; empty = no limit
+  extraModules: "pandas,numpy"                # comma-separated whitelist
+  httpAllowedHosts: ""                        # comma-separated; empty = block all; "*" = allow all
+
+# ---------------------------------------------------------------------------
+# Gateway
+# ---------------------------------------------------------------------------
+gateway:
+  tokenGetEnabled: "false"                    # GET /token/generate (credentials in URL)
+  jwtExpireSeconds: "3600"
+  maxResponseRows: "10000"                    # 0 = no limit
+  firewallDefaultAllow: "true"
+  accessLogBody: "true"
+  configCacheTtlSeconds: "300"
+  routeCacheTtlSeconds: "60"
+  accessLogPoolSize: "4"
+
+# ---------------------------------------------------------------------------
+# Flow control (rate limiting & concurrency)
+# ---------------------------------------------------------------------------
+flowControl:
+  rateLimitPerMinute: "60"
+  rateLimitEnabled: "true"
+  maxConcurrentPerClient: "10"                # 0 = no limit
+  debug: "0"
+
+# ---------------------------------------------------------------------------
+# Auth & initial superuser
+# ---------------------------------------------------------------------------
+auth:
+  firstSuperuser: ""                          # Required (→ Secret)
+  firstSuperuserPassword: ""                  # Required (→ Secret)
+  firstSuperuserEmail: ""                     # Optional (→ Secret)
+  rateLimitLogin: "5"                         # per IP, per minute
+  rateLimitResetPassword: "5"
+  rateLimitTokenGenerate: "10"
+
+# ---------------------------------------------------------------------------
+# Report engine
+# ---------------------------------------------------------------------------
+report:
+  libreOfficePath: "/usr/bin/libreoffice"
+  recalcTimeout: "120"
+  tempDir: "/tmp/reports"
+  outputUrlExpiry: "3600"
+  maxRowsPerSheet: "1048576"
+  sqlChunkSize: "50000"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging:
+  level: INFO
+  json: "true"
+
+# ---------------------------------------------------------------------------
+# Kubernetes resources
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: pydbapi.local
+  tls: []
+  #  - secretName: pydbapi-tls
+  #    hosts:
+  #      - pydbapi.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+probes:
+  liveness:
+    path: /api/v1/utils/liveness/
+    initialDelaySeconds: 30
+    periodSeconds: 15
+  readiness:
+    path: /api/v1/utils/health-check/
+    initialDelaySeconds: 20
+    periodSeconds: 10
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

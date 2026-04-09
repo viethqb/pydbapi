@@ -1,0 +1,69 @@
+# values-prod.yaml — Production overrides
+# Usage: helm install pydbapi helm/pydbapi/ -f helm/pydbapi/values-prod.yaml
+#
+# IMPORTANT: Override secret values via --set or external secret management.
+# Do NOT commit real credentials in this file.
+
+replicaCount: 2
+
+image:
+  pullPolicy: Always
+
+# existingSecret: pydbapi-prod-secrets
+
+app:
+  environment: production
+  # domain: pydbapi.example.com
+  # frontendHost: "https://pydbapi.example.com"
+  # backendCorsOrigins: "https://pydbapi.example.com"
+  trustedProxyCount: "1"
+  seedExampleData: "false"
+
+# database:
+#   host: prod-postgres.internal
+#   port: "5432"
+
+# redis:
+#   host: prod-redis.internal
+
+gateway:
+  tokenGetEnabled: "false"
+  accessLogBody: "false"
+  configCacheTtlSeconds: "600"
+  routeCacheTtlSeconds: "120"
+
+flowControl:
+  rateLimitPerMinute: "120"
+  debug: "0"
+
+script:
+  httpAllowedHosts: ""
+
+logging:
+  level: WARNING
+  json: "true"
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  host: pydbapi.example.com
+  tls:
+    - secretName: pydbapi-tls
+      hosts:
+        - pydbapi.example.com

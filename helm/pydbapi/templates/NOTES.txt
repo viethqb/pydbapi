@@ -1,0 +1,20 @@
+pyDBAPI has been deployed!
+
+{{- if .Values.ingress.enabled }}
+
+Access the application at:
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}
+
+Make sure to add the following to /etc/hosts if using a local cluster:
+  127.0.0.1 {{ .Values.ingress.host }}
+{{- else }}
+
+Get the application URL by running:
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "{{ include "pydbapi.selectorLabels" . | replace "\n" "," }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl port-forward $POD_NAME 8080:80
+  echo "Visit http://127.0.0.1:8080"
+{{- end }}
+
+Prerequisites:
+  - PostgreSQL must be available at {{ .Values.database.host }}:{{ .Values.database.port }}
+  - Redis must be available at {{ .Values.redis.host }}

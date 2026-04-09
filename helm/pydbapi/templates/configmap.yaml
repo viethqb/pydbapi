@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pydbapi.configMapName" . }}
+  labels:
+    {{- include "pydbapi.labels" . | nindent 4 }}
+data:
+  # App core
+  PROJECT_NAME: "PyDBAPI"
+  ENVIRONMENT: {{ .Values.app.environment | quote }}
+  DOMAIN: {{ .Values.app.domain | quote }}
+  FRONTEND_HOST: {{ .Values.app.frontendHost | quote }}
+  BACKEND_CORS_ORIGINS: {{ .Values.app.backendCorsOrigins | quote }}
+  ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.app.accessTokenExpireMinutes | quote }}
+  TRUSTED_PROXY_COUNT: {{ .Values.app.trustedProxyCount | quote }}
+  SEED_EXAMPLE_DATA: {{ .Values.app.seedExampleData | quote }}
+
+  # Database
+  POSTGRES_SERVER: {{ required "database.host is required" .Values.database.host | quote }}
+  POSTGRES_PORT: {{ .Values.database.port | quote }}
+  EXTERNAL_DB_POOL_SIZE: {{ .Values.database.poolSize | quote }}
+  EXTERNAL_DB_CONNECT_TIMEOUT: {{ .Values.database.connectTimeout | quote }}
+  {{- if .Values.database.statementTimeout }}
+  EXTERNAL_DB_STATEMENT_TIMEOUT: {{ .Values.database.statementTimeout | quote }}
+  {{- end }}
+
+  # Redis
+  REDIS_HOST: {{ required "redis.host is required" .Values.redis.host | quote }}
+  REDIS_PORT: {{ .Values.redis.port | quote }}
+  REDIS_DB: {{ .Values.redis.db | quote }}
+  REDIS_SSL: {{ .Values.redis.ssl | quote }}
+  REDIS_CONNECT_TIMEOUT: {{ .Values.redis.connectTimeout | quote }}
+  REDIS_SOCKET_TIMEOUT: {{ .Values.redis.socketTimeout | quote }}
+  CACHE_ENABLED: {{ .Values.redis.cacheEnabled | quote }}
+
+  # SQL engine
+  SQL_TEMPLATE_MAX_SIZE: {{ .Values.sql.templateMaxSize | quote }}
+  SQL_RENDERED_MAX_SIZE: {{ .Values.sql.renderedMaxSize | quote }}
+
+  # Script engine
+  {{- if .Values.script.execTimeout }}
+  SCRIPT_EXEC_TIMEOUT: {{ .Values.script.execTimeout | quote }}
+  {{- end }}
+  SCRIPT_EXTRA_MODULES: {{ .Values.script.extraModules | quote }}
+  SCRIPT_HTTP_ALLOWED_HOSTS: {{ .Values.script.httpAllowedHosts | quote }}
+
+  # Gateway
+  GATEWAY_TOKEN_GET_ENABLED: {{ .Values.gateway.tokenGetEnabled | quote }}
+  GATEWAY_JWT_EXPIRE_SECONDS: {{ .Values.gateway.jwtExpireSeconds | quote }}
+  GATEWAY_MAX_RESPONSE_ROWS: {{ .Values.gateway.maxResponseRows | quote }}
+  GATEWAY_FIREWALL_DEFAULT_ALLOW: {{ .Values.gateway.firewallDefaultAllow | quote }}
+  GATEWAY_ACCESS_LOG_BODY: {{ .Values.gateway.accessLogBody | quote }}
+  GATEWAY_CONFIG_CACHE_TTL_SECONDS: {{ .Values.gateway.configCacheTtlSeconds | quote }}
+  GATEWAY_ROUTE_CACHE_TTL_SECONDS: {{ .Values.gateway.routeCacheTtlSeconds | quote }}
+  ACCESS_LOG_POOL_SIZE: {{ .Values.gateway.accessLogPoolSize | quote }}
+
+  # Flow control
+  FLOW_CONTROL_RATE_LIMIT_PER_MINUTE: {{ .Values.flowControl.rateLimitPerMinute | quote }}
+  FLOW_CONTROL_RATE_LIMIT_ENABLED: {{ .Values.flowControl.rateLimitEnabled | quote }}
+  FLOW_CONTROL_MAX_CONCURRENT_PER_CLIENT: {{ .Values.flowControl.maxConcurrentPerClient | quote }}
+  CONCURRENT_DEBUG: {{ .Values.flowControl.debug | quote }}
+
+  # Auth rate limiting
+  AUTH_RATE_LIMIT_LOGIN: {{ .Values.auth.rateLimitLogin | quote }}
+  AUTH_RATE_LIMIT_RESET_PASSWORD: {{ .Values.auth.rateLimitResetPassword | quote }}
+  AUTH_RATE_LIMIT_TOKEN_GENERATE: {{ .Values.auth.rateLimitTokenGenerate | quote }}
+
+  # Report engine
+  LIBREOFFICE_PATH: {{ .Values.report.libreOfficePath | quote }}
+  REPORT_RECALC_TIMEOUT: {{ .Values.report.recalcTimeout | quote }}
+  REPORT_TEMP_DIR: {{ .Values.report.tempDir | quote }}
+  REPORT_OUTPUT_URL_EXPIRY: {{ .Values.report.outputUrlExpiry | quote }}
+  REPORT_MAX_ROWS_PER_SHEET: {{ .Values.report.maxRowsPerSheet | quote }}
+  REPORT_SQL_CHUNK_SIZE: {{ .Values.report.sqlChunkSize | quote }}
+
+  # Logging
+  LOG_LEVEL: {{ .Values.logging.level | quote }}
+  LOG_JSON: {{ .Values.logging.json | quote }}

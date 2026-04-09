@@ -1,0 +1,40 @@
+# values-local.yaml — Local/Kind cluster overrides
+# Usage: helm install pydbapi helm/pydbapi/ -f helm/pydbapi/values-local.yaml
+
+image:
+  pullPolicy: Always
+
+app:
+  environment: local
+  domain: pydbapi.local
+  frontendHost: "http://pydbapi.local"
+  backendCorsOrigins: "http://pydbapi.local,http://localhost:5173"
+  secretKey: change-me-secret-key
+  seedExampleData: "false"
+
+database:
+  host: pydbapi-db-postgresql-hl
+  port: "5432"
+  user: postgres
+  password: change-me-postgres-password
+  db: pydbapi_db
+
+redis:
+  host: redis-master
+
+gateway:
+  tokenGetEnabled: "true"
+  accessLogBody: "true"
+
+logging:
+  level: DEBUG
+  json: "true"
+
+auth:
+  firstSuperuser: "admin@example.com"
+  firstSuperuserPassword: change-me-superuser-password
+
+ingress:
+  enabled: true
+  className: nginx
+  host: pydbapi.local

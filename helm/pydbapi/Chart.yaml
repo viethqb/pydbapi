@@ -1,0 +1,8 @@
+apiVersion: v2
+name: pydbapi
+description: A Helm chart for pyDBAPI — database API platform with dynamic gateway
+type: application
+version: 0.1.0
+appVersion: "latest"
+maintainers:
+  - name: pydbapi
