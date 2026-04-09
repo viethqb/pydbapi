@@ -85,6 +85,9 @@ def _test_connection(datasource: DataSource | DataSourcePreTestIn) -> tuple[bool
     """Connect, run SELECT 1 (or list_buckets for MinIO), close."""
     from app.models_dbapi import ProductTypeEnum
 
+    # preTest sends plaintext password; saved DataSource has Fernet-encrypted password.
+    needs_decrypt = not isinstance(datasource, DataSourcePreTestIn)
+
     # MinIO: test via minio client instead of DB connect
     if datasource.product_type == ProductTypeEnum.MINIO:
         try:
@@ -98,7 +101,7 @@ def _test_connection(datasource: DataSource | DataSourcePreTestIn) -> tuple[bool
 
     conn = None
     try:
-        conn = connect(datasource)
+        conn = connect(datasource, decrypt=needs_decrypt)
         health_check(conn, datasource.product_type)
         return True, "Connection successful"
     except Exception as e:

@@ -39,6 +39,7 @@ def connect(
     datasource: Any,
     *,
     product_type: ProductTypeEnum | None = None,
+    decrypt: bool = True,
 ) -> Any:
     """
     Open a connection to an external DB from DataSource or connection dict.
@@ -61,7 +62,9 @@ def connect(
     ]:
         if val is None:
             raise ValueError(f"datasource must provide {name}")
-    password = decrypt_value(raw_password) if raw_password else ""
+    password = (
+        decrypt_value(raw_password) if decrypt and raw_password else (raw_password or "")
+    )
 
     timeout = settings.EXTERNAL_DB_CONNECT_TIMEOUT
 
