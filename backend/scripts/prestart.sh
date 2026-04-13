@@ -15,7 +15,8 @@ echo "======== prestart: waiting for DB ========"
 python app/backend_pre_start.py
 
 # Save the current revision before migrating (useful for rollback)
-PREV_REV=$(alembic current 2>/dev/null | head -1 || echo "none")
+PREV_REV=$(alembic current 2>/dev/null | head -1 || true)
+PREV_REV=${PREV_REV:-none}
 echo "======== prestart: current alembic revision: ${PREV_REV} ========"
 
 echo "======== prestart: running alembic upgrade head ========"

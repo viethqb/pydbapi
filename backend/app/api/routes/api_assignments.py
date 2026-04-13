@@ -39,6 +39,7 @@ from app.models import Message, User
 from app.models_dbapi import (
     ApiAssignment,
     ApiAssignmentGroupLink,
+    AppClientApiLink,
     ApiContext,
     HttpMethodEnum,
     VersionCommit,
@@ -769,10 +770,20 @@ def delete_api_assignment(
     current_user: CurrentUser,  # noqa: ARG001
     id: uuid.UUID,
 ) -> Any:
-    """Delete API assignment (cascades ApiContext, group_links, etc.)."""
+    """Delete API assignment and all related records."""
     a = session.get(ApiAssignment, id)
     if not a:
         raise HTTPException(status_code=404, detail="ApiAssignment not found")
+    # Break circular FK before cascade can conflict
+    if a.published_version_id:
+        a.published_version_id = None
+        session.add(a)
+        session.flush()
+    # Clean up records that ORM won't cascade automatically
+    session.exec(delete(VersionCommit).where(VersionCommit.api_assignment_id == id))
+    session.exec(
+        delete(AppClientApiLink).where(AppClientApiLink.api_assignment_id == id)
+    )
     remove_resource_permissions(session, ResourceTypeEnum.API_ASSIGNMENT, a.id)
     session.delete(a)
     session.commit()
