@@ -5,6 +5,7 @@ import {
   Check,
   Copy,
   Download,
+  Pencil,
   Play,
   Plus,
   Trash2,
@@ -50,6 +51,8 @@ import { API_BASE, getAuthToken } from "@/lib/api-request"
 import { ClientsService } from "@/services/clients"
 import {
   type SheetMappingCreate,
+  type SheetMappingPublic,
+  type SheetMappingUpdate,
   type GenerateReportIn,
   type ReportTemplateDetail,
   ReportModuleService,
@@ -159,6 +162,38 @@ function TemplateDetailPage() {
       queryClient.invalidateQueries({
         queryKey: ["report-template", moduleId, tid],
       })
+    },
+    onError: (error: Error) => showErrorToast(error.message),
+  })
+
+  // --- Edit mapping state ---
+  const [editMapping, setEditMapping] = useState<SheetMappingPublic | null>(null)
+  const [editForm, setEditForm] = useState<SheetMappingUpdate>({ id: "" })
+
+  const openEditMapping = (mapping: SheetMappingPublic) => {
+    setEditMapping(mapping)
+    setEditForm({
+      id: mapping.id,
+      sheet_name: mapping.sheet_name,
+      start_cell: mapping.start_cell,
+      sort_order: mapping.sort_order,
+      write_mode: mapping.write_mode,
+      write_headers: mapping.write_headers,
+      sql_content: mapping.sql_content,
+      description: mapping.description,
+      is_active: mapping.is_active,
+    })
+  }
+
+  const updateMappingMutation = useMutation({
+    mutationFn: () =>
+      ReportModuleService.updateMapping(moduleId!, tid, editForm),
+    onSuccess: () => {
+      showSuccessToast("Mapping updated successfully")
+      queryClient.invalidateQueries({
+        queryKey: ["report-template", moduleId, tid],
+      })
+      setEditMapping(null)
     },
     onError: (error: Error) => showErrorToast(error.message),
   })
@@ -362,16 +397,25 @@ function TemplateDetailPage() {
                           <pre className="font-mono text-xs whitespace-pre-wrap bg-muted/50 rounded p-2 max-h-[120px] overflow-y-auto">{mapping.sql_content}</pre>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              deleteMappingMutation.mutate(mapping.id)
-                            }
-                            disabled={deleteMappingMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditMapping(mapping)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                deleteMappingMutation.mutate(mapping.id)
+                              }
+                              disabled={deleteMappingMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -499,6 +543,126 @@ function TemplateDetailPage() {
                   }
                 >
                   Add Mapping
+                </LoadingButton>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Mapping Dialog */}
+          <Dialog open={!!editMapping} onOpenChange={(open) => { if (!open) setEditMapping(null) }}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Edit Sheet Mapping</DialogTitle>
+                <DialogDescription>
+                  Update the mapping configuration.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Sheet Name *</Label>
+                  <Input
+                    value={editForm.sheet_name ?? ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, sheet_name: e.target.value })
+                    }
+                    placeholder="e.g. Sheet1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Start Cell *</Label>
+                  <Input
+                    value={editForm.start_cell ?? ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, start_cell: e.target.value })
+                    }
+                    placeholder="e.g. A1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sort Order</Label>
+                  <Input
+                    type="number"
+                    value={editForm.sort_order ?? 0}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, sort_order: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Write Mode</Label>
+                  <Select
+                    value={editForm.write_mode || "rows"}
+                    onValueChange={(v) =>
+                      setEditForm({ ...editForm, write_mode: v as "rows" | "single" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rows">Rows</SelectItem>
+                      <SelectItem value="single">Single Value</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={editForm.write_headers ?? false}
+                    onCheckedChange={(checked) =>
+                      setEditForm({ ...editForm, write_headers: checked === true })
+                    }
+                  />
+                  <Label>Write Headers</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label>SQL Content *</Label>
+                  <Textarea
+                    value={editForm.sql_content ?? ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, sql_content: e.target.value })
+                    }
+                    placeholder="SELECT * FROM ..."
+                    rows={5}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={editForm.description ?? ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, description: e.target.value })
+                    }
+                    placeholder="Optional description"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={editForm.is_active ?? true}
+                    onCheckedChange={(checked) =>
+                      setEditForm({ ...editForm, is_active: checked === true })
+                    }
+                  />
+                  <Label>Active</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditMapping(null)}
+                >
+                  Cancel
+                </Button>
+                <LoadingButton
+                  loading={updateMappingMutation.isPending}
+                  onClick={() => updateMappingMutation.mutate()}
+                  disabled={
+                    !editForm.sheet_name ||
+                    !editForm.start_cell ||
+                    !editForm.sql_content
+                  }
+                >
+                  Save Changes
                 </LoadingButton>
               </DialogFooter>
             </DialogContent>

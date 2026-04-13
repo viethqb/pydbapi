@@ -27,7 +27,7 @@ from app.schemas_report import (
     ReportGenerateIn, ReportGenerateOut,
     ReportModuleCreate, ReportModuleDetail, ReportModuleListIn, ReportModuleListOut, ReportModulePublic, ReportModuleUpdate,
     ReportTemplateCreate, ReportTemplateDetail, ReportTemplateListIn, ReportTemplateListOut, ReportTemplatePublic, ReportTemplateUpdate,
-    SheetMappingCreate, SheetMappingListOut, SheetMappingPublic, SheetMappingUpdate,
+    SheetMappingBatchUpdate, SheetMappingCreate, SheetMappingListOut, SheetMappingPublic, SheetMappingUpdate,
 )
 
 _log = logging.getLogger(__name__)
@@ -416,6 +416,28 @@ def update_mapping(session: SessionDep, id: uuid.UUID, tid: uuid.UUID, body: She
     session.commit()
     session.refresh(mapping)
     return _mapping_public(mapping)
+
+
+@router.post("/{id}/templates/{tid}/mappings/batch-update", response_model=list[SheetMappingPublic])
+def batch_update_mappings(session: SessionDep, id: uuid.UUID, tid: uuid.UUID, body: SheetMappingBatchUpdate,
+    _: User = Depends(require_permission_for_resource(RES, PermissionActionEnum.UPDATE, _mid_from_path))) -> Any:
+    if not body.mappings:
+        raise HTTPException(400, "No mappings provided")
+    updated = []
+    now = datetime.now(UTC)
+    for item in body.mappings:
+        mapping = session.get(ReportSheetMapping, item.id)
+        if not mapping or mapping.report_template_id != tid:
+            raise HTTPException(404, f"Mapping {item.id} not found")
+        data = item.model_dump(exclude_unset=True, exclude={"id"})
+        mapping.sqlmodel_update(data)
+        mapping.updated_at = now
+        session.add(mapping)
+        updated.append(mapping)
+    session.commit()
+    for m in updated:
+        session.refresh(m)
+    return [_mapping_public(m) for m in updated]
 
 
 @router.post("/{id}/templates/{tid}/mappings/delete", response_model=Message)

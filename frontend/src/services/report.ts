@@ -391,6 +391,20 @@ export const ReportModuleService = {
     )
   },
 
+  batchUpdateMappings: async (
+    moduleId: string,
+    templateId: string,
+    mappings: SheetMappingUpdate[],
+  ): Promise<SheetMappingPublic[]> => {
+    return request<SheetMappingPublic[]>(
+      `/api/v1/report-modules/${moduleId}/templates/${templateId}/mappings/batch-update`,
+      {
+        method: "POST",
+        body: JSON.stringify({ mappings }),
+      },
+    )
+  },
+
   deleteMapping: async (
     moduleId: string,
     templateId: string,

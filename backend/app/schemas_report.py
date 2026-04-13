@@ -151,6 +151,9 @@ class SheetMappingUpdate(SQLModel):
     description: str | None = None
     is_active: bool | None = None
 
+class SheetMappingBatchUpdate(SQLModel):
+    mappings: list[SheetMappingUpdate]
+
 class SheetMappingListOut(SQLModel):
     data: list[SheetMappingPublic]
     total: int
