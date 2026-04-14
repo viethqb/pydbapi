@@ -10,12 +10,14 @@ from app.models_dbapi import DataSource
 _log = logging.getLogger(__name__)
 
 
-def get_minio_client(datasource: DataSource) -> Minio:
+def get_minio_client(datasource: DataSource, decrypt: bool = True) -> Minio:
     endpoint = f"{datasource.host}:{datasource.port}"
+    password = datasource.password or ""
+    secret_key = decrypt_value(password) if decrypt else password
     return Minio(
         endpoint,
         access_key=datasource.username,
-        secret_key=decrypt_value(datasource.password),
+        secret_key=secret_key,
         secure=datasource.use_ssl,
     )
 

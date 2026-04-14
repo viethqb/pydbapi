@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from sqlmodel import Session, func, select
 
 from app.api.deps import CurrentUser, SessionDep, require_permission
@@ -134,11 +135,17 @@ def download_execution(
         client = get_minio_client(minio_ds)
         client.fget_object(bucket, object_path, tmp_path)
         filename = os.path.basename(object_path)
+        def _cleanup(path: str) -> None:
+            try:
+                os.unlink(path)
+            except FileNotFoundError:
+                pass
+
         return FileResponse(
             tmp_path,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             filename=filename,
-            background=None,  # cleanup handled by BackgroundTask below
+            background=BackgroundTask(_cleanup, tmp_path),
         )
     except Exception as e:
         if os.path.exists(tmp_path):

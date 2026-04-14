@@ -93,11 +93,11 @@ def _test_connection(datasource: DataSource | DataSourcePreTestIn) -> tuple[bool
         try:
             from app.engines.excel.minio_client import get_minio_client
 
-            client = get_minio_client(datasource)
+            client = get_minio_client(datasource, decrypt=needs_decrypt)
             client.list_buckets()
             return True, "MinIO connection successful"
         except Exception as e:
-            return False, str(e)
+            return False, str(e) or type(e).__name__
 
     conn = None
     try:
