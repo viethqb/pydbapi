@@ -873,12 +873,13 @@ A flexible search endpoint that accepts recursive nested filters with `and`/`or`
 
 **Parameters:**
 
-| Name   | Location | Type    | Required | Default | Description                                |
-|--------|----------|---------|----------|---------|--------------------------------------------|
-| filter | body     | object  | no       |         | Nested filter with logic (and/or) and conditions |
-| sort   | body     | object  | no       |         | Sort object with field and order (asc/desc)       |
-| offset | body     | integer | no       | 0       | Number of rows to skip                            |
-| limit  | body     | integer | no       | 20      | Max rows to return (max 100)                      |
+| Name    | Location | Type    | Required | Default | Description                                       |
+|---------|----------|---------|----------|---------|---------------------------------------------------|
+| filter  | body     | object  | no       |         | Nested filter with logic (and/or) and conditions  |
+| sort    | body     | object  | no       |         | Sort object with field and order (asc/desc)       |
+| columns | body     | array   | no       |         | List of column names to return (whitelisted)      |
+| offset  | body     | integer | no       | 0       | Number of rows to skip                            |
+| limit   | body     | integer | no       | 20      | Max rows to return (max 100)                      |
 
 **Parameter validation:**
 
@@ -945,6 +946,7 @@ curl -X POST http://localhost/api/contacts/search \
       ]
     },
     "sort": { "field": "created_at", "order": "desc" },
+    "columns": ["id", "name", "email"],
     "offset": 0,
     "limit": 20
   }'
@@ -953,12 +955,14 @@ curl -X POST http://localhost/api/contacts/search \
 **Generated SQL (parameterized):**
 
 ```sql
-SELECT * FROM contacts
+SELECT id, name, email FROM contacts
 WHERE (name = %s AND (age > %s OR city = %s))
 ORDER BY created_at DESC
 LIMIT %s OFFSET %s
 -- values: ['John', 25, 'New York', 20, 0]
 ```
+
+When `columns` is omitted or empty, all whitelisted fields are returned (`SELECT *`). Any requested column not in `ALLOWED_FIELDS` is silently dropped.
 
 **Response:**
 
@@ -1038,12 +1042,16 @@ def execute(params=None):
         if sort_field in ALLOWED_FIELDS and sort_order in ('ASC', 'DESC'):
             order_clause = 'ORDER BY ' + sort_field + ' ' + sort_order
 
+    columns_param = params.get('columns') or []
+    safe_columns = [c for c in columns_param if c in ALLOWED_FIELDS]
+    select_clause = ', '.join(safe_columns) if safe_columns else '*'
+
     limit = params.get('limit', 20)
     if limit > 100:
         limit = 100
     offset = params.get('offset', 0)
 
-    sql = 'SELECT * FROM contacts ' + where_clause + ' ' + order_clause + ' LIMIT %s OFFSET %s'
+    sql = 'SELECT ' + select_clause + ' FROM contacts ' + where_clause + ' ' + order_clause + ' LIMIT %s OFFSET %s'
     values.append(limit)
     values.append(offset)
 
@@ -1062,7 +1070,7 @@ def execute(params=None):
     }
 ```
 
-> **Security:** Field names are validated against `ALLOWED_FIELDS` — unknown fields resolve to `TRUE` (ignored). All values use `%s` parameterized queries to prevent SQL injection. Sort field and order are also whitelisted.
+> **Security:** Field names are validated against `ALLOWED_FIELDS` — unknown fields resolve to `TRUE` (ignored). All values use `%s` parameterized queries to prevent SQL injection. Sort field, order, and `columns` are also whitelisted against `ALLOWED_FIELDS` before being interpolated into the `SELECT` clause.
 
 ---
 
