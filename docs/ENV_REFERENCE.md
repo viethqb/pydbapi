@@ -118,6 +118,7 @@ Controls the connection pool for **external data sources** (not the app database
 | `EXTERNAL_DB_POOL_SIZE` | int | `5` | No | Max connections per data source. |
 | `EXTERNAL_DB_CONNECT_TIMEOUT` | int | `10` | No | TCP connect timeout (seconds). |
 | `EXTERNAL_DB_STATEMENT_TIMEOUT` | int \| None | `None` | No | Statement execution timeout (seconds). `None` = no timeout. Supported for PostgreSQL and MySQL. |
+| `EXTERNAL_DB_COERCE_TINYINT_BOOL` | bool | `true` | No | MySQL-family drivers (MySQL, StarRocks) return `TINYINT(1)` / `BOOLEAN` columns as 0/1 ints; when `true` the engine coerces them to Python `bool` so responses return proper `true`/`false`. Disable if you intentionally use `TINYINT(1)` to store small ints. PostgreSQL cursors are unaffected (psycopg already returns native bool). |
 
 ---
 

@@ -85,6 +85,11 @@ class Settings(BaseSettings):
     EXTERNAL_DB_POOL_SIZE: int = 10
     EXTERNAL_DB_CONNECT_TIMEOUT: int = 10
     EXTERNAL_DB_STATEMENT_TIMEOUT: int | None = None
+    # When True, MySQL-family drivers (pymysql, StarRocks via MySQL protocol)
+    # coerce TINYINT(1) / BOOLEAN column values from 0/1 ints to Python bool.
+    # This follows the standard MySQL convention where TINYINT(1) is BOOLEAN.
+    # Disable only if you have a table that uses TINYINT(1) to store small ints.
+    EXTERNAL_DB_COERCE_TINYINT_BOOL: bool = True
     SQL_TEMPLATE_MAX_SIZE: int = 1_000_000  # max template source size (bytes)
     SQL_RENDERED_MAX_SIZE: int = 10_000_000  # max rendered SQL output (bytes)
     SCRIPT_EXEC_TIMEOUT: int | None = (

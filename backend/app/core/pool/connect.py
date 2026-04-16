@@ -159,10 +159,71 @@ def execute(
     return cur
 
 
+def _bool_coerce_indexes(cursor: Any) -> set[int]:
+    """Return column indexes whose values should be coerced to bool.
+
+    MySQL-family drivers (pymysql — used for MySQL and StarRocks via MySQL
+    protocol) return TINYINT(1) / BOOLEAN columns as Python ints (0/1). We
+    distinguish a bool column from a regular TINYINT by looking at both
+    ``display_size`` (cursor.description[2]) and ``internal_size`` (index 3):
+
+    - **MySQL** populates ``display_size`` with the declared width (1 for
+      ``TINYINT(1)``, 4 for ``TINYINT(4)``); ``internal_size`` matches.
+    - **StarRocks** leaves ``display_size`` as ``None`` but populates
+      ``internal_size`` — only ``BOOLEAN`` columns return ``internal_size=1``;
+      user-declared ``TINYINT(1)`` is normalized to ``TINYINT(4)``. So on
+      StarRocks you must use ``BOOLEAN`` (not ``TINYINT(1)``) for the fix to
+      detect the column — that's the canonical convention anyway.
+
+    psycopg (Postgres) already returns native bool for BOOLEAN columns, so
+    we skip detection for it.
+    """
+    if not settings.EXTERNAL_DB_COERCE_TINYINT_BOOL:
+        return set()
+    desc = getattr(cursor, "description", None)
+    if not desc:
+        return set()
+    module = (type(cursor).__module__ or "").lower()
+    # Only pymysql-family cursors — psycopg handles bool natively.
+    if "pymysql" not in module:
+        return set()
+
+    PYMYSQL_TINY = 1  # pymysql FIELD_TYPE.TINY
+    out: set[int] = set()
+    for i, d in enumerate(desc):
+        # d = (name, type_code, display_size, internal_size, precision, scale, null_ok)
+        if len(d) < 4 or d[1] != PYMYSQL_TINY:
+            continue
+        display_size = d[2]
+        internal_size = d[3]
+        # Bool if either metadata says "width = 1".
+        # MySQL populates both; StarRocks only populates internal_size (for BOOLEAN).
+        if display_size == 1 or internal_size == 1:
+            out.add(i)
+    return out
+
+
 def cursor_to_dicts(cursor: Any) -> list[dict[str, Any]]:
-    """Convert cursor result to list of dicts. Works for both psycopg and pymysql."""
+    """Convert cursor result to list of dicts.
+
+    For pymysql-family drivers (MySQL, StarRocks) detects TINYINT(1) columns
+    via ``cursor.description`` and coerces values to Python bool — see
+    :func:`_bool_coerce_indexes`. psycopg / Trino cursors are untouched.
+    """
     desc = cursor.description
     if not desc:
         return []
     names = [d[0] for d in desc]
-    return [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
+    bool_idx = _bool_coerce_indexes(cursor)
+    if not bool_idx:
+        return [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
+
+    out: list[dict[str, Any]] = []
+    for row in cursor.fetchall():
+        d = dict(zip(names, row, strict=True))
+        for i in bool_idx:
+            v = row[i]
+            if v is not None:
+                d[names[i]] = bool(v)
+        out.append(d)
+    return out
