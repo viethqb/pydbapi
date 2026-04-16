@@ -77,7 +77,11 @@ export const reportTemplatesColumns: ColumnDef<TemplateTableData>[] = [
     header: "Output",
     cell: ({ row }) =>
       row.original.output_sheet ? (
-        <Badge variant="secondary">{row.original.output_sheet}</Badge>
+        <div className="flex gap-1 flex-wrap">
+          {row.original.output_sheet.split(",").map((s: string) => s.trim()).filter(Boolean).map((s: string) => (
+            <Badge key={s} variant="secondary">{s}</Badge>
+          ))}
+        </div>
       ) : (
         <span className="text-muted-foreground text-sm">Full file</span>
       ),

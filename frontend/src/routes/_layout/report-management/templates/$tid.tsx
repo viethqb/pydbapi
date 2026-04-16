@@ -931,7 +931,17 @@ function OverviewTab({
               </TableRow>
               <TableRow>
                 <TableHead>Output Sheet</TableHead>
-                <TableCell>{template.output_sheet || <span className="text-muted-foreground">Full file</span>}</TableCell>
+                <TableCell>
+                  {template.output_sheet ? (
+                    <div className="flex gap-1 flex-wrap">
+                      {template.output_sheet.split(",").map((s) => s.trim()).filter(Boolean).map((s) => (
+                        <Badge key={s} variant="secondary">{s}</Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Full file</span>
+                  )}
+                </TableCell>
               </TableRow>
               <TableRow>
                 <TableHead>Recalc</TableHead>
