@@ -2,7 +2,6 @@
 import logging
 import os
 import shutil
-import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -10,19 +9,60 @@ from openpyxl import Workbook, load_workbook
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.engines.excel.excel_extractor import extract_sheet
 from app.engines.excel import excel_writer
+from app.engines.excel.excel_extractor import extract_sheet
 from app.engines.excel.excel_writer import write_rows, write_single
 from app.engines.excel.minio_client import download_file, get_minio_client, upload_file
 from app.engines.excel.recalc import recalc_workbook
 from app.engines.sql import SQLTemplateEngine, execute_sql
 from app.models_dbapi import DataSource
 from app.models_report import (
-    ExecutionStatusEnum, ReportExecution, ReportModule,
-    ReportSheetMapping, ReportTemplate, SheetWriteModeEnum,
+    ExecutionStatusEnum,
+    ReportExecution,
+    ReportModule,
+    ReportSheetMapping,
+    ReportTemplate,
+    SheetWriteModeEnum,
 )
 
 _log = logging.getLogger(__name__)
+
+
+def _deep_merge(base: dict | None, override: dict | None) -> dict | None:
+    """Recursively merge two dicts. override wins per-key. None values in override are ignored."""
+    if not base and not override:
+        return None
+    if not base:
+        return dict(override or {})
+    if not override:
+        return dict(base)
+    result: dict = {}
+    for k in set(base) | set(override):
+        bv, ov = base.get(k), override.get(k)
+        if isinstance(bv, dict) and isinstance(ov, dict):
+            result[k] = _deep_merge(bv, ov)
+        elif ov is not None:
+            result[k] = ov
+        else:
+            result[k] = bv
+    return result
+
+
+def _effective_start(
+    sheet_name: str, start_cell: str, gap_rows: int,
+    sheet_last_row: dict[str, int],
+) -> tuple[str, bool]:
+    """Resolve effective start_cell given prior writes on same sheet.
+
+    If requested row overlaps last_row, auto-shift to last_row + gap_rows + 1 (same column).
+    Returns (effective_cell, shifted).
+    """
+    req_row, req_col = excel_writer._parse_cell(start_cell)
+    last = sheet_last_row.get(sheet_name, 0)
+    if req_row <= last:
+        new_row = last + gap_rows + 1
+        return f"{excel_writer._col_letter(req_col)}{new_row}", True
+    return start_cell, False
 
 
 class ExcelReportExecutor:
@@ -93,37 +133,82 @@ class ExcelReportExecutor:
             chunk_size = settings.REPORT_SQL_CHUNK_SIZE
             max_rows = settings.REPORT_MAX_ROWS_PER_SHEET
 
+            tpl_fmt = template.format_config or {}
+            sheet_last_row: dict[str, int] = {}
+
             for mapping in active_mappings:
+                # Resolve effective start cell (auto-shift on collision)
+                eff_cell, shifted = _effective_start(
+                    mapping.sheet_name, mapping.start_cell,
+                    mapping.gap_rows, sheet_last_row,
+                )
+                if shifted:
+                    _log.info(
+                        "Mapping %s: start_cell %s collided with prior writes on sheet %r, "
+                        "shifted to %s (gap_rows=%d)",
+                        mapping.id, mapping.start_cell, mapping.sheet_name,
+                        eff_cell, mapping.gap_rows,
+                    )
+
+                # Merge formats: template base ⟵ mapping override
+                merged_fmt = _deep_merge(tpl_fmt, mapping.format_config or {}) or {}
+                header_fmt = merged_fmt.get("header")
+                data_fmt = merged_fmt.get("data")
+                col_widths = merged_fmt.get("column_widths")
+                do_auto_fit = bool(merged_fmt.get("auto_fit"))
+                auto_fit_max = float(merged_fmt.get("auto_fit_max_width") or 50)
+                do_wrap_text = bool(merged_fmt.get("wrap_text"))
+
+                start_row, start_col = excel_writer._parse_cell(eff_cell)
                 rendered_sql = sql_engine.render(mapping.sql_content, _params)
 
                 if mapping.write_mode == SheetWriteModeEnum.SINGLE:
                     results = execute_sql(sql_ds, rendered_sql, use_pool=True)
                     data = results[0] if results else []
                     if not isinstance(data, int):
-                        write_single(wb, mapping.sheet_name, mapping.start_cell, data)
+                        write_single(
+                            wb, mapping.sheet_name, eff_cell, data,
+                            data_format=data_fmt,
+                        )
+                        if data:
+                            last = max(sheet_last_row.get(mapping.sheet_name, 0), start_row)
+                            sheet_last_row[mapping.sheet_name] = last
                     continue
 
                 # Chunked pagination for ROWS mode
-                # Check if SQL already has LIMIT (user-controlled pagination)
                 sql_upper = rendered_sql.strip().upper()
                 user_has_limit = "LIMIT" in sql_upper.split("--")[0].split("/*")[0]
 
                 if user_has_limit:
-                    # User controls pagination — execute as-is
                     results = execute_sql(sql_ds, rendered_sql, use_pool=True)
                     data = results[0] if results else []
                     if isinstance(data, int):
                         continue
                     if max_rows > 0 and len(data) > max_rows:
                         data = data[:max_rows]
-                    write_rows(wb, mapping.sheet_name, mapping.start_cell, data, write_headers=mapping.write_headers)
+                    rows = write_rows(
+                        wb, mapping.sheet_name, eff_cell, data,
+                        write_headers=mapping.write_headers,
+                        header_format=header_fmt,
+                        data_format=data_fmt,
+                        column_widths=col_widths,
+                        auto_fit=do_auto_fit,
+                        auto_fit_max_width=auto_fit_max,
+                        wrap_text=do_wrap_text,
+                    )
+                    if rows:
+                        last_row = start_row + rows - 1
+                        sheet_last_row[mapping.sheet_name] = max(
+                            sheet_last_row.get(mapping.sheet_name, 0), last_row,
+                        )
                 else:
-                    # Auto-paginate: fetch in chunks to reduce memory
+                    # Auto-paginate
                     total_written = 0
                     headers_written = False
                     offset = 0
-                    start_row, start_col = excel_writer._parse_cell(mapping.start_cell)
                     current_row = start_row
+                    # column widths apply once per mapping
+                    widths_applied = False
 
                     while total_written < max_rows:
                         chunk_sql = f"{rendered_sql} LIMIT {chunk_size} OFFSET {offset}"
@@ -136,21 +221,34 @@ class ExcelReportExecutor:
                             columns = list(chunk[0].keys())
                             ws = wb[mapping.sheet_name]
                             for ci, col_name in enumerate(columns):
-                                ws.cell(row=current_row, column=start_col + ci, value=col_name)
+                                c = ws.cell(
+                                    row=current_row, column=start_col + ci, value=col_name,
+                                )
+                                excel_writer._apply_cell_format(c, header_fmt)
+                                if do_wrap_text:
+                                    c.alignment = excel_writer.Alignment(
+                                        horizontal=c.alignment.horizontal if c.alignment else None,
+                                        vertical=c.alignment.vertical if c.alignment else None,
+                                        wrap_text=True,
+                                    )
                             current_row += 1
                             headers_written = True
 
-                        # Respect max rows limit
                         remaining = max_rows - total_written
                         if len(chunk) > remaining:
                             chunk = chunk[:remaining]
 
-                        # Write chunk at current_row position
                         rows_written = write_rows(
                             wb, mapping.sheet_name,
                             f"{excel_writer._col_letter(start_col)}{current_row}",
                             chunk, write_headers=False,
+                            data_format=data_fmt,
+                            column_widths=col_widths if not widths_applied else None,
+                            auto_fit=do_auto_fit and not widths_applied,
+                            auto_fit_max_width=auto_fit_max,
+                            wrap_text=do_wrap_text,
                         )
+                        widths_applied = True
                         current_row += rows_written
                         total_written += len(chunk)
                         offset += chunk_size
@@ -160,9 +258,13 @@ class ExcelReportExecutor:
                             len(chunk), total_written, mapping.sheet_name,
                         )
 
-                        # If chunk < chunk_size, no more data
                         if len(chunk) < chunk_size:
                             break
+
+                    if current_row > start_row:
+                        sheet_last_row[mapping.sheet_name] = max(
+                            sheet_last_row.get(mapping.sheet_name, 0), current_row - 1,
+                        )
 
             filled_path = os.path.join(work_dir, "filled.xlsx")
             wb.save(filled_path)

@@ -100,6 +100,9 @@ class ReportTemplate(SQLModel, table=True):
     output_prefix: str = Field(default="", max_length=1024)
     recalc_enabled: bool = Field(default=False)
     output_sheet: str | None = Field(default=None, max_length=255)
+    format_config: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)
@@ -141,6 +144,10 @@ class ReportSheetMapping(SQLModel, table=True):
         default=SheetWriteModeEnum.ROWS,
     )
     write_headers: bool = Field(default=False)
+    gap_rows: int = Field(default=0)
+    format_config: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
     sql_content: str = Field(sa_column=Column(Text, nullable=False))
     description: str | None = Field(default=None, max_length=255)
     is_active: bool = Field(default=True)

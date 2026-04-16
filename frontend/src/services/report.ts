@@ -53,6 +53,47 @@ export type ReportModuleListOut = {
   total: number
 }
 
+export type FontFormat = {
+  name?: string | null
+  size?: number | null
+  bold?: boolean | null
+  italic?: boolean | null
+  color?: string | null
+}
+
+export type FillFormat = {
+  bg_color?: string | null
+  pattern?: string | null
+}
+
+export type BorderFormat = {
+  style?: string | null
+  color?: string | null
+}
+
+export type AlignmentFormat = {
+  horizontal?: string | null
+  vertical?: string | null
+  wrap_text?: boolean | null
+}
+
+export type CellFormat = {
+  font?: FontFormat | null
+  fill?: FillFormat | null
+  border?: BorderFormat | null
+  alignment?: AlignmentFormat | null
+  number_format?: string | null
+}
+
+export type FormatConfig = {
+  header?: CellFormat | null
+  data?: CellFormat | null
+  column_widths?: Record<string, number> | null
+  auto_fit?: boolean | null
+  auto_fit_max_width?: number | null
+  wrap_text?: boolean | null
+}
+
 export type ReportTemplatePublic = {
   id: string
   report_module_id: string
@@ -64,6 +105,7 @@ export type ReportTemplatePublic = {
   output_prefix: string
   recalc_enabled: boolean
   output_sheet: string | null
+  format_config: FormatConfig | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -93,6 +135,7 @@ export type ReportTemplateUpdate = {
   output_prefix?: string | null
   recalc_enabled?: boolean | null
   output_sheet?: string | null
+  format_config?: FormatConfig | null
 }
 
 export type ReportTemplateListIn = {
@@ -116,6 +159,8 @@ export type SheetMappingPublic = {
   sort_order: number
   write_mode: "rows" | "single"
   write_headers: boolean
+  gap_rows: number
+  format_config: FormatConfig | null
   sql_content: string
   description: string | null
   is_active: boolean
@@ -129,6 +174,8 @@ export type SheetMappingCreate = {
   sort_order?: number
   write_mode?: "rows" | "single"
   write_headers?: boolean
+  gap_rows?: number
+  format_config?: FormatConfig | null
   sql_content: string
 }
 
@@ -139,6 +186,8 @@ export type SheetMappingUpdate = {
   sort_order?: number | null
   write_mode?: "rows" | "single" | null
   write_headers?: boolean | null
+  gap_rows?: number | null
+  format_config?: FormatConfig | null
   sql_content?: string | null
   description?: string | null
   is_active?: boolean | null

@@ -118,6 +118,8 @@ Each mapping defines one data injection into the workbook:
 | `write_mode` | `rows` or `single` |
 | `write_headers` | Include column headers as the first row (only for `rows` mode) |
 | `sort_order` | Execution order when multiple mappings target the same sheet |
+| `gap_rows` | Number of empty rows to insert when auto-shifting (default `0`) |
+| `format_config` | Per-mapping formatting (overrides template-level format). See [Format Config](#format-config) |
 | `sql_content` | SQL query, optionally with Jinja2 templating |
 
 ### Write Modes
@@ -145,6 +147,223 @@ SQL: SELECT COUNT(*) FROM products
 
 Sheet (start_cell=E1):
   E1: 42
+```
+
+### Collision Detection & Auto-Shift
+
+When multiple mappings write to the **same sheet**, the engine tracks the last row written per sheet. If a mapping's `start_cell` falls within an already-written region, the engine **automatically shifts** it down to avoid overwriting.
+
+**How it works:**
+
+1. Mappings execute in `sort_order` sequence
+2. After each mapping, the engine records the last written row for that sheet
+3. Before writing the next mapping, if `start_cell` row ≤ `last_written_row`, the engine shifts to `last_written_row + gap_rows + 1` (keeping the same column)
+4. A log message records every shift: `Mapping {id}: start_cell A1 collided with prior writes on sheet 'Sheet1', shifted to A5 (gap_rows=2)`
+
+**gap_rows** controls the spacing between auto-shifted blocks. It only takes effect when a collision is detected — if mappings don't overlap, `gap_rows` is ignored.
+
+```text
+Template with 2 mappings on the same sheet, gap_rows=2 on mapping 2:
+
+Mapping 1 (sort_order=0, start_cell=A1, write_headers=true):
+  SQL: SELECT 1 AS v UNION ALL SELECT 2
+
+  A1: v       ← header
+  A2: 1       ← data
+  A3: 2       ← last_written_row = 3
+
+Mapping 2 (sort_order=1, start_cell=A1, gap_rows=2, write_headers=true):
+  SQL: SELECT 10 AS v
+
+  A1 would collide → shifted to A3 + 2 + 1 = A6
+  A4: (empty)  ← gap row 1
+  A5: (empty)  ← gap row 2
+  A6: v        ← header
+  A7: 10       ← data
+```
+
+**Rules:**
+- Auto-shift is per-sheet: mappings on different sheets never affect each other
+- `single` mode updates the sheet's last-row tracker too (at the cell's row)
+- When `start_cell` row is already below the last written row, no shift occurs
+
+### Format Config
+
+Format configuration controls the appearance of written cells. It can be set at two levels:
+
+- **Template-level** (`ReportTemplate.format_config`): Default format for all mappings
+- **Mapping-level** (`ReportSheetMapping.format_config`): Override per mapping
+
+When both are set, they are **deep-merged**: mapping values override template values per-key, while unset keys inherit from the template.
+
+#### Format Config Structure
+
+```json
+{
+  "header": { ... },           // CellFormat — applied to header row
+  "data": { ... },             // CellFormat — applied to data rows
+  "column_widths": {           // Manual column widths
+    "A": 15, "B": 25, "C": 10
+  },
+  "auto_fit": true,            // Auto-calculate column widths from content
+  "auto_fit_max_width": 50,    // Max width when auto-fitting (default 50)
+  "wrap_text": true            // Apply wrap text to all cells (header + data)
+}
+```
+
+#### CellFormat Object
+
+Each of `header` and `data` accepts a `CellFormat` with these sub-objects:
+
+```json
+{
+  "font": {
+    "name": "Calibri",         // Font family
+    "size": 11,                // Font size in points
+    "bold": true,              // Bold text
+    "italic": false,           // Italic text
+    "color": "FF0000"          // Font color (RGB hex, e.g. "FF0000" = red)
+  },
+  "fill": {
+    "bg_color": "FFFF00",     // Background color (RGB hex)
+    "pattern": "solid"         // Fill pattern (default "solid" when bg_color set)
+  },
+  "border": {
+    "style": "thin",           // Border style: thin, medium, thick, dashed, dotted, double
+    "color": "000000"          // Border color (RGB hex, default black)
+  },
+  "alignment": {
+    "horizontal": "center",    // left, center, right, justify
+    "vertical": "center",      // top, center, bottom
+    "wrap_text": true          // Wrap text within cell
+  },
+  "number_format": "#,##0.00"  // Excel number format string
+}
+```
+
+All fields are optional. Only set what you need — unset fields keep the cell's default or template-inherited style.
+
+#### Common Number Formats
+
+| Format | Example Output | Use Case |
+|---|---|---|
+| `General` | 1234.5 | Default |
+| `#,##0` | 1,235 | Integer with thousands separator |
+| `#,##0.00` | 1,234.50 | Currency/decimal |
+| `0%` | 75% | Percentage (integer) |
+| `0.00%` | 75.50% | Percentage (decimal) |
+| `yyyy-mm-dd` | 2026-04-16 | ISO date |
+| `dd/mm/yyyy` | 16/04/2026 | EU date |
+| `yyyy-mm-dd hh:mm:ss` | 2026-04-16 14:30:00 | Datetime |
+| `@` | (text as-is) | Force text format |
+
+#### Common Font Colors
+
+| Color | Hex Code |
+|---|---|
+| Black | `000000` |
+| White | `FFFFFF` |
+| Red | `FF0000` |
+| Dark Red | `C00000` |
+| Green | `00B050` |
+| Blue | `0070C0` |
+| Dark Blue | `002060` |
+| Orange | `FF6600` |
+| Yellow | `FFFF00` |
+| Purple | `7030A0` |
+| Gray 25% | `D9D9D9` |
+| Gray 50% | `808080` |
+
+#### Auto-fit Columns
+
+When `auto_fit: true`, the engine calculates column widths based on the content (header + data values). The width is clamped between `8` (minimum) and `auto_fit_max_width` (default `50`).
+
+**Rules:**
+- Auto-fit is **skipped** when `column_widths` is also set (manual widths take priority)
+- Auto-fit calculates width from the longest value across all data rows per column
+- Multi-line values (containing `\n`) use the longest line for width calculation
+- Width = `max_content_length + 2` (padding), capped at `auto_fit_max_width`
+
+#### Wrap Text
+
+When `wrap_text: true`, all cells (both header and data rows) get `wrap_text=true` in their alignment. This is a convenience shortcut — you can also set `alignment.wrap_text` per-section in `header` or `data` CellFormat for more granular control.
+
+#### Format Merge Examples
+
+**Template-level format + no mapping override:**
+
+```json
+// Template format_config
+{
+  "header": { "font": { "bold": true, "size": 12 } },
+  "data": { "number_format": "#,##0" }
+}
+// Mapping format_config: null
+
+// Result: all mappings use template format
+// → Header: bold 12pt
+// → Data: #,##0
+```
+
+**Mapping overrides specific keys:**
+
+```json
+// Template format_config
+{
+  "header": { "font": { "bold": true, "size": 12 } },
+  "data": { "number_format": "#,##0" }
+}
+// Mapping format_config
+{
+  "header": { "font": { "size": 16 }, "fill": { "bg_color": "FFFF00" } }
+}
+
+// Result (deep-merged):
+// → Header: bold (inherited) + 16pt (overridden) + yellow background (added)
+// → Data: #,##0 (inherited from template)
+```
+
+#### Complete Format Config Examples
+
+**Simple styled export:**
+
+```json
+{
+  "header": {
+    "font": { "bold": true, "color": "FFFFFF" },
+    "fill": { "bg_color": "002060" },
+    "border": { "style": "thin" },
+    "alignment": { "horizontal": "center" }
+  },
+  "data": {
+    "border": { "style": "thin", "color": "D9D9D9" },
+    "number_format": "#,##0.00"
+  },
+  "auto_fit": true,
+  "auto_fit_max_width": 40
+}
+```
+
+**Wrap text with fixed column widths:**
+
+```json
+{
+  "column_widths": { "A": 10, "B": 30, "C": 15 },
+  "wrap_text": true,
+  "header": { "font": { "bold": true } }
+}
+```
+
+**Data-only formatting (no header style):**
+
+```json
+{
+  "data": {
+    "font": { "name": "Consolas", "size": 10 },
+    "alignment": { "vertical": "top" }
+  },
+  "auto_fit": true
+}
 ```
 
 ### Blank Template vs Template File
@@ -181,13 +400,57 @@ This is useful when you have a template with a raw data sheet and a summary shee
 
 SQL queries support Jinja2 templating for dynamic parameter injection. Parameters are passed at generation time via the `parameters` field.
 
-Available filters:
+#### Available Filters
 
-| Filter | Description | Example |
+**Type-safe escaping filters** (all return SQL-safe values, `None` → `NULL`):
+
+| Filter | Output Example | Description |
 |---|---|---|
-| `sql_string` | Wraps value in single quotes with escaping | `{{ name \| sql_string }}` |
-| `sql_float` | Casts to float | `{{ min_price \| sql_float }}` |
-| `sql_int` | Casts to int | `{{ limit \| sql_int }}` |
+| `sql_string` | `'O''Brien'` | Single-quote wrapped, escapes `'` |
+| `sql_int` | `42` | Validates integer |
+| `sql_float` | `3.14` | Validates float |
+| `sql_bool` | `TRUE` / `FALSE` | Boolean literal |
+| `sql_date` | `'2026-04-16'` | YYYY-MM-DD format |
+| `sql_datetime` | `'2026-04-16T14:30:00'` | ISO datetime format |
+| `sql_ident` | `column_name` | Identifier (alphanumeric + `_` + `.` only, no quoting) |
+
+**List & pattern filters**:
+
+| Filter | Output Example | Description |
+|---|---|---|
+| `in_list` | `(1, 2, 3)` | Comma-separated parenthesized list. Empty list → `(SELECT 1 WHERE 1=0)` |
+| `sql_like` | `'pattern'` | Escapes `%` and `_` for safe LIKE |
+| `sql_like_start` | `'pattern%'` | Prefix match |
+| `sql_like_end` | `'%pattern'` | Suffix match |
+| `compare` | `> 100.0` or `BETWEEN 10 AND 50` | From JSON: `{"combinator": ">", "values": "100"}` |
+
+**Utility filters**:
+
+| Filter | Output Example | Description |
+|---|---|---|
+| `fromjson` | (parsed dict/list) | Parse JSON string to object |
+| `json` | `'{"key":"val"}'` | Serialize to quoted JSON string |
+
+#### Auto-escape Behavior
+
+When a variable is used **without an explicit filter** (e.g., `{{ name }}`), the engine auto-escapes based on type:
+
+| Python Type | Auto-escape Result |
+|---|---|
+| `None` | `NULL` |
+| `bool` | `TRUE` / `FALSE` |
+| `int`, `float` | String representation (no quoting) |
+| `str` | `sql_string()` (quoted + escaped) |
+| `list`, `tuple` | `in_list()` |
+| `dict` | `json()` |
+| `datetime` | `sql_datetime()` |
+| `date` | `sql_date()` |
+
+This means `{{ name }}` is safe by default — you only need explicit filters when you want a specific behavior different from auto-escape (e.g., `{{ ids | in_list }}` for a list in an `IN` clause).
+
+#### Tags
+
+**`{% where %}` / `{% endwhere %}`** — Conditional WHERE clause builder:
 
 The `{% where %}` / `{% endwhere %}` block tag generates a `WHERE` clause only if at least one inner condition is active, converting the first `AND` to `WHERE`:
 
@@ -217,6 +480,81 @@ SELECT id, name, price, category
 FROM products
 ORDER BY id
 ```
+
+**OR mode** — use `operation="OR"` to join conditions with OR instead of AND:
+
+```sql
+SELECT * FROM users
+{% where operation="OR" %}
+  {% if email %}AND email = {{ email | sql_string }}{% endif %}
+  {% if phone %}AND phone = {{ phone | sql_string }}{% endif %}
+{% endwhere %}
+```
+
+#### Advanced SQL Template Patterns
+
+**Dynamic IN list from parameter array:**
+
+```sql
+SELECT * FROM orders
+WHERE status IN {{ statuses | in_list }}
+ORDER BY created_at DESC
+```
+
+```json
+{ "statuses": ["pending", "processing"] }
+```
+
+→ `WHERE status IN ('pending', 'processing')`
+
+**Conditional columns and JOINs:**
+
+```sql
+SELECT o.id, o.total
+  {% if include_customer %}, c.name AS customer_name{% endif %}
+FROM orders o
+{% if include_customer %}
+  LEFT JOIN customers c ON c.id = o.customer_id
+{% endif %}
+{% where %}
+  {% if status %}AND o.status = {{ status | sql_string }}{% endif %}
+  {% if min_total %}AND o.total >= {{ min_total | sql_float }}{% endif %}
+  {% if date_from %}AND o.created_at >= {{ date_from | sql_date }}{% endif %}
+  {% if date_to %}AND o.created_at <= {{ date_to | sql_date }}{% endif %}
+{% endwhere %}
+ORDER BY o.created_at DESC
+{% if limit %}LIMIT {{ limit | sql_int }}{% endif %}
+```
+
+**LIKE search:**
+
+```sql
+SELECT * FROM products
+{% where %}
+  {% if search %}AND name LIKE {{ search | sql_like_start }}{% endif %}
+  {% if category %}AND category = {{ category | sql_string }}{% endif %}
+{% endwhere %}
+```
+
+With `{"search": "Wi"}` → `WHERE name LIKE 'Wi%'`
+
+**Default values with Jinja2:**
+
+```sql
+SELECT * FROM logs
+WHERE created_at >= {{ date_from | default("2026-01-01") | sql_date }}
+ORDER BY created_at
+LIMIT {{ limit | default(1000) | sql_int }}
+```
+
+**Multiple statements (write multiple result sets):**
+
+```sql
+SELECT 'Report Title' AS title;
+SELECT id, name, amount FROM transactions ORDER BY id
+```
+
+The first statement's result goes to a `single` mapping, the second to a `rows` mapping.
 
 ---
 
@@ -493,6 +831,126 @@ curl -s -X POST http://localhost:8000/api/v1/report-modules/$MODULE_ID/templates
   -d '{
     "parameters": {},
     "async": false
+  }' | jq .
+```
+
+### Formatted Report with Auto-Shift
+
+Create a template with default formatting and two mappings that auto-shift on the same sheet:
+
+```bash
+# Create template with default format (applied to all mappings)
+curl -s -X POST http://localhost:8000/api/v1/report-modules/$MODULE_ID/templates/create \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "styled-sales-report",
+    "output_bucket": "report-output",
+    "format_config": {
+      "header": {
+        "font": { "bold": true, "color": "FFFFFF", "size": 11 },
+        "fill": { "bg_color": "002060" },
+        "border": { "style": "thin" },
+        "alignment": { "horizontal": "center" }
+      },
+      "data": {
+        "border": { "style": "thin", "color": "D9D9D9" }
+      },
+      "auto_fit": true,
+      "auto_fit_max_width": 40,
+      "wrap_text": true
+    },
+    "sheet_mappings": [
+      {
+        "sort_order": 0,
+        "sheet_name": "Report",
+        "start_cell": "A1",
+        "write_mode": "rows",
+        "write_headers": true,
+        "sql_content": "SELECT id, product, amount, status FROM sales ORDER BY id",
+        "description": "Sales data"
+      },
+      {
+        "sort_order": 1,
+        "sheet_name": "Report",
+        "start_cell": "A1",
+        "write_mode": "rows",
+        "write_headers": true,
+        "gap_rows": 2,
+        "sql_content": "SELECT status, COUNT(*) as count, SUM(amount) as total FROM sales GROUP BY status",
+        "description": "Summary by status",
+        "format_config": {
+          "header": { "fill": { "bg_color": "00B050" } },
+          "data": { "number_format": "#,##0.00" }
+        }
+      }
+    ]
+  }' | jq .
+```
+
+**Output:**
+
+```text
+Sheet "Report":
+
+  A1: id    B1: product   C1: amount    D1: status     ← dark blue header (template)
+  A2: 1     B2: Widget    C2: 9.99      D2: completed
+  A3: 2     B3: Gadget    C3: 19.99     D3: pending
+  ...
+  A50: 49   B50: Item49   C50: 5.00     D50: completed ← last row = 50
+
+  A51: (empty) ← gap row 1
+  A52: (empty) ← gap row 2
+
+  A53: status    B53: count   C53: total    ← green header (mapping override)
+  A54: completed B54: 30      C54: 15,000.00 ← number format #,##0.00
+  A55: pending   B55: 19      C55: 8,500.00
+
+All cells have thin borders, auto-fit column widths, and wrap text.
+```
+
+### Multi-Sheet Report with Mixed Modes
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/report-modules/$MODULE_ID/templates/create \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "dashboard-export",
+    "output_bucket": "report-output",
+    "format_config": { "auto_fit": true },
+    "sheet_mappings": [
+      {
+        "sort_order": 0,
+        "sheet_name": "Dashboard",
+        "start_cell": "B2",
+        "write_mode": "single",
+        "sql_content": "SELECT COUNT(*) FROM orders",
+        "format_config": { "data": { "font": { "size": 24, "bold": true } } },
+        "description": "Total orders count"
+      },
+      {
+        "sort_order": 1,
+        "sheet_name": "Dashboard",
+        "start_cell": "D2",
+        "write_mode": "single",
+        "sql_content": "SELECT SUM(amount) FROM orders",
+        "format_config": { "data": { "number_format": "#,##0.00", "font": { "size": 24, "bold": true } } },
+        "description": "Total revenue"
+      },
+      {
+        "sort_order": 2,
+        "sheet_name": "Data",
+        "start_cell": "A1",
+        "write_mode": "rows",
+        "write_headers": true,
+        "sql_content": "SELECT id, customer, amount, created_at FROM orders ORDER BY created_at DESC",
+        "format_config": {
+          "header": { "font": { "bold": true }, "fill": { "bg_color": "DDEBF7" } },
+          "data": { "number_format": "#,##0.00" }
+        }
+      }
+    ]
   }' | jq .
 ```
 

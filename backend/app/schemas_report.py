@@ -3,10 +3,61 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel import SQLModel
 
 from app.models_report import ExecutionStatusEnum, SheetWriteModeEnum
+
+# ---------------------------------------------------------------------------
+# Excel Format Config
+# ---------------------------------------------------------------------------
+
+
+class FontFormat(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    size: float | None = None
+    bold: bool | None = None
+    italic: bool | None = None
+    color: str | None = None  # ARGB/RGB hex, e.g. "FF0000" or "FFFF0000"
+
+
+class FillFormat(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    bg_color: str | None = None
+    pattern: str | None = None  # e.g. "solid"
+
+
+class BorderFormat(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    style: str | None = None  # thin, medium, thick, dashed, dotted
+    color: str | None = None
+
+
+class AlignmentFormat(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    horizontal: str | None = None  # left, center, right, justify
+    vertical: str | None = None  # top, center, bottom
+    wrap_text: bool | None = None
+
+
+class CellFormat(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    font: FontFormat | None = None
+    fill: FillFormat | None = None
+    border: BorderFormat | None = None
+    alignment: AlignmentFormat | None = None
+    number_format: str | None = None
+
+
+class FormatConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    header: CellFormat | None = None
+    data: CellFormat | None = None
+    column_widths: dict[str, float] | None = None  # {"A": 15, "B": 20}
+    auto_fit: bool | None = None
+    auto_fit_max_width: float | None = None  # default 50
+    wrap_text: bool | None = None
 
 # ---------------------------------------------------------------------------
 # ReportModule
@@ -66,6 +117,8 @@ class SheetMappingCreate(SQLModel):
     start_cell: str = Field(..., min_length=1, max_length=20)
     write_mode: SheetWriteModeEnum = SheetWriteModeEnum.ROWS
     write_headers: bool = False
+    gap_rows: int = Field(default=0, ge=0)
+    format_config: FormatConfig | None = None
     sql_content: str = Field(..., min_length=1)
     description: str | None = Field(default=None, max_length=255)
 
@@ -78,6 +131,7 @@ class ReportTemplateCreate(SQLModel):
     output_prefix: str = Field(default="", max_length=1024)
     recalc_enabled: bool = False
     output_sheet: str | None = Field(default=None, max_length=255)
+    format_config: FormatConfig | None = None
     sheet_mappings: list[SheetMappingCreate] | None = Field(default=None)
 
 class ReportTemplateUpdate(SQLModel):
@@ -90,6 +144,7 @@ class ReportTemplateUpdate(SQLModel):
     output_prefix: str | None = None
     recalc_enabled: bool | None = None
     output_sheet: str | None = None
+    format_config: FormatConfig | None = None
     is_active: bool | None = None
 
 class SheetMappingPublic(SQLModel):
@@ -100,6 +155,8 @@ class SheetMappingPublic(SQLModel):
     start_cell: str
     write_mode: SheetWriteModeEnum
     write_headers: bool
+    gap_rows: int
+    format_config: dict[str, Any] | None
     sql_content: str
     description: str | None
     is_active: bool
@@ -117,6 +174,7 @@ class ReportTemplatePublic(SQLModel):
     output_prefix: str
     recalc_enabled: bool
     output_sheet: str | None
+    format_config: dict[str, Any] | None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -147,6 +205,8 @@ class SheetMappingUpdate(SQLModel):
     start_cell: str | None = None
     write_mode: SheetWriteModeEnum | None = None
     write_headers: bool | None = None
+    gap_rows: int | None = Field(default=None, ge=0)
+    format_config: FormatConfig | None = None
     sql_content: str | None = None
     description: str | None = None
     is_active: bool | None = None
