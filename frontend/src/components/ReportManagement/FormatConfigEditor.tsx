@@ -394,7 +394,7 @@ function CellFormatSection({
             <div className="flex gap-2">
               <Select
                 value={fmt.number_format ?? ""}
-                onValueChange={(v) => update({ number_format: v || undefined })}
+                onValueChange={(v) => update({ number_format: v === "__clear__" ? undefined : (v || undefined) })}
               >
                 <SelectTrigger className="h-8 text-xs flex-1">
                   <SelectValue placeholder="Select format" />

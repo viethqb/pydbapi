@@ -105,7 +105,7 @@ def test_api_executor_sql_loads_datasource_from_session(
 @patch("app.engines.executor.ScriptContext")
 @patch("app.engines.executor.get_pool_manager")
 def test_api_executor_script_returns_data(
-    mock_get_pm: MagicMock,
+    _mock_get_pm: MagicMock,
     mock_ctx_cls: MagicMock,
     mock_se_cls: MagicMock,
 ) -> None:
@@ -133,7 +133,7 @@ def test_api_executor_script_returns_data(
 @patch("app.engines.executor.ScriptContext")
 @patch("app.engines.executor.get_pool_manager")
 def test_api_executor_script_loads_datasource_from_session(
-    mock_get_pm: MagicMock,
+    _mock_get_pm: MagicMock,
     mock_ctx_cls: MagicMock,
     mock_se_cls: MagicMock,
 ) -> None:
@@ -195,8 +195,8 @@ def test_api_executor_datasource_id_without_session_raises() -> None:
 @patch("app.engines.executor.execute_sql")
 @patch("app.engines.executor.SQLTemplateEngine")
 def test_api_executor_datasource_not_found_raises(
-    mock_engine: MagicMock,
-    mock_execute_sql: MagicMock,
+    _mock_engine: MagicMock,
+    _mock_execute_sql: MagicMock,
 ) -> None:
     mock_session = MagicMock()
     mock_session.get.return_value = None

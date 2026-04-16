@@ -53,6 +53,7 @@ def enqueue_report_job(
 def _process_job(job_data: dict) -> None:
     """Process a single report generation job."""
     from sqlmodel import Session, select
+
     from app.core.db import engine
     from app.engines.excel.executor import ExcelReportExecutor
     from app.models_report import (
@@ -165,7 +166,9 @@ def stop_worker() -> None:
 def recover_orphaned_executions() -> None:
     """Mark any pending/running executions as failed on startup."""
     from datetime import UTC, datetime
+
     from sqlmodel import Session, select
+
     from app.core.db import engine
     from app.models_report import ExecutionStatusEnum, ReportExecution
 

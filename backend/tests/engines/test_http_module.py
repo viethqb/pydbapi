@@ -97,7 +97,7 @@ class TestCheckUrlAllowed:
 def _fake_getaddrinfo(ip: str):
     """Return a mock getaddrinfo result resolving to a single IP."""
 
-    def _gai(host, port, family=0, type_=0, proto=0, flags=0):
+    def _gai(_host, port, _family=0, _type=0, _proto=0, _flags=0):
         return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, port))]
 
     return _gai
@@ -106,7 +106,7 @@ def _fake_getaddrinfo(ip: str):
 def _fake_getaddrinfo_multi(ips: list[str]):
     """Return a mock getaddrinfo result resolving to multiple IPs."""
 
-    def _gai(host, port, family=0, type_=0, proto=0, flags=0):
+    def _gai(_host, port, _family=0, _type=0, _proto=0, _flags=0):
         return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, port)) for ip in ips]
 
     return _gai
@@ -155,7 +155,7 @@ class TestSSRFSafeBackend:
             patch("socket.getaddrinfo", _fake_getaddrinfo("93.184.216.34")),
             patch("socket.socket", return_value=mock_sock),
         ):
-            stream = backend.connect_tcp("example.com", 80, timeout=5.0)
+            backend.connect_tcp("example.com", 80, timeout=5.0)
             mock_sock.settimeout.assert_any_call(5.0)
             mock_sock.connect.assert_called_once_with(("93.184.216.34", 80))
 
