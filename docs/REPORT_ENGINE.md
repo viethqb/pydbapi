@@ -956,6 +956,200 @@ curl -s -X POST http://localhost:8000/api/v1/report-modules/$MODULE_ID/templates
 
 ---
 
+## Frontend Configuration Guide
+
+This section walks through configuring the Report Engine entirely from the pyDBAPI Dashboard UI (`/report-management`).
+
+### Creating a Report Module
+
+1. Navigate to **Report Management → Modules** and click **Create Module**
+2. Fill in the required fields:
+   - **Name**: Unique module name
+   - **MinIO Datasource**: Select a MinIO-type datasource (stores templates and output files)
+   - **SQL Datasource**: Select a PostgreSQL/MySQL datasource (executes SQL queries)
+   - **Default Template Bucket**: Bucket containing `.xlsx` template files
+   - **Default Output Bucket**: Bucket where generated reports are saved
+3. Click **Create**
+
+### Creating a Report Template
+
+1. Open the module, go to the **Templates** tab, and click **Create Template**
+2. Fill in:
+   - **Name**: Template name (unique within the module)
+   - **Template File**: Select an `.xlsx` file from MinIO, or leave empty to create a blank workbook
+   - **Output Prefix**: Output folder path (e.g., `reports/monthly/`)
+   - **Output Sheet**: Extract a specific sheet after generation (leave empty to keep the full workbook)
+   - **Recalc**: Enable if the template contains formulas that reference injected data
+3. Click **Create**
+
+### Configuring Default Format (Template-level)
+
+On the template detail page, go to the **Overview** tab and click **Edit**:
+
+1. Scroll down to the **Default Format** row and click **Format Config** to expand the panel
+2. Configure the options:
+
+   **Quick Options** (applied to all cells in every mapping):
+
+   | Option | Description |
+   |---|---|
+   | **Auto-fit column widths** | Automatically calculate column widths based on content. Set **Max width** to cap the maximum (default 50) |
+   | **Wrap text** | Enable text wrapping in all cells (header and data rows) |
+
+   **Header Format** (applied to header rows only):
+
+   Click **Header Format** to expand. Available settings:
+
+   | Setting | How to configure |
+   |---|---|
+   | **Font** | Select font family from the dropdown (Arial, Calibri, Segoe UI, etc.), choose size (8–36), toggle **B** for bold or **I** for italic |
+   | **Font Color** | Pick a preset color from the dropdown (Red, Blue, White, etc.) or type a hex code (e.g., `FF0000`) in the text field. A color swatch previews the selected color |
+   | **Background** | Pick a fill color. Pattern defaults to `solid` when a color is selected |
+   | **Border** | Choose a style (thin, medium, thick, dashed, dotted, double) from the dropdown. A color picker appears when a style is selected |
+   | **Alignment** | Click alignment icons for horizontal (left / center / right / justify), select vertical (Top / Middle / Bottom), toggle the wrap text icon |
+   | **Number Format** | Select a preset from the dropdown (`#,##0`, `0%`, `yyyy-mm-dd`, etc.) or type a custom Excel format string in the text field |
+
+   **Data Format** (applied to data rows only):
+
+   Same settings as Header Format, configured independently.
+
+   **Column Widths** (manual override):
+
+   Click **Column Widths** to expand:
+   - Enter a column letter (A, B, C…) and width value, then click **Add** or press Enter
+   - Each width appears as a removable pill tag (e.g., `A=15 ×`)
+   - When set, manual widths take priority over auto-fit
+
+3. Click **Save**
+
+> **Note**: Template-level format is the **default** for all mappings. Each mapping can override specific properties without affecting others (deep merge).
+
+### Creating and Configuring Sheet Mappings
+
+On the template detail page, go to the **Mappings** tab and click **Add Mapping**. The dialog opens as a table-based form:
+
+#### Basic Fields
+
+| Field | Description | Example |
+|---|---|---|
+| **Sheet Name** | Target Excel sheet name. For blank templates, sheets are auto-created | `Sheet1`, `Data`, `Summary` |
+| **Start Cell** | Cell where writing begins | `A1`, `B5`, `E10` |
+| **Write Mode** | `Rows` = write all query rows. `Single Value` = write first value of first row | `Rows` |
+| **Sort Order** | Execution order (lower runs first). Critical when multiple mappings target the same sheet | `0`, `1`, `2` |
+| **Gap Rows** | Empty rows to insert when auto-shift triggers (only applies during collision, ignored otherwise) | `0`, `2`, `5` |
+| **Options** | **Headers** = write column names as the first row. **Active** = enable/disable the mapping (edit dialog only) | ✓ Headers |
+
+#### SQL Content
+
+Write a SQL query with optional Jinja2 templating for dynamic parameters:
+
+```sql
+SELECT id, name, amount, status
+FROM orders
+{% where %}
+  {% if status %}AND status = {{ status | sql_string }}{% endif %}
+  {% if min_amount %}AND amount >= {{ min_amount | sql_float }}{% endif %}
+  {% if date_from %}AND created_at >= {{ date_from | sql_date }}{% endif %}
+{% endwhere %}
+ORDER BY id
+```
+
+Parameters are passed as JSON when generating the report (see [Generating a Report](#generating-a-report)).
+
+#### Per-Mapping Format Override
+
+Below the SQL Content field, click **Format Config** to expand the format panel. The interface is identical to the template-level format editor but applies only to this mapping.
+
+**Merge rules**:
+- The mapping **inherits** all format settings from the template
+- Only set what you want to **override** — unset fields keep the template value
+- Merge is **per-key** (deep merge), not a full replacement of the block
+
+**Example**: Template sets header = bold + 11pt. Mapping only sets header fill = yellow. Result: header = bold + 11pt + yellow background.
+
+### Reading the Mapping Summary
+
+After creation, each mapping displays as a table with full details:
+
+| Row | Content |
+|---|---|
+| **Sheet / Start Cell / Mode** | Position info + write mode badge + edit/delete buttons |
+| **Order / Headers / Gap Rows** | Execution order, header toggle, gap spacing |
+| **SQL** | Query content in a scrollable code block |
+| **Format** | Visual summary using pill tags: `auto-fit ≤50` `wrap-text` `Header: Bold · Calibri · 12pt · ●#FFFFFF · ●fill` `Data: #,##0.00 · thin` `widths: A=15 B=25` |
+| **Status** | Shows `Inactive` badge if disabled, plus description text if set |
+
+### Multiple Mappings on the Same Sheet
+
+When two or more mappings share the same `Sheet Name`:
+
+1. Set **Sort Order** to control execution sequence (mapping with order 0 runs first)
+2. Set **Gap Rows** on the second mapping onward to add spacing between data blocks
+3. The engine automatically **auto-shifts** later mappings below earlier ones — no data is overwritten
+
+**Example setup**:
+
+| Mapping | Sort Order | Start Cell | Gap Rows | Write Headers | SQL |
+|---|---|---|---|---|---|
+| Order details | 0 | A1 | 0 | ✓ | `SELECT id, product, amount FROM orders` |
+| Summary by status | 1 | A1 | 2 | ✓ | `SELECT status, COUNT(*), SUM(amount) FROM orders GROUP BY status` |
+
+**Result**: Mapping 1 writes from A1 downward. Mapping 2 auto-shifts below mapping 1's data, with 2 empty gap rows in between.
+
+### Combining SINGLE + ROWS on the Same Sheet
+
+Use `Single Value` mode for totals/labels and `Rows` mode for data tables:
+
+| Mapping | Mode | Sort Order | Start Cell | SQL |
+|---|---|---|---|---|
+| Report title | Single Value | 0 | A1 | `SELECT 'Monthly Report - April 2026'` |
+| Total orders | Single Value | 1 | D1 | `SELECT COUNT(*) FROM orders` |
+| Order data | Rows | 2 | A3 | `SELECT * FROM orders ORDER BY id` |
+
+> **Important**: `Single Value` mappings also affect auto-shift tracking. If a SINGLE mapping writes to row 1, a subsequent ROWS mapping at A1 will shift to A2. To avoid unexpected shifts, place ROWS mappings at a `Start Cell` below the SINGLE values (e.g., `A3`), or rely on Sort Order + Gap Rows.
+
+### Generating a Report
+
+1. Open the template detail page and go to the **Generate** tab
+2. Enter **Parameters** as a JSON object:
+
+```json
+{
+  "status": "completed",
+  "min_amount": 100,
+  "date_from": "2026-01-01",
+  "date_to": "2026-04-30"
+}
+```
+
+Pass `{}` to generate without filters (all SQL conditions using `{% if param %}` are skipped).
+
+3. Click **Generate**
+4. When complete, click **Download Report** or copy the download URL
+
+### Viewing Execution History
+
+The **History** tab shows all past generations:
+
+| Column | Description |
+|---|---|
+| **Status** | `pending` → `running` → `success` or `failed` |
+| **Started / Completed** | Timestamps for execution start and finish |
+| **Download** | Download button (only shown for `success` status) |
+| **Error** | Error message if failed (hover to see full text) |
+
+The page auto-refreshes every 3 seconds while any execution is `pending` or `running`.
+
+### Managing Client Access
+
+The **Clients** tab (available at both module and template level):
+
+1. Check the clients allowed to generate reports via external API (ToolJet, scripts, etc.)
+2. Clients must be assigned at the **module level** for access
+3. Click **Save** to apply changes
+
+---
+
 ## ToolJet Integration
 
 ### Step 1: Create a Client
