@@ -3,22 +3,343 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AccessLogsGetAccessLogDatasourceOptionsResponse, AccessLogsGetAccessLogConfigResponse, AccessLogsUpdateAccessLogConfigData, AccessLogsUpdateAccessLogConfigResponse, AccessLogsListAccessLogsData, AccessLogsListAccessLogsResponse, AccessLogsGetAccessLogDetailData, AccessLogsGetAccessLogDetailResponse, AccessLogsInitExternalAccessLogTableResponse, ApiAssignmentsListApiAssignmentsData, ApiAssignmentsListApiAssignmentsResponse, ApiAssignmentsCreateApiAssignmentData, ApiAssignmentsCreateApiAssignmentResponse, ApiAssignmentsUpdateApiAssignmentData, ApiAssignmentsUpdateApiAssignmentResponse, ApiAssignmentsPublishApiAssignmentData, ApiAssignmentsPublishApiAssignmentResponse, ApiAssignmentsUnpublishApiAssignmentData, ApiAssignmentsUnpublishApiAssignmentResponse, ApiAssignmentsDebugApiAssignmentData, ApiAssignmentsDebugApiAssignmentResponse, ApiAssignmentsDeleteApiAssignmentData, ApiAssignmentsDeleteApiAssignmentResponse, ApiAssignmentsGetApiAssignmentData, ApiAssignmentsGetApiAssignmentResponse, ApiAssignmentsCreateVersionData, ApiAssignmentsCreateVersionResponse, ApiAssignmentsListVersionsData, ApiAssignmentsListVersionsResponse, ApiAssignmentsGetVersionData, ApiAssignmentsGetVersionResponse, ApiAssignmentsDeleteVersionData, ApiAssignmentsDeleteVersionResponse, ApiAssignmentsRestoreVersionData, ApiAssignmentsRestoreVersionResponse, ApiAssignmentsRevertVersionToDraftData, ApiAssignmentsRevertVersionToDraftResponse, ApiAssignmentsCheckSqlSafetyData, ApiAssignmentsCheckSqlSafetyResponse, ClientsListClientsData, ClientsListClientsResponse, ClientsCreateClientData, ClientsCreateClientResponse, ClientsUpdateClientData, ClientsUpdateClientResponse, ClientsDeleteClientData, ClientsDeleteClientResponse, ClientsRegenerateClientSecretData, ClientsRegenerateClientSecretResponse, ClientsGetClientData, ClientsGetClientResponse, DatasourcesGetTypesResponse, DatasourcesGetDriversData, DatasourcesGetDriversResponse, DatasourcesListDatasourcesData, DatasourcesListDatasourcesResponse, DatasourcesCreateDatasourceData, DatasourcesCreateDatasourceResponse, DatasourcesUpdateDatasourceData, DatasourcesUpdateDatasourceResponse, DatasourcesTestDatasourceData, DatasourcesTestDatasourceResponse, DatasourcesGetDatasourceData, DatasourcesGetDatasourceResponse, DatasourcesDeleteDatasourceData, DatasourcesDeleteDatasourceResponse, DatasourcesPreTestDatasourceData, DatasourcesPreTestDatasourceResponse, GroupsListGroupsData, GroupsListGroupsResponse, GroupsCreateGroupData, GroupsCreateGroupResponse, GroupsUpdateGroupData, GroupsUpdateGroupResponse, GroupsDeleteGroupData, GroupsDeleteGroupResponse, GroupsGetGroupData, GroupsGetGroupResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginLogoutResponse, LoginResetPasswordData, LoginResetPasswordResponse, MacroDefsListMacroDefsSimpleData, MacroDefsListMacroDefsSimpleResponse, MacroDefsListMacroDefsData, MacroDefsListMacroDefsResponse, MacroDefsCreateMacroDefData, MacroDefsCreateMacroDefResponse, MacroDefsUpdateMacroDefData, MacroDefsUpdateMacroDefResponse, MacroDefsDeleteMacroDefData, MacroDefsDeleteMacroDefResponse, MacroDefsGetMacroDefData, MacroDefsGetMacroDefResponse, MacroDefsPublishMacroDefData, MacroDefsPublishMacroDefResponse, MacroDefsUnpublishMacroDefData, MacroDefsUnpublishMacroDefResponse, MacroDefsCreateMacroDefVersionData, MacroDefsCreateMacroDefVersionResponse, MacroDefsListMacroDefVersionsData, MacroDefsListMacroDefVersionsResponse, MacroDefsGetMacroDefVersionData, MacroDefsGetMacroDefVersionResponse, MacroDefsDeleteMacroDefVersionData, MacroDefsDeleteMacroDefVersionResponse, MacroDefsRestoreMacroDefVersionData, MacroDefsRestoreMacroDefVersionResponse, MacroDefsRevertMacroDefVersionToDraftData, MacroDefsRevertMacroDefVersionToDraftResponse, ModulesListModulesSimpleResponse, ModulesListModulesData, ModulesListModulesResponse, ModulesCreateModuleData, ModulesCreateModuleResponse, ModulesUpdateModuleData, ModulesUpdateModuleResponse, ModulesDeleteModuleData, ModulesDeleteModuleResponse, ModulesGetModuleData, ModulesGetModuleResponse, OverviewGetOverviewStatsResponse, OverviewGetRequestsByDayData, OverviewGetRequestsByDayResponse, OverviewGetTopPathsData, OverviewGetTopPathsResponse, OverviewGetStatusBreakdownData, OverviewGetStatusBreakdownResponse, OverviewGetRecentAccessData, OverviewGetRecentAccessResponse, OverviewGetRecentCommitsData, OverviewGetRecentCommitsResponse, PermissionsGetResourceNamesResponse, PermissionsListPermissionsResponse, ReportExecutionsGetExecutionData, ReportExecutionsGetExecutionResponse, ReportExecutionsDownloadExecutionData, ReportExecutionsDownloadExecutionResponse, ReportExecutionsListExecutionsData, ReportExecutionsListExecutionsResponse, ReportModulesListMinioBucketsData, ReportModulesListMinioBucketsResponse, ReportModulesListMinioFilesData, ReportModulesListMinioFilesResponse, ReportModulesListExcelSheetsData, ReportModulesListExcelSheetsResponse, ReportModulesListModulesData, ReportModulesListModulesResponse, ReportModulesCreateModuleData, ReportModulesCreateModuleResponse, ReportModulesUpdateModuleData, ReportModulesUpdateModuleResponse, ReportModulesDeleteModuleData, ReportModulesDeleteModuleResponse, ReportModulesGetModuleData, ReportModulesGetModuleResponse, ReportModulesGetModuleClientsData, ReportModulesGetModuleClientsResponse, ReportModulesSetModuleClientsData, ReportModulesSetModuleClientsResponse, ReportModulesListAllTemplatesData, ReportModulesListAllTemplatesResponse, ReportModulesListTemplatesData, ReportModulesListTemplatesResponse, ReportModulesCreateTemplateData, ReportModulesCreateTemplateResponse, ReportModulesUpdateTemplateData, ReportModulesUpdateTemplateResponse, ReportModulesDeleteTemplateData, ReportModulesDeleteTemplateResponse, ReportModulesGetTemplateData, ReportModulesGetTemplateResponse, ReportModulesGetTemplateClientsData, ReportModulesGetTemplateClientsResponse, ReportModulesSetTemplateClientsData, ReportModulesSetTemplateClientsResponse, ReportModulesCreateMappingData, ReportModulesCreateMappingResponse, ReportModulesUpdateMappingData, ReportModulesUpdateMappingResponse, ReportModulesBatchUpdateMappingsData, ReportModulesBatchUpdateMappingsResponse, ReportModulesDeleteMappingData, ReportModulesDeleteMappingResponse, ReportModulesGenerateData, ReportModulesGenerateResponse, ReportModulesPreviewTemplateData, ReportModulesPreviewTemplateResponse, ReportModulesListTemplateExecutionsData, ReportModulesListTemplateExecutionsResponse, ReportModulesClientListModulesData, ReportModulesClientListModulesResponse, ReportModulesClientListTemplatesData, ReportModulesClientListTemplatesResponse, ReportModulesClientGetTemplateData, ReportModulesClientGetTemplateResponse, ReportModulesClientGetExecutionData, ReportModulesClientGetExecutionResponse, ReportModulesClientListExecutionsData, ReportModulesClientListExecutionsResponse, ReportModulesClientGetModuleData, ReportModulesClientGetModuleResponse, ReportModulesClientCreateTemplateData, ReportModulesClientCreateTemplateResponse, ReportModulesClientUpdateTemplateData, ReportModulesClientUpdateTemplateResponse, ReportModulesClientDeleteTemplateData, ReportModulesClientDeleteTemplateResponse, ReportModulesClientCreateMappingData, ReportModulesClientCreateMappingResponse, ReportModulesClientUpdateMappingData, ReportModulesClientUpdateMappingResponse, ReportModulesClientBatchUpdateMappingsData, ReportModulesClientBatchUpdateMappingsResponse, ReportModulesClientDeleteMappingData, ReportModulesClientDeleteMappingResponse, ReportModulesClientGetTemplateClientsData, ReportModulesClientGetTemplateClientsResponse, ReportModulesClientSetTemplateClientsData, ReportModulesClientSetTemplateClientsResponse, ReportModulesClientListTemplateExecutionsData, ReportModulesClientListTemplateExecutionsResponse, ReportModulesClientListBucketsData, ReportModulesClientListBucketsResponse, ReportModulesClientListFilesData, ReportModulesClientListFilesResponse, ReportModulesClientListSheetsData, ReportModulesClientListSheetsResponse, RolesCreateRoleData, RolesCreateRoleResponse, RolesListRolesResponse, RolesListRoleUsersData, RolesListRoleUsersResponse, RolesGetRoleData, RolesGetRoleResponse, RolesUpdateRoleData, RolesUpdateRoleResponse, RolesDeleteRoleData, RolesDeleteRoleResponse, TokenTokenGenerateResponse, TokenTokenGenerateGetData, TokenTokenGenerateGetResponse, TokenTokenGenerate1Response, TokenTokenGenerateGet1Data, TokenTokenGenerateGet1Response, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadMyPermissionsResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UsersGetUserRolesData, UsersGetUserRolesResponse, UsersUpdateUserRolesData, UsersUpdateUserRolesResponse, UtilsLivenessResponse, UtilsHealthCheckResponse } from './types.gen';
 
-export class ItemsService {
+export class AccessLogsService {
     /**
-     * Read Items
-     * Retrieve items.
-     * @param data The data for the request.
-     * @param data.skip
-     * @param data.limit
-     * @returns ItemsPublic Successful Response
+     * Get Access Log Datasource Options
+     * List datasources suitable for access log storage (postgres/mysql, active). For dropdown; no DATASOURCE read required.
+     * @returns AccessLogDatasourceOptionsOut Successful Response
      * @throws ApiError
      */
-    public static readItems(data: ItemsReadItemsData = {}): CancelablePromise<ItemsReadItemsResponse> {
+    public static getAccessLogDatasourceOptions(): CancelablePromise<AccessLogsGetAccessLogDatasourceOptionsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/items/',
+            url: '/api/v1/access-logs/datasource-options'
+        });
+    }
+    
+    /**
+     * Get Access Log Config
+     * Get current access log storage: null = main DB, else DataSource id; use_starrocks_audit for MySQL.
+     * @returns AccessLogConfigPublic Successful Response
+     * @throws ApiError
+     */
+    public static getAccessLogConfig(): CancelablePromise<AccessLogsGetAccessLogConfigResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/access-logs/config'
+        });
+    }
+    
+    /**
+     * Update Access Log Config
+     * Set which DataSource stores access logs. Requires access_log update. Null = main DB. use_starrocks_audit only for MySQL.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AccessLogConfigPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateAccessLogConfig(data: AccessLogsUpdateAccessLogConfigData): CancelablePromise<AccessLogsUpdateAccessLogConfigResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/access-logs/config',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Access Logs
+     * List access logs with filters. Paginated.
+     * @param data The data for the request.
+     * @param data.apiAssignmentId Filter by API assignment UUID
+     * @param data.moduleId Filter by module UUID (resolves to API assignment ids)
+     * @param data.groupId Filter by group UUID (resolves to API assignment ids)
+     * @param data.appClientId Filter by app client UUID
+     * @param data.pathIlike Filter by path (substring)
+     * @param data.httpMethod Filter by HTTP method (GET, POST, ...)
+     * @param data.ipAddress Filter by client IP
+     * @param data.timeFrom From (inclusive)
+     * @param data.timeTo To (inclusive)
+     * @param data.status all | success | fail
+     * @param data.page
+     * @param data.pageSize
+     * @returns AccessLogListOut Successful Response
+     * @throws ApiError
+     */
+    public static listAccessLogs(data: AccessLogsListAccessLogsData = {}): CancelablePromise<AccessLogsListAccessLogsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/access-logs',
+            query: {
+                api_assignment_id: data.apiAssignmentId,
+                module_id: data.moduleId,
+                group_id: data.groupId,
+                app_client_id: data.appClientId,
+                path__ilike: data.pathIlike,
+                http_method: data.httpMethod,
+                ip_address: data.ipAddress,
+                time_from: data.timeFrom,
+                time_to: data.timeTo,
+                status: data.status,
+                page: data.page,
+                page_size: data.pageSize
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Access Log Detail
+     * Get one access log by id (includes request_body).
+     * @param data The data for the request.
+     * @param data.logId
+     * @returns AccessRecordDetail Successful Response
+     * @throws ApiError
+     */
+    public static getAccessLogDetail(data: AccessLogsGetAccessLogDetailData): CancelablePromise<AccessLogsGetAccessLogDetailResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/access-logs/{log_id}',
+            path: {
+                log_id: data.logId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Init External Access Log Table
+     * Create access_record table (or StarRocks audit schema) in the configured external DataSource.
+     * Requires access_log update. No-op if using main DB.
+     * When use_starrocks_audit is True, creates starrocks_audit_db__ and pydbapi_access_log_tbl__ table.
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static initExternalAccessLogTable(): CancelablePromise<AccessLogsInitExternalAccessLogTableResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/access-logs/init-external-table'
+        });
+    }
+}
+
+export class ApiAssignmentsService {
+    /**
+     * List Api Assignments
+     * List API assignments with pagination and optional filters.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiAssignmentListOut Successful Response
+     * @throws ApiError
+     */
+    public static listApiAssignments(data: ApiAssignmentsListApiAssignmentsData): CancelablePromise<ApiAssignmentsListApiAssignmentsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/list',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Api Assignment
+     * Create API assignment; if content provided, create ApiContext (1-1). Optionally link groups.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiAssignmentPublic Successful Response
+     * @throws ApiError
+     */
+    public static createApiAssignment(data: ApiAssignmentsCreateApiAssignmentData): CancelablePromise<ApiAssignmentsCreateApiAssignmentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Api Assignment
+     * Update API assignment; if content sent, update or create ApiContext. If group_ids sent, replace links.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiAssignmentPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateApiAssignment(data: ApiAssignmentsUpdateApiAssignmentData): CancelablePromise<ApiAssignmentsUpdateApiAssignmentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/update',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Publish Api Assignment
+     * Set is_published=True for the given API assignment. Must provide version_id.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiAssignmentPublic Successful Response
+     * @throws ApiError
+     */
+    public static publishApiAssignment(data: ApiAssignmentsPublishApiAssignmentData): CancelablePromise<ApiAssignmentsPublishApiAssignmentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/publish',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unpublish Api Assignment
+     * Set is_published=False for the given API assignment.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiAssignmentPublic Successful Response
+     * @throws ApiError
+     */
+    public static unpublishApiAssignment(data: ApiAssignmentsUnpublishApiAssignmentData): CancelablePromise<ApiAssignmentsUnpublishApiAssignmentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/unpublish',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Debug Api Assignment
+     * Run API (SQL or Script) for testing. Phase 3: uses ApiExecutor.
+     *
+     * - If body.id: load ApiAssignment + ApiContext; use content, execute_engine, datasource_id.
+     * - If body.content (inline): use content, execute_engine, datasource_id from body.
+     * Returns same format as gateway: { success, message, data }; errors use same envelope.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static debugApiAssignment(data: ApiAssignmentsDebugApiAssignmentData): CancelablePromise<ApiAssignmentsDebugApiAssignmentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/debug',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Api Assignment
+     * Delete API assignment and all related records.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteApiAssignment(data: ApiAssignmentsDeleteApiAssignmentData): CancelablePromise<ApiAssignmentsDeleteApiAssignmentResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/api-assignments/delete/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Api Assignment
+     * Get API assignment detail with api_context and group_ids.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns ApiAssignmentDetail Successful Response
+     * @throws ApiError
+     */
+    public static getApiAssignment(data: ApiAssignmentsGetApiAssignmentData): CancelablePromise<ApiAssignmentsGetApiAssignmentResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/api-assignments/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Version
+     * Create a new version snapshot for the API (content + params + validations + transform).
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns VersionCommitDetail Successful Response
+     * @throws ApiError
+     */
+    public static createVersion(data: ApiAssignmentsCreateVersionData): CancelablePromise<ApiAssignmentsCreateVersionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/{id}/versions/create',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Versions
+     * List versions for an API assignment (paginated).
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.skip
+     * @param data.limit
+     * @returns VersionCommitListOut Successful Response
+     * @throws ApiError
+     */
+    public static listVersions(data: ApiAssignmentsListVersionsData): CancelablePromise<ApiAssignmentsListVersionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/api-assignments/{id}/versions',
+            path: {
+                id: data.id
+            },
             query: {
                 skip: data.skip,
                 limit: data.limit
@@ -30,39 +351,19 @@ export class ItemsService {
     }
     
     /**
-     * Create Item
-     * Create new item.
+     * Get Version
+     * Get a specific version detail including content.
      * @param data The data for the request.
-     * @param data.requestBody
-     * @returns ItemPublic Successful Response
+     * @param data.versionId
+     * @returns VersionCommitDetail Successful Response
      * @throws ApiError
      */
-    public static createItem(data: ItemsCreateItemData): CancelablePromise<ItemsCreateItemResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/items/',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Item
-     * Get item by ID.
-     * @param data The data for the request.
-     * @param data.id
-     * @returns ItemPublic Successful Response
-     * @throws ApiError
-     */
-    public static readItem(data: ItemsReadItemData): CancelablePromise<ItemsReadItemResponse> {
+    public static getVersion(data: ApiAssignmentsGetVersionData): CancelablePromise<ApiAssignmentsGetVersionResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/api-assignments/versions/{version_id}',
             path: {
-                id: data.id
+                version_id: data.versionId
             },
             errors: {
                 422: 'Validation Error'
@@ -71,21 +372,109 @@ export class ItemsService {
     }
     
     /**
-     * Update Item
-     * Update an item.
+     * Delete Version
+     * Delete a version. Cannot delete if it's the published version.
      * @param data The data for the request.
-     * @param data.id
-     * @param data.requestBody
-     * @returns ItemPublic Successful Response
+     * @param data.versionId
+     * @returns Message Successful Response
      * @throws ApiError
      */
-    public static updateItem(data: ItemsUpdateItemData): CancelablePromise<ItemsUpdateItemResponse> {
+    public static deleteVersion(data: ApiAssignmentsDeleteVersionData): CancelablePromise<ApiAssignmentsDeleteVersionResponse> {
         return __request(OpenAPI, {
-            method: 'PUT',
-            url: '/api/v1/items/{id}',
+            method: 'DELETE',
+            url: '/api/v1/api-assignments/versions/{version_id}',
             path: {
-                id: data.id
+                version_id: data.versionId
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Restore Version
+     * Restore API dev config from a version snapshot. Overwrites current ApiContext with version's content, params, param_validates, result_transform.
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.versionId
+     * @returns ApiAssignmentDetail Successful Response
+     * @throws ApiError
+     */
+    public static restoreVersion(data: ApiAssignmentsRestoreVersionData): CancelablePromise<ApiAssignmentsRestoreVersionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/{id}/versions/{version_id}/restore',
+            path: {
+                id: data.id,
+                version_id: data.versionId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Revert Version To Draft
+     * Clear published_version_id for this version (revert to draft). Only allowed when API is not published.
+     * @param data The data for the request.
+     * @param data.versionId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static revertVersionToDraft(data: ApiAssignmentsRevertVersionToDraftData): CancelablePromise<ApiAssignmentsRevertVersionToDraftResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/versions/{version_id}/revert-to-draft',
+            path: {
+                version_id: data.versionId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Check Sql Safety
+     * Analyse SQL template content for variables without explicit SQL filters.
+     *
+     * Body: ``{"content": "SELECT ... {{ name }} ..."}``
+     *
+     * Returns ``{"warnings": [...]}`` where each warning has ``variable``,
+     * ``line``, and ``message`` keys.  Empty list = no issues found.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static checkSqlSafety(data: ApiAssignmentsCheckSqlSafetyData): CancelablePromise<ApiAssignmentsCheckSqlSafetyResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-assignments/check-sql-safety',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class ClientsService {
+    /**
+     * List Clients
+     * List clients with pagination and optional filters (name, is_active).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AppClientListOut Successful Response
+     * @throws ApiError
+     */
+    public static listClients(data: ClientsListClientsData): CancelablePromise<ClientsListClientsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/clients/list',
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
@@ -95,17 +484,386 @@ export class ItemsService {
     }
     
     /**
-     * Delete Item
-     * Delete an item.
+     * Create Client
+     * Create a new client; generate client_id and hash client_secret by default.
+     *
+     * If ``client_id`` is provided in the request body, it will be used instead of a
+     * generated value (must be unique). ``client_secret`` is always hashed before
+     * storing.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AppClientPublic Successful Response
+     * @throws ApiError
+     */
+    public static createClient(data: ClientsCreateClientData): CancelablePromise<ClientsCreateClientResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/clients/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Client
+     * Update an existing client (client_id and client_secret not changed here). If group_ids is set, replace links.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AppClientPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateClient(data: ClientsUpdateClientData): CancelablePromise<ClientsUpdateClientResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/clients/update',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Client
+     * Delete a client by id.
      * @param data The data for the request.
      * @param data.id
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteItem(data: ItemsDeleteItemData): CancelablePromise<ItemsDeleteItemResponse> {
+    public static deleteClient(data: ClientsDeleteClientData): CancelablePromise<ClientsDeleteClientResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/clients/delete/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Regenerate Client Secret
+     * Generate a new client_secret, hash and save; return plain secret once.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns AppClientRegenerateSecretOut Successful Response
+     * @throws ApiError
+     */
+    public static regenerateClientSecret(data: ClientsRegenerateClientSecretData): CancelablePromise<ClientsRegenerateClientSecretResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/clients/{id}/regenerate-secret',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Client
+     * Get client detail by id (client_secret omitted; includes group_ids and effective API access).
+     * @param data The data for the request.
+     * @param data.id
+     * @returns AppClientDetail Successful Response
+     * @throws ApiError
+     */
+    public static getClient(data: ClientsGetClientData): CancelablePromise<ClientsGetClientResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/clients/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class DatasourcesService {
+    /**
+     * Get Types
+     * List supported database types (postgres, mysql initially).
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static getTypes(): CancelablePromise<DatasourcesGetTypesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/datasources/types'
+        });
+    }
+    
+    /**
+     * Get Drivers
+     * List driver versions for the given database type.
+     * @param data The data for the request.
+     * @param data.type
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static getDrivers(data: DatasourcesGetDriversData): CancelablePromise<DatasourcesGetDriversResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/datasources/{type}/drivers',
+            path: {
+                type: data.type
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Datasources
+     * List datasources with pagination and optional filters.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns DataSourceListOut Successful Response
+     * @throws ApiError
+     */
+    public static listDatasources(data: DatasourcesListDatasourcesData): CancelablePromise<DatasourcesListDatasourcesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/datasources/list',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Datasource
+     * Create a new datasource.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns DataSourcePublic Successful Response
+     * @throws ApiError
+     */
+    public static createDatasource(data: DatasourcesCreateDatasourceData): CancelablePromise<DatasourcesCreateDatasourceResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/datasources/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Datasource
+     * Update an existing datasource.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns DataSourcePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateDatasource(data: DatasourcesUpdateDatasourceData): CancelablePromise<DatasourcesUpdateDatasourceResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/datasources/update',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Test Datasource
+     * Test connection for an existing datasource.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns DataSourceTestResult Successful Response
+     * @throws ApiError
+     */
+    public static testDatasource(data: DatasourcesTestDatasourceData): CancelablePromise<DatasourcesTestDatasourceResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/datasources/test/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Datasource
+     * Get a datasource by id.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns DataSourcePublic Successful Response
+     * @throws ApiError
+     */
+    public static getDatasource(data: DatasourcesGetDatasourceData): CancelablePromise<DatasourcesGetDatasourceResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/datasources/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Datasource
+     * Delete a datasource by id.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteDatasource(data: DatasourcesDeleteDatasourceData): CancelablePromise<DatasourcesDeleteDatasourceResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/datasources/delete/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Pre Test Datasource
+     * Test connection before saving (connection params in body).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns DataSourceTestResult Successful Response
+     * @throws ApiError
+     */
+    public static preTestDatasource(data: DatasourcesPreTestDatasourceData): CancelablePromise<DatasourcesPreTestDatasourceResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/datasources/preTest',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class GroupsService {
+    /**
+     * List Groups
+     * List groups with pagination and optional filters (name, is_active).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiGroupListOut Successful Response
+     * @throws ApiError
+     */
+    public static listGroups(data: GroupsListGroupsData): CancelablePromise<GroupsListGroupsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/groups/list',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Group
+     * Create a new group.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiGroupPublic Successful Response
+     * @throws ApiError
+     */
+    public static createGroup(data: GroupsCreateGroupData): CancelablePromise<GroupsCreateGroupResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/groups/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Group
+     * Update an existing group.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiGroupPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateGroup(data: GroupsUpdateGroupData): CancelablePromise<GroupsUpdateGroupResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/groups/update',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Group
+     * Delete a group by id.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteGroup(data: GroupsDeleteGroupData): CancelablePromise<GroupsDeleteGroupResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/groups/delete/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Group
+     * Get group detail by id (includes api_assignment_ids from group_links).
+     * @param data The data for the request.
+     * @param data.id
+     * @returns ApiGroupDetail Successful Response
+     * @throws ApiError
+     */
+    public static getGroup(data: GroupsGetGroupData): CancelablePromise<GroupsGetGroupResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/groups/{id}',
             path: {
                 id: data.id
             },
@@ -151,23 +909,15 @@ export class LoginService {
     }
     
     /**
-     * Recover Password
-     * Password Recovery
-     * @param data The data for the request.
-     * @param data.email
+     * Logout
+     * Revoke the current access token (server-side logout).
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static recoverPassword(data: LoginRecoverPasswordData): CancelablePromise<LoginRecoverPasswordResponse> {
+    public static logout(): CancelablePromise<LoginLogoutResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/password-recovery/{email}',
-            path: {
-                email: data.email
-            },
-            errors: {
-                422: 'Validation Error'
-            }
+            url: '/api/v1/logout'
         });
     }
     
@@ -190,21 +940,296 @@ export class LoginService {
             }
         });
     }
-    
+}
+
+export class MacroDefsService {
     /**
-     * Recover Password Html Content
-     * HTML Content for Password Recovery
+     * List Macro Defs Simple
+     * Simple list for dropdowns (no pagination). Global + module-specific if module_id given.
      * @param data The data for the request.
-     * @param data.email
-     * @returns string Successful Response
+     * @param data.moduleId
+     * @returns ApiMacroDefPublic Successful Response
      * @throws ApiError
      */
-    public static recoverPasswordHtmlContent(data: LoginRecoverPasswordHtmlContentData): CancelablePromise<LoginRecoverPasswordHtmlContentResponse> {
+    public static listMacroDefsSimple(data: MacroDefsListMacroDefsSimpleData = {}): CancelablePromise<MacroDefsListMacroDefsSimpleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/macro-defs',
+            query: {
+                module_id: data.moduleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Macro Defs
+     * List macro_defs with pagination and optional filters.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiMacroDefListOut Successful Response
+     * @throws ApiError
+     */
+    public static listMacroDefs(data: MacroDefsListMacroDefsData): CancelablePromise<MacroDefsListMacroDefsResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/password-recovery-html-content/{email}',
+            url: '/api/v1/macro-defs/list',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Macro Def
+     * Create a new macro_def (Jinja or Python).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiMacroDefPublic Successful Response
+     * @throws ApiError
+     */
+    public static createMacroDef(data: MacroDefsCreateMacroDefData): CancelablePromise<MacroDefsCreateMacroDefResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/macro-defs/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Macro Def
+     * Update an existing macro_def.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiMacroDefPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateMacroDef(data: MacroDefsUpdateMacroDefData): CancelablePromise<MacroDefsUpdateMacroDefResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/macro-defs/update',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Macro Def
+     * Delete a macro_def by id. Fails if any API is in scope (uses this macro_def).
+     * @param data The data for the request.
+     * @param data.id
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteMacroDef(data: MacroDefsDeleteMacroDefData): CancelablePromise<MacroDefsDeleteMacroDefResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/macro-defs/delete/{id}',
             path: {
-                email: data.email
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Macro Def
+     * Get macro_def detail by id. Includes used_by_apis_count.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns ApiMacroDefDetail Successful Response
+     * @throws ApiError
+     */
+    public static getMacroDef(data: MacroDefsGetMacroDefData): CancelablePromise<MacroDefsGetMacroDefResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/macro-defs/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Publish Macro Def
+     * Set is_published=True. Must provide version_id.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiMacroDefPublic Successful Response
+     * @throws ApiError
+     */
+    public static publishMacroDef(data: MacroDefsPublishMacroDefData): CancelablePromise<MacroDefsPublishMacroDefResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/macro-defs/publish',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unpublish Macro Def
+     * Set is_published=False.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiMacroDefPublic Successful Response
+     * @throws ApiError
+     */
+    public static unpublishMacroDef(data: MacroDefsUnpublishMacroDefData): CancelablePromise<MacroDefsUnpublishMacroDefResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/macro-defs/unpublish',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Macro Def Version
+     * Create a new version snapshot for the macro_def.
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns MacroDefVersionCommitDetail Successful Response
+     * @throws ApiError
+     */
+    public static createMacroDefVersion(data: MacroDefsCreateMacroDefVersionData): CancelablePromise<MacroDefsCreateMacroDefVersionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/macro-defs/{id}/versions/create',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Macro Def Versions
+     * List all versions for a macro_def.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns MacroDefVersionCommitListOut Successful Response
+     * @throws ApiError
+     */
+    public static listMacroDefVersions(data: MacroDefsListMacroDefVersionsData): CancelablePromise<MacroDefsListMacroDefVersionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/macro-defs/{id}/versions',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Macro Def Version
+     * Get a specific version detail including content.
+     * @param data The data for the request.
+     * @param data.versionId
+     * @returns MacroDefVersionCommitDetail Successful Response
+     * @throws ApiError
+     */
+    public static getMacroDefVersion(data: MacroDefsGetMacroDefVersionData): CancelablePromise<MacroDefsGetMacroDefVersionResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/macro-defs/versions/{version_id}',
+            path: {
+                version_id: data.versionId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Macro Def Version
+     * Delete a version. Cannot delete if it's the published version.
+     * @param data The data for the request.
+     * @param data.versionId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteMacroDefVersion(data: MacroDefsDeleteMacroDefVersionData): CancelablePromise<MacroDefsDeleteMacroDefVersionResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/macro-defs/versions/{version_id}',
+            path: {
+                version_id: data.versionId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Restore Macro Def Version
+     * Restore macro_def content from a version snapshot.
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.versionId
+     * @returns ApiMacroDefPublic Successful Response
+     * @throws ApiError
+     */
+    public static restoreMacroDefVersion(data: MacroDefsRestoreMacroDefVersionData): CancelablePromise<MacroDefsRestoreMacroDefVersionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/macro-defs/{id}/versions/{version_id}/restore',
+            path: {
+                id: data.id,
+                version_id: data.versionId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Revert Macro Def Version To Draft
+     * Clear published_version_id for this version (revert to draft). Only allowed when macro_def is not published.
+     * @param data The data for the request.
+     * @param data.versionId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static revertMacroDefVersionToDraft(data: MacroDefsRevertMacroDefVersionToDraftData): CancelablePromise<MacroDefsRevertMacroDefVersionToDraftResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/macro-defs/versions/{version_id}/revert-to-draft',
+            path: {
+                version_id: data.versionId
             },
             errors: {
                 422: 'Validation Error'
@@ -213,21 +1238,1586 @@ export class LoginService {
     }
 }
 
-export class PrivateService {
+export class ModulesService {
     /**
-     * Create User
-     * Create a new user.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns UserPublic Successful Response
+     * List Modules Simple
+     * Simple list for dropdowns (no pagination).
+     * @returns ApiModulePublic Successful Response
      * @throws ApiError
      */
-    public static createUser(data: PrivateCreateUserData): CancelablePromise<PrivateCreateUserResponse> {
+    public static listModulesSimple(): CancelablePromise<ModulesListModulesSimpleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/modules'
+        });
+    }
+    
+    /**
+     * List Modules
+     * List modules with pagination and optional filters (name, is_active).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiModuleListOut Successful Response
+     * @throws ApiError
+     */
+    public static listModules(data: ModulesListModulesData): CancelablePromise<ModulesListModulesResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/private/users/',
+            url: '/api/v1/modules/list',
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Module
+     * Create a new module.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiModulePublic Successful Response
+     * @throws ApiError
+     */
+    public static createModule(data: ModulesCreateModuleData): CancelablePromise<ModulesCreateModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/modules/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Module
+     * Update an existing module.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiModulePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateModule(data: ModulesUpdateModuleData): CancelablePromise<ModulesUpdateModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/modules/update',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Module
+     * Delete a module by id (cascades to api_assignments).
+     * @param data The data for the request.
+     * @param data.id
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteModule(data: ModulesDeleteModuleData): CancelablePromise<ModulesDeleteModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/modules/delete/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Module
+     * Get module detail by id.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns ApiModulePublic Successful Response
+     * @throws ApiError
+     */
+    public static getModule(data: ModulesGetModuleData): CancelablePromise<ModulesGetModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/modules/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class OverviewService {
+    /**
+     * Get Overview Stats
+     * Counts: datasources, modules, groups, apis (published/total), clients.
+     * @returns OverviewStats Successful Response
+     * @throws ApiError
+     */
+    public static getOverviewStats(): CancelablePromise<OverviewGetOverviewStatsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/overview/stats'
+        });
+    }
+    
+    /**
+     * Get Requests By Day
+     * Requests grouped by day from AccessRecord.created_at. Uses external DB if configured.
+     * @param data The data for the request.
+     * @param data.days
+     * @returns RequestsByDayOut Successful Response
+     * @throws ApiError
+     */
+    public static getRequestsByDay(data: OverviewGetRequestsByDayData = {}): CancelablePromise<OverviewGetRequestsByDayResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/overview/requests-by-day',
+            query: {
+                days: data.days
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Top Paths
+     * Top accessed paths within the last N days. Uses external DB if configured.
+     * @param data The data for the request.
+     * @param data.days
+     * @param data.limit
+     * @returns TopPathsOut Successful Response
+     * @throws ApiError
+     */
+    public static getTopPaths(data: OverviewGetTopPathsData = {}): CancelablePromise<OverviewGetTopPathsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/overview/top-paths',
+            query: {
+                days: data.days,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Status Breakdown
+     * Request counts grouped by status category and HTTP method within the last N days.
+     * @param data The data for the request.
+     * @param data.days
+     * @returns StatusBreakdownOut Successful Response
+     * @throws ApiError
+     */
+    public static getStatusBreakdown(data: OverviewGetStatusBreakdownData = {}): CancelablePromise<OverviewGetStatusBreakdownResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/overview/status-breakdown',
+            query: {
+                days: data.days
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Recent Access
+     * Latest AccessRecord entries (default limit=20). Uses external DB if configured.
+     * @param data The data for the request.
+     * @param data.limit
+     * @returns RecentAccessOut Successful Response
+     * @throws ApiError
+     */
+    public static getRecentAccess(data: OverviewGetRecentAccessData = {}): CancelablePromise<OverviewGetRecentAccessResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/overview/recent-access',
+            query: {
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Recent Commits
+     * Latest VersionCommit entries (default limit=20). content_snapshot excluded.
+     * @param data The data for the request.
+     * @param data.limit
+     * @returns RecentCommitsOut Successful Response
+     * @throws ApiError
+     */
+    public static getRecentCommits(data: OverviewGetRecentCommitsData = {}): CancelablePromise<OverviewGetRecentCommitsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/overview/recent-commits',
+            query: {
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class PermissionsService {
+    /**
+     * Get Resource Names
+     * Return id+name for all permission-scoped resources for permission UI labels.
+     * API assignments: name = 'METHOD /full/path' (e.g. GET /api/v1/users).
+     * @returns ResourceNamesOut Successful Response
+     * @throws ApiError
+     */
+    public static getResourceNames(): CancelablePromise<PermissionsGetResourceNamesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/permissions/resource-names'
+        });
+    }
+    
+    /**
+     * List Permissions
+     * List all permissions (resource_type, action, resource_id). Admin only.
+     * @returns PermissionListOut Successful Response
+     * @throws ApiError
+     */
+    public static listPermissions(): CancelablePromise<PermissionsListPermissionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/permissions/list'
+        });
+    }
+}
+
+export class ReportExecutionsService {
+    /**
+     * Get Execution
+     * @param data The data for the request.
+     * @param data.execId
+     * @returns ReportExecutionPublic Successful Response
+     * @throws ApiError
+     */
+    public static getExecution(data: ReportExecutionsGetExecutionData): CancelablePromise<ReportExecutionsGetExecutionResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-executions/{exec_id}',
+            path: {
+                exec_id: data.execId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Download Execution
+     * Download the generated report file.
+     *
+     * Auth via: Authorization header OR ?token= query param (for browser links).
+     * @param data The data for the request.
+     * @param data.execId
+     * @param data.token
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static downloadExecution(data: ReportExecutionsDownloadExecutionData): CancelablePromise<ReportExecutionsDownloadExecutionResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-executions/{exec_id}/download',
+            path: {
+                exec_id: data.execId
+            },
+            query: {
+                token: data.token
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Executions
+     * @param data The data for the request.
+     * @param data.page
+     * @param data.pageSize
+     * @param data.status
+     * @param data.templateId
+     * @param data.moduleId
+     * @returns ReportExecutionListOut Successful Response
+     * @throws ApiError
+     */
+    public static listExecutions(data: ReportExecutionsListExecutionsData = {}): CancelablePromise<ReportExecutionsListExecutionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-executions',
+            query: {
+                page: data.page,
+                page_size: data.pageSize,
+                status: data.status,
+                template_id: data.templateId,
+                module_id: data.moduleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class ReportModulesService {
+    /**
+     * List Minio Buckets
+     * List all buckets from a MinIO datasource.
+     * @param data The data for the request.
+     * @param data.datasourceId
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static listMinioBuckets(data: ReportModulesListMinioBucketsData): CancelablePromise<ReportModulesListMinioBucketsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/buckets/{datasource_id}',
+            path: {
+                datasource_id: data.datasourceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Minio Files
+     * List files in a MinIO bucket, optionally filtered by prefix and suffix.
+     * @param data The data for the request.
+     * @param data.datasourceId
+     * @param data.bucket
+     * @param data.prefix
+     * @param data.suffix
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static listMinioFiles(data: ReportModulesListMinioFilesData): CancelablePromise<ReportModulesListMinioFilesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/files/{datasource_id}/{bucket}',
+            path: {
+                datasource_id: data.datasourceId,
+                bucket: data.bucket
+            },
+            query: {
+                prefix: data.prefix,
+                suffix: data.suffix
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Excel Sheets
+     * Download an xlsx file from MinIO and return its sheet names.
+     * @param data The data for the request.
+     * @param data.datasourceId
+     * @param data.bucket
+     * @param data.filePath
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static listExcelSheets(data: ReportModulesListExcelSheetsData): CancelablePromise<ReportModulesListExcelSheetsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/sheets/{datasource_id}/{bucket}/{file_path}',
+            path: {
+                datasource_id: data.datasourceId,
+                bucket: data.bucket,
+                file_path: data.filePath
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Modules
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ReportModuleListOut Successful Response
+     * @throws ApiError
+     */
+    public static listModules(data: ReportModulesListModulesData): CancelablePromise<ReportModulesListModulesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/list',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Module
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ReportModuleDetail Successful Response
+     * @throws ApiError
+     */
+    public static createModule(data: ReportModulesCreateModuleData): CancelablePromise<ReportModulesCreateModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Module
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ReportModulePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateModule(data: ReportModulesUpdateModuleData): CancelablePromise<ReportModulesUpdateModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/update',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Module
+     * @param data The data for the request.
+     * @param data.id
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteModule(data: ReportModulesDeleteModuleData): CancelablePromise<ReportModulesDeleteModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/delete',
+            query: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Module
+     * @param data The data for the request.
+     * @param data.id
+     * @returns ReportModuleDetail Successful Response
+     * @throws ApiError
+     */
+    public static getModule(data: ReportModulesGetModuleData): CancelablePromise<ReportModulesGetModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Module Clients
+     * @param data The data for the request.
+     * @param data.id
+     * @returns ClientIdsOut Successful Response
+     * @throws ApiError
+     */
+    public static getModuleClients(data: ReportModulesGetModuleClientsData): CancelablePromise<ReportModulesGetModuleClientsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/{id}/clients',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Set Module Clients
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns ClientIdsOut Successful Response
+     * @throws ApiError
+     */
+    public static setModuleClients(data: ReportModulesSetModuleClientsData): CancelablePromise<ReportModulesSetModuleClientsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/clients',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List All Templates
+     * List all templates across all modules, with optional module_id filter.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ReportTemplateListOut Successful Response
+     * @throws ApiError
+     */
+    public static listAllTemplates(data: ReportModulesListAllTemplatesData): CancelablePromise<ReportModulesListAllTemplatesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/templates/list',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Templates
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns ReportTemplateListOut Successful Response
+     * @throws ApiError
+     */
+    public static listTemplates(data: ReportModulesListTemplatesData): CancelablePromise<ReportModulesListTemplatesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/list',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Template
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns ReportTemplateDetail Successful Response
+     * @throws ApiError
+     */
+    public static createTemplate(data: ReportModulesCreateTemplateData): CancelablePromise<ReportModulesCreateTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/create',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Template
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns ReportTemplatePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateTemplate(data: ReportModulesUpdateTemplateData): CancelablePromise<ReportModulesUpdateTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/update',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Template
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteTemplate(data: ReportModulesDeleteTemplateData): CancelablePromise<ReportModulesDeleteTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/delete',
+            path: {
+                id: data.id
+            },
+            query: {
+                tid: data.tid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Template
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @returns ReportTemplateDetail Successful Response
+     * @throws ApiError
+     */
+    public static getTemplate(data: ReportModulesGetTemplateData): CancelablePromise<ReportModulesGetTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/{id}/templates/{tid}',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Template Clients
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @returns ClientIdsOut Successful Response
+     * @throws ApiError
+     */
+    public static getTemplateClients(data: ReportModulesGetTemplateClientsData): CancelablePromise<ReportModulesGetTemplateClientsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/clients',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Set Template Clients
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.requestBody
+     * @returns ClientIdsOut Successful Response
+     * @throws ApiError
+     */
+    public static setTemplateClients(data: ReportModulesSetTemplateClientsData): CancelablePromise<ReportModulesSetTemplateClientsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/clients',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Mapping
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.requestBody
+     * @returns SheetMappingPublic Successful Response
+     * @throws ApiError
+     */
+    public static createMapping(data: ReportModulesCreateMappingData): CancelablePromise<ReportModulesCreateMappingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/mappings/create',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Mapping
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.requestBody
+     * @returns SheetMappingPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateMapping(data: ReportModulesUpdateMappingData): CancelablePromise<ReportModulesUpdateMappingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/mappings/update',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Batch Update Mappings
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.requestBody
+     * @returns SheetMappingPublic Successful Response
+     * @throws ApiError
+     */
+    public static batchUpdateMappings(data: ReportModulesBatchUpdateMappingsData): CancelablePromise<ReportModulesBatchUpdateMappingsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/mappings/batch-update',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Mapping
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.mappingId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteMapping(data: ReportModulesDeleteMappingData): CancelablePromise<ReportModulesDeleteMappingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/mappings/delete',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            query: {
+                mapping_id: data.mappingId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Generate
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.requestBody
+     * @returns ReportGenerateOut Successful Response
+     * @throws ApiError
+     */
+    public static generate(data: ReportModulesGenerateData): CancelablePromise<ReportModulesGenerateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/generate',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Preview Template
+     * Dry-run: render each mapping's SQL with the given parameters and return
+     * a small sample of rows. Used by the UI to validate templates before
+     * triggering a full generate. Does not recalc or upload anything.
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.requestBody
+     * @returns ReportPreviewOut Successful Response
+     * @throws ApiError
+     */
+    public static previewTemplate(data: ReportModulesPreviewTemplateData): CancelablePromise<ReportModulesPreviewTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/preview',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Template Executions
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.tid
+     * @param data.page
+     * @param data.pageSize
+     * @returns ReportExecutionListOut Successful Response
+     * @throws ApiError
+     */
+    public static listTemplateExecutions(data: ReportModulesListTemplateExecutionsData): CancelablePromise<ReportModulesListTemplateExecutionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/{id}/templates/{tid}/executions',
+            path: {
+                id: data.id,
+                tid: data.tid
+            },
+            query: {
+                page: data.page,
+                page_size: data.pageSize
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client List Modules
+     * List modules accessible by the current token (dashboard=all, client=assigned only).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ReportModuleListOut Successful Response
+     * @throws ApiError
+     */
+    public static clientListModules(data: ReportModulesClientListModulesData): CancelablePromise<ReportModulesClientListModulesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client List Templates
+     * List templates accessible by the current token.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ReportTemplateListOut Successful Response
+     * @throws ApiError
+     */
+    public static clientListTemplates(data: ReportModulesClientListTemplatesData): CancelablePromise<ReportModulesClientListTemplatesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/templates',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Get Template
+     * Get template detail. Client must be assigned to the template's module.
+     * @param data The data for the request.
+     * @param data.tid
+     * @returns ReportTemplateDetail Successful Response
+     * @throws ApiError
+     */
+    public static clientGetTemplate(data: ReportModulesClientGetTemplateData): CancelablePromise<ReportModulesClientGetTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/template-detail',
+            query: {
+                tid: data.tid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Get Execution
+     * Get execution status. Client must be assigned to the execution's module.
+     * @param data The data for the request.
+     * @param data.execId
+     * @returns ReportExecutionPublic Successful Response
+     * @throws ApiError
+     */
+    public static clientGetExecution(data: ReportModulesClientGetExecutionData): CancelablePromise<ReportModulesClientGetExecutionResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/execution-detail',
+            query: {
+                exec_id: data.execId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client List Executions
+     * List executions accessible by the current token.
+     * @param data The data for the request.
+     * @param data.page
+     * @param data.pageSize
+     * @param data.status
+     * @param data.templateId
+     * @param data.moduleId
+     * @returns ReportExecutionListOut Successful Response
+     * @throws ApiError
+     */
+    public static clientListExecutions(data: ReportModulesClientListExecutionsData = {}): CancelablePromise<ReportModulesClientListExecutionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/executions',
+            query: {
+                page: data.page,
+                page_size: data.pageSize,
+                status: data.status,
+                template_id: data.templateId,
+                module_id: data.moduleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Get Module
+     * @param data The data for the request.
+     * @param data.mid
+     * @returns ReportModuleDetail Successful Response
+     * @throws ApiError
+     */
+    public static clientGetModule(data: ReportModulesClientGetModuleData): CancelablePromise<ReportModulesClientGetModuleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/module-detail',
+            query: {
+                mid: data.mid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Create Template
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.requestBody
+     * @returns ReportTemplateDetail Successful Response
+     * @throws ApiError
+     */
+    public static clientCreateTemplate(data: ReportModulesClientCreateTemplateData): CancelablePromise<ReportModulesClientCreateTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/create',
+            path: {
+                mid: data.mid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Update Template
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.requestBody
+     * @returns ReportTemplatePublic Successful Response
+     * @throws ApiError
+     */
+    public static clientUpdateTemplate(data: ReportModulesClientUpdateTemplateData): CancelablePromise<ReportModulesClientUpdateTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/update',
+            path: {
+                mid: data.mid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Delete Template
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static clientDeleteTemplate(data: ReportModulesClientDeleteTemplateData): CancelablePromise<ReportModulesClientDeleteTemplateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/delete',
+            path: {
+                mid: data.mid
+            },
+            query: {
+                tid: data.tid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Create Mapping
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @param data.requestBody
+     * @returns SheetMappingPublic Successful Response
+     * @throws ApiError
+     */
+    public static clientCreateMapping(data: ReportModulesClientCreateMappingData): CancelablePromise<ReportModulesClientCreateMappingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/{tid}/mappings/create',
+            path: {
+                mid: data.mid,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Update Mapping
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @param data.requestBody
+     * @returns SheetMappingPublic Successful Response
+     * @throws ApiError
+     */
+    public static clientUpdateMapping(data: ReportModulesClientUpdateMappingData): CancelablePromise<ReportModulesClientUpdateMappingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/{tid}/mappings/update',
+            path: {
+                mid: data.mid,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Batch Update Mappings
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @param data.requestBody
+     * @returns SheetMappingPublic Successful Response
+     * @throws ApiError
+     */
+    public static clientBatchUpdateMappings(data: ReportModulesClientBatchUpdateMappingsData): CancelablePromise<ReportModulesClientBatchUpdateMappingsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/{tid}/mappings/batch-update',
+            path: {
+                mid: data.mid,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Delete Mapping
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @param data.mappingId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static clientDeleteMapping(data: ReportModulesClientDeleteMappingData): CancelablePromise<ReportModulesClientDeleteMappingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/{tid}/mappings/delete',
+            path: {
+                mid: data.mid,
+                tid: data.tid
+            },
+            query: {
+                mapping_id: data.mappingId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Get Template Clients
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @returns ClientIdsOut Successful Response
+     * @throws ApiError
+     */
+    public static clientGetTemplateClients(data: ReportModulesClientGetTemplateClientsData): CancelablePromise<ReportModulesClientGetTemplateClientsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/{tid}/clients',
+            path: {
+                mid: data.mid,
+                tid: data.tid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client Set Template Clients
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @param data.requestBody
+     * @returns ClientIdsOut Successful Response
+     * @throws ApiError
+     */
+    public static clientSetTemplateClients(data: ReportModulesClientSetTemplateClientsData): CancelablePromise<ReportModulesClientSetTemplateClientsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/{tid}/clients',
+            path: {
+                mid: data.mid,
+                tid: data.tid
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client List Template Executions
+     * @param data The data for the request.
+     * @param data.mid
+     * @param data.tid
+     * @param data.page
+     * @param data.pageSize
+     * @returns ReportExecutionListOut Successful Response
+     * @throws ApiError
+     */
+    public static clientListTemplateExecutions(data: ReportModulesClientListTemplateExecutionsData): CancelablePromise<ReportModulesClientListTemplateExecutionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/modules/{mid}/templates/{tid}/executions',
+            path: {
+                mid: data.mid,
+                tid: data.tid
+            },
+            query: {
+                page: data.page,
+                page_size: data.pageSize
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client List Buckets
+     * @param data The data for the request.
+     * @param data.datasourceId
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static clientListBuckets(data: ReportModulesClientListBucketsData): CancelablePromise<ReportModulesClientListBucketsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/buckets/{datasource_id}',
+            path: {
+                datasource_id: data.datasourceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client List Files
+     * @param data The data for the request.
+     * @param data.datasourceId
+     * @param data.bucket
+     * @param data.prefix
+     * @param data.suffix
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static clientListFiles(data: ReportModulesClientListFilesData): CancelablePromise<ReportModulesClientListFilesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/files/{datasource_id}/{bucket}',
+            path: {
+                datasource_id: data.datasourceId,
+                bucket: data.bucket
+            },
+            query: {
+                prefix: data.prefix,
+                suffix: data.suffix
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Client List Sheets
+     * @param data The data for the request.
+     * @param data.datasourceId
+     * @param data.bucket
+     * @param data.filePath
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static clientListSheets(data: ReportModulesClientListSheetsData): CancelablePromise<ReportModulesClientListSheetsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/report-modules/client/sheets/{datasource_id}/{bucket}/{file_path}',
+            path: {
+                datasource_id: data.datasourceId,
+                bucket: data.bucket,
+                file_path: data.filePath
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class RolesService {
+    /**
+     * Create Role
+     * Create a custom role. Admin only. Name must be unique.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns RoleDetailOut Successful Response
+     * @throws ApiError
+     */
+    public static createRole(data: RolesCreateRoleData): CancelablePromise<RolesCreateRoleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/roles',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Roles
+     * List all roles with user_count. Admin only.
+     * @returns RoleListOut Successful Response
+     * @throws ApiError
+     */
+    public static listRoles(): CancelablePromise<RolesListRolesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/roles/list'
+        });
+    }
+    
+    /**
+     * List Role Users
+     * List users assigned to this role. Admin only.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns RoleUsersOut Successful Response
+     * @throws ApiError
+     */
+    public static listRoleUsers(data: RolesListRoleUsersData): CancelablePromise<RolesListRoleUsersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/roles/{id}/users',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Role
+     * Get role by id with permission_ids and user_count. Admin only.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns RoleDetailOut Successful Response
+     * @throws ApiError
+     */
+    public static getRole(data: RolesGetRoleData): CancelablePromise<RolesGetRoleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/roles/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Role
+     * Update role name, description, and/or permissions. Admin only.
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns RoleDetailOut Successful Response
+     * @throws ApiError
+     */
+    public static updateRole(data: RolesUpdateRoleData): CancelablePromise<RolesUpdateRoleResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/roles/{id}',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Role
+     * Delete a role. Admin only. Unlinks all user and permission associations.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns void Successful Response
+     * @throws ApiError
+     */
+    public static deleteRole(data: RolesDeleteRoleData): CancelablePromise<RolesDeleteRoleResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/roles/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class TokenService {
+    /**
+     * Token Generate
+     * OAuth2-style client_credentials: exchange client_id and client_secret for a JWT.
+     *
+     * Accepts JSON (application/json) or form (application/x-www-form-urlencoded).
+     * Does not require Authorization (this is where the token is obtained).
+     * @returns GatewayTokenResponse Successful Response
+     * @throws ApiError
+     */
+    public static tokenGenerate(): CancelablePromise<TokenTokenGenerateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/token/generate'
+        });
+    }
+    
+    /**
+     * Token Generate Get
+     * Legacy migration: GET /token/generate?clientId=XXXX&secret=YYYY (also /api/token/generate).
+     * Returns { expireAt: unixtime, token } (no Bearer prefix required in Authorization).
+     *
+     * Disabled by default (GATEWAY_TOKEN_GET_ENABLED=false). Passing credentials in
+     * query parameters is insecure — they leak into access logs, browser history,
+     * and Referer headers. Use POST /token/generate instead.
+     * @param data The data for the request.
+     * @param data.clientId
+     * @param data.secret
+     * @returns GatewayTokenGenerateGetResponse Successful Response
+     * @throws ApiError
+     */
+    public static tokenGenerateGet(data: TokenTokenGenerateGetData): CancelablePromise<TokenTokenGenerateGetResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/token/generate',
+            query: {
+                clientId: data.clientId,
+                secret: data.secret
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Token Generate
+     * OAuth2-style client_credentials: exchange client_id and client_secret for a JWT.
+     *
+     * Accepts JSON (application/json) or form (application/x-www-form-urlencoded).
+     * Does not require Authorization (this is where the token is obtained).
+     * @returns GatewayTokenResponse Successful Response
+     * @throws ApiError
+     */
+    public static tokenGenerate1(): CancelablePromise<TokenTokenGenerate1Response> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/token/generate'
+        });
+    }
+    
+    /**
+     * Token Generate Get
+     * Legacy migration: GET /token/generate?clientId=XXXX&secret=YYYY (also /api/token/generate).
+     * Returns { expireAt: unixtime, token } (no Bearer prefix required in Authorization).
+     *
+     * Disabled by default (GATEWAY_TOKEN_GET_ENABLED=false). Passing credentials in
+     * query parameters is insecure — they leak into access logs, browser history,
+     * and Referer headers. Use POST /token/generate instead.
+     * @param data The data for the request.
+     * @param data.clientId
+     * @param data.secret
+     * @returns GatewayTokenGenerateGetResponse Successful Response
+     * @throws ApiError
+     */
+    public static tokenGenerateGet1(data: TokenTokenGenerateGet1Data): CancelablePromise<TokenTokenGenerateGet1Response> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/token/generate',
+            query: {
+                clientId: data.clientId,
+                secret: data.secret
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -346,8 +2936,22 @@ export class UsersService {
     }
     
     /**
+     * Read My Permissions
+     * Get current user's permissions (from roles). Phase 2.
+     * @returns MyPermissionsOut Successful Response
+     * @throws ApiError
+     */
+    public static readMyPermissions(): CancelablePromise<UsersReadMyPermissionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/users/me/permissions'
+        });
+    }
+    
+    /**
+     * @deprecated
      * Register User
-     * Create new user without the need to be logged in.
+     * Public signup is disabled. Use admin-created accounts instead.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns UserPublic Successful Response
@@ -367,7 +2971,7 @@ export class UsersService {
     
     /**
      * Read User By Id
-     * Get a specific user by id.
+     * Get a specific user by id. Allowed if viewing self, or superuser, or has user read permission.
      * @param data The data for the request.
      * @param data.userId
      * @returns UserPublic Successful Response
@@ -430,23 +3034,21 @@ export class UsersService {
             }
         });
     }
-}
-
-export class UtilsService {
+    
     /**
-     * Test Email
-     * Test emails.
+     * Get User Roles
+     * Get roles assigned to a user. Admin only.
      * @param data The data for the request.
-     * @param data.emailTo
-     * @returns Message Successful Response
+     * @param data.userId
+     * @returns UserRolesOut Successful Response
      * @throws ApiError
      */
-    public static testEmail(data: UtilsTestEmailData): CancelablePromise<UtilsTestEmailResponse> {
+    public static getUserRoles(data: UsersGetUserRolesData): CancelablePromise<UsersGetUserRolesResponse> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/utils/test-email/',
-            query: {
-                email_to: data.emailTo
+            method: 'GET',
+            url: '/api/v1/users/{user_id}/roles',
+            path: {
+                user_id: data.userId
             },
             errors: {
                 422: 'Validation Error'
@@ -455,8 +3057,54 @@ export class UtilsService {
     }
     
     /**
+     * Update User Roles
+     * Assign roles to a user. Replaces existing role assignments. Admin only.
+     * @param data The data for the request.
+     * @param data.userId
+     * @param data.requestBody
+     * @returns UserRolesOut Successful Response
+     * @throws ApiError
+     */
+    public static updateUserRoles(data: UsersUpdateUserRolesData): CancelablePromise<UsersUpdateUserRolesResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/users/{user_id}/roles',
+            path: {
+                user_id: data.userId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class UtilsService {
+    /**
+     * Liveness
+     * Liveness probe — is the process alive and responsive?
+     *
+     * Lightweight: no DB/Redis I/O.  If this fails the container should be
+     * restarted by the orchestrator.
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static liveness(): CancelablePromise<UtilsLivenessResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/utils/liveness/'
+        });
+    }
+    
+    /**
      * Health Check
-     * @returns boolean Successful Response
+     * Readiness probe — can the service handle traffic?
+     *
+     * Checks: Postgres + Redis (when enabled) + alembic migrations at head.
+     * Returns 200 with true if all required dependencies are up; 503 otherwise.
+     * @returns unknown Successful Response
      * @throws ApiError
      */
     public static healthCheck(): CancelablePromise<UtilsHealthCheckResponse> {

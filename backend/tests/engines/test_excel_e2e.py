@@ -147,7 +147,7 @@ def _run_executor(db, module, tpl, mappings, execution, params=None):
 
         captured = {}
 
-        def _capture_upload(_client, _bucket, _path, local_path):
+        def _capture_upload(_client, _bucket, _path, local_path, **_kwargs):
             captured["path"] = local_path
             out = os.path.join(tempfile.gettempdir(), f"test_output_{uuid.uuid4().hex}.xlsx")
             shutil.copy2(local_path, out)

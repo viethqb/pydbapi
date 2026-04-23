@@ -99,6 +99,8 @@ class ReportTemplate(SQLModel, table=True):
     output_bucket: str = Field(max_length=255)
     output_prefix: str = Field(default="", max_length=1024)
     recalc_enabled: bool = Field(default=False)
+    # Per-template override of REPORT_RECALC_TIMEOUT (seconds). None = use global.
+    recalc_timeout_override: int | None = Field(default=None)
     output_sheet: str | None = Field(default=None, max_length=255)
     format_config: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSONB, nullable=True)
@@ -186,6 +188,11 @@ class ReportExecution(SQLModel, table=True):
     output_minio_path: str | None = Field(default=None, max_length=1024)
     output_url: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     error_message: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    # Progress tracking for async reports. processed_rows is the cumulative
+    # number of data rows written across all mappings so far; progress_pct is
+    # a best-effort percent estimate (0-100, None when unknown).
+    processed_rows: int = Field(default=0)
+    progress_pct: int | None = Field(default=None)
     started_at: datetime | None = Field(default=None)
     completed_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=_utc_now)

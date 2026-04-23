@@ -12,10 +12,24 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 _log = logging.getLogger(__name__)
 
 
+# Leading chars that Excel treats as the start of a formula. When present in
+# string data originating from SQL results they must be neutralised to prevent
+# formula/CSV injection attacks (e.g. =HYPERLINK, =cmd|..., @SUM).
+_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _escape_formula(val: str) -> str:
+    if val and val[0] in _FORMULA_TRIGGERS:
+        return "'" + val
+    return val
+
+
 def _sanitize_value(val: object) -> object:
     if val is None:
         return val
-    if isinstance(val, (str, int, float, bool, datetime, date, time)):
+    if isinstance(val, str):
+        return _escape_formula(val)
+    if isinstance(val, (int, float, bool, datetime, date, time)):
         return val
     if isinstance(val, Decimal):
         return float(val)
@@ -23,7 +37,7 @@ def _sanitize_value(val: object) -> object:
         return str(val)
     if isinstance(val, bytes):
         return val.hex()
-    return str(val)
+    return _escape_formula(str(val))
 
 
 def _col_letter(col: int) -> str:
@@ -180,7 +194,7 @@ def write_rows(
 
     if write_headers:
         for ci, col_name in enumerate(columns):
-            c = ws.cell(row=current_row, column=start_col + ci, value=col_name)
+            c = ws.cell(row=current_row, column=start_col + ci, value=_sanitize_value(col_name))
             _apply_cell_format(c, header_format)
             if wrap_text:
                 c.alignment = Alignment(

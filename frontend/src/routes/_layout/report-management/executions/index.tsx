@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { Download } from "lucide-react"
-import { useCallback, useState } from "react"
+import { useState } from "react"
+import { DownloadButton } from "@/components/ReportManagement/DownloadButton"
+import { ProgressCell } from "@/components/ReportManagement/ProgressCell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,16 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { API_BASE, getAuthToken } from "@/lib/api-request"
 import {
   type ReportExecutionListIn,
   ReportExecutionsService,
   ReportModuleService,
 } from "@/services/report"
 
-export const Route = createFileRoute(
-  "/_layout/report-management/executions/",
-)({
+export const Route = createFileRoute("/_layout/report-management/executions/")({
   component: ExecutionsPage,
   head: () => ({
     meta: [{ title: "Executions - Report Management" }],
@@ -49,7 +47,9 @@ function ExecutionsPage() {
     queryFn: () => ReportExecutionsService.list(filters),
     refetchInterval: (query) => {
       const execs = query.state.data?.data
-      if (execs?.some((e) => e.status === "pending" || e.status === "running")) {
+      if (
+        execs?.some((e) => e.status === "pending" || e.status === "running")
+      ) {
         return 3000
       }
       return false
@@ -62,7 +62,7 @@ function ExecutionsPage() {
     queryFn: () => ReportModuleService.list({ page: 1, page_size: 100 }),
   })
   const modules = modulesData?.data ?? []
-  const moduleMap = Object.fromEntries(modules.map((m) => [m.id, m.name]))
+  const _moduleMap = Object.fromEntries(modules.map((m) => [m.id, m.name]))
 
   // Build template→module mapping from module details
   const { data: moduleDetails } = useQuery({
@@ -71,7 +71,8 @@ function ExecutionsPage() {
       const details = await Promise.all(
         modules.map((m) => ReportModuleService.get(m.id)),
       )
-      const map: Record<string, { moduleName: string; templateName: string }> = {}
+      const map: Record<string, { moduleName: string; templateName: string }> =
+        {}
       for (const mod of details) {
         for (const tpl of mod.templates) {
           map[tpl.id] = { moduleName: mod.name, templateName: tpl.name }
@@ -178,9 +179,7 @@ function ExecutionsPage() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading...
-        </div>
+        <div className="text-center py-8 text-muted-foreground">Loading...</div>
       ) : data?.data && data.data.length > 0 ? (
         <Table>
           <TableHeader>
@@ -188,6 +187,7 @@ function ExecutionsPage() {
               <TableHead>Status</TableHead>
               <TableHead>Module</TableHead>
               <TableHead>Template</TableHead>
+              <TableHead>Progress</TableHead>
               <TableHead>Parameters</TableHead>
               <TableHead>Started</TableHead>
               <TableHead>Completed</TableHead>
@@ -209,14 +209,20 @@ function ExecutionsPage() {
                     {lookup?.moduleName ?? "-"}
                   </TableCell>
                   <TableCell className="text-sm font-medium">
-                    {lookup?.templateName ?? exec.report_template_id.slice(0, 8) + "..."}
+                    {lookup?.templateName ??
+                      `${exec.report_template_id.slice(0, 8)}...`}
+                  </TableCell>
+                  <TableCell>
+                    <ProgressCell
+                      status={exec.status}
+                      progressPct={exec.progress_pct}
+                      processedRows={exec.processed_rows}
+                    />
                   </TableCell>
                   <TableCell
                     className="font-mono text-xs max-w-[150px] truncate"
                     title={
-                      exec.parameters
-                        ? JSON.stringify(exec.parameters)
-                        : ""
+                      exec.parameters ? JSON.stringify(exec.parameters) : ""
                     }
                   >
                     {exec.parameters
@@ -235,27 +241,13 @@ function ExecutionsPage() {
                   </TableCell>
                   <TableCell>
                     {exec.status === "success" && exec.output_minio_path ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={async () => {
-                          const t = await getAuthToken()
-                          const resp = await fetch(
-                            `${API_BASE}/api/v1/report-executions/${exec.id}/download`,
-                            { headers: t ? { Authorization: `Bearer ${t}` } : {} },
-                          )
-                          if (!resp.ok) return
-                          const blob = await resp.blob()
-                          const url = URL.createObjectURL(blob)
-                          const a = document.createElement("a")
-                          a.href = url
-                          a.download = exec.output_minio_path?.split("/").pop() || "report.xlsx"
-                          a.click()
-                          URL.revokeObjectURL(url)
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <DownloadButton
+                        executionId={exec.id}
+                        fallbackFilename={
+                          exec.output_minio_path?.split("/").pop() ||
+                          "report.xlsx"
+                        }
+                      />
                     ) : (
                       <span className="text-muted-foreground text-sm">--</span>
                     )}
@@ -281,8 +273,8 @@ function ExecutionsPage() {
       {data && data.total > 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing{" "}
-            {((filters.page || 1) - 1) * (filters.page_size || 50) + 1} to{" "}
+            Showing {((filters.page || 1) - 1) * (filters.page_size || 50) + 1}{" "}
+            to{" "}
             {Math.min(
               (filters.page || 1) * (filters.page_size || 50),
               data.total,

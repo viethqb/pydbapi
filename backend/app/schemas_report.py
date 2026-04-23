@@ -1,12 +1,51 @@
 """Pydantic schemas for Report Engine."""
+import re
 import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlmodel import SQLModel
 
 from app.models_report import ExecutionStatusEnum, SheetWriteModeEnum
+
+# Allowed characters for MinIO object paths / bucket names.
+# Rejects '..', leading '/', backslashes, control chars, URL-encoded traversal.
+_PATH_SAFE_RE = re.compile(r"^[a-zA-Z0-9._\-/]*$")
+
+
+def _validate_minio_path(value: str | None) -> str | None:
+    if value is None or value == "":
+        return value
+    v = value.strip()
+    if not v:
+        return v
+    if ".." in v or v.startswith("/") or v.startswith("-"):
+        raise ValueError("Path must not contain '..', start with '/' or '-'")
+    # Reject URL-encoded traversal patterns (%2e%2e, etc.)
+    low = v.lower()
+    if "%2e%2e" in low or "%2f" in low or "%5c" in low:
+        raise ValueError("Path must not contain URL-encoded traversal sequences")
+    if not _PATH_SAFE_RE.match(v):
+        raise ValueError(
+            "Path may only contain letters, digits, '.', '_', '-', '/'"
+        )
+    return v
+
+
+def _validate_bucket(value: str | None) -> str | None:
+    if value is None or value == "":
+        return value
+    v = value.strip()
+    if not v:
+        return v
+    # MinIO/S3 bucket naming: lowercase letters, digits, '-', '.', 3-63 chars.
+    # Be slightly lenient on case because existing configs may use uppercase.
+    if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9.\-]{2,62}$", v):
+        raise ValueError(
+            "Bucket name must be 3-63 chars of letters, digits, '.', '-'"
+        )
+    return v
 
 # ---------------------------------------------------------------------------
 # Excel Format Config
@@ -71,6 +110,11 @@ class ReportModuleCreate(SQLModel):
     default_template_bucket: str = Field(..., min_length=1, max_length=255)
     default_output_bucket: str = Field(..., min_length=1, max_length=255)
 
+    @field_validator("default_template_bucket", "default_output_bucket")
+    @classmethod
+    def _val_bucket(cls, v: str) -> str:
+        return _validate_bucket(v) or v
+
 class ReportModuleUpdate(SQLModel):
     id: uuid.UUID
     name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -80,6 +124,11 @@ class ReportModuleUpdate(SQLModel):
     default_template_bucket: str | None = None
     default_output_bucket: str | None = None
     is_active: bool | None = None
+
+    @field_validator("default_template_bucket", "default_output_bucket")
+    @classmethod
+    def _val_bucket(cls, v: str | None) -> str | None:
+        return _validate_bucket(v)
 
 class ReportModulePublic(SQLModel):
     id: uuid.UUID
@@ -130,9 +179,20 @@ class ReportTemplateCreate(SQLModel):
     output_bucket: str = Field(..., min_length=1, max_length=255)
     output_prefix: str = Field(default="", max_length=1024)
     recalc_enabled: bool = False
+    recalc_timeout_override: int | None = Field(default=None, ge=10, le=1800)
     output_sheet: str | None = Field(default=None, max_length=255)
     format_config: FormatConfig | None = None
     sheet_mappings: list[SheetMappingCreate] | None = Field(default=None)
+
+    @field_validator("template_bucket", "output_bucket")
+    @classmethod
+    def _val_bucket(cls, v: str) -> str:
+        return _validate_bucket(v) or v
+
+    @field_validator("template_path", "output_prefix")
+    @classmethod
+    def _val_path(cls, v: str) -> str:
+        return _validate_minio_path(v) or v
 
 class ReportTemplateUpdate(SQLModel):
     id: uuid.UUID
@@ -143,9 +203,20 @@ class ReportTemplateUpdate(SQLModel):
     output_bucket: str | None = None
     output_prefix: str | None = None
     recalc_enabled: bool | None = None
+    recalc_timeout_override: int | None = Field(default=None, ge=10, le=1800)
     output_sheet: str | None = None
     format_config: FormatConfig | None = None
     is_active: bool | None = None
+
+    @field_validator("template_bucket", "output_bucket")
+    @classmethod
+    def _val_bucket(cls, v: str | None) -> str | None:
+        return _validate_bucket(v)
+
+    @field_validator("template_path", "output_prefix")
+    @classmethod
+    def _val_path(cls, v: str | None) -> str | None:
+        return _validate_minio_path(v)
 
 class SheetMappingPublic(SQLModel):
     id: uuid.UUID
@@ -173,6 +244,7 @@ class ReportTemplatePublic(SQLModel):
     output_bucket: str
     output_prefix: str
     recalc_enabled: bool
+    recalc_timeout_override: int | None = None
     output_sheet: str | None
     format_config: dict[str, Any] | None
     is_active: bool
@@ -251,6 +323,8 @@ class ReportExecutionPublic(SQLModel):
     output_minio_path: str | None
     output_url: str | None
     error_message: str | None
+    processed_rows: int = 0
+    progress_pct: int | None = None
     started_at: datetime | None
     completed_at: datetime | None
     created_at: datetime
@@ -258,3 +332,27 @@ class ReportExecutionPublic(SQLModel):
 class ReportExecutionListOut(SQLModel):
     data: list[ReportExecutionPublic]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Preview (dry-run: fetch N rows per mapping without generating xlsx)
+# ---------------------------------------------------------------------------
+
+
+class ReportPreviewIn(SQLModel):
+    parameters: dict[str, Any] | None = None
+    # Rows returned per mapping (caller can cap for UI).
+    row_limit: int = Field(default=5, ge=1, le=100)
+
+
+class MappingPreviewOut(SQLModel):
+    mapping_id: uuid.UUID
+    sheet_name: str
+    start_cell: str
+    columns: list[str]
+    rows: list[dict[str, Any]]
+    error: str | None = None
+
+
+class ReportPreviewOut(SQLModel):
+    mappings: list[MappingPreviewOut]

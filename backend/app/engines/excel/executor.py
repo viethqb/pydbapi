@@ -1,4 +1,5 @@
 """Excel report executor: orchestrates the full generate flow."""
+import gc
 import logging
 import os
 import shutil
@@ -26,6 +27,21 @@ from app.models_report import (
 )
 
 _log = logging.getLogger(__name__)
+
+
+def _update_progress(
+    session: Session, execution: ReportExecution,
+    processed_rows: int, pct: int | None,
+) -> None:
+    """Commit current progress to DB so async pollers can observe it."""
+    execution.processed_rows = processed_rows
+    execution.progress_pct = pct
+    session.add(execution)
+    try:
+        session.commit()
+    except Exception as e:
+        _log.warning("Failed to commit progress update: %s", e)
+        session.rollback()
 
 
 def _deep_merge(base: dict | None, override: dict | None) -> dict | None:
@@ -102,9 +118,13 @@ class ExcelReportExecutor:
             minio = get_minio_client(minio_ds)
             use_blank = not template.template_path or not template.template_path.strip()
 
+            tpl_size_limit = settings.REPORT_MAX_TEMPLATE_SIZE_MB * 1024 * 1024
             if not use_blank:
                 try:
-                    download_file(minio, tpl_bucket, template.template_path, template_local)
+                    download_file(
+                        minio, tpl_bucket, template.template_path, template_local,
+                        max_size_bytes=tpl_size_limit,
+                    )
                 except Exception as dl_err:
                     _log.warning("Template download failed, using blank workbook: %s", dl_err)
                     use_blank = True
@@ -136,7 +156,12 @@ class ExcelReportExecutor:
             tpl_fmt = template.format_config or {}
             sheet_last_row: dict[str, int] = {}
 
-            for mapping in active_mappings:
+            total_mappings = len(active_mappings) or 1
+            cumulative_rows = 0
+            streaming_threshold = settings.REPORT_STREAMING_ROW_THRESHOLD
+            warned_streaming = False
+
+            for mapping_idx, mapping in enumerate(active_mappings):
                 # Resolve effective start cell (auto-shift on collision)
                 eff_cell, shifted = _effective_start(
                     mapping.sheet_name, mapping.start_cell,
@@ -173,6 +198,10 @@ class ExcelReportExecutor:
                         if data:
                             last = max(sheet_last_row.get(mapping.sheet_name, 0), start_row)
                             sheet_last_row[mapping.sheet_name] = last
+                            cumulative_rows += 1
+                    # Commit progress after each mapping so async pollers see advancement.
+                    pct = min(95, int((mapping_idx + 1) / total_mappings * 95))
+                    _update_progress(session, execution, cumulative_rows, pct)
                     continue
 
                 # Chunked pagination for ROWS mode
@@ -201,6 +230,9 @@ class ExcelReportExecutor:
                         sheet_last_row[mapping.sheet_name] = max(
                             sheet_last_row.get(mapping.sheet_name, 0), last_row,
                         )
+                        cumulative_rows += len(data)
+                    pct = min(95, int((mapping_idx + 1) / total_mappings * 95))
+                    _update_progress(session, execution, cumulative_rows, pct)
                 else:
                     # Auto-paginate
                     total_written = 0
@@ -222,7 +254,8 @@ class ExcelReportExecutor:
                             ws = wb[mapping.sheet_name]
                             for ci, col_name in enumerate(columns):
                                 c = ws.cell(
-                                    row=current_row, column=start_col + ci, value=col_name,
+                                    row=current_row, column=start_col + ci,
+                                    value=excel_writer._sanitize_value(col_name),
                                 )
                                 excel_writer._apply_cell_format(c, header_fmt)
                                 if do_wrap_text:
@@ -250,15 +283,44 @@ class ExcelReportExecutor:
                         )
                         widths_applied = True
                         current_row += rows_written
-                        total_written += len(chunk)
+                        chunk_len = len(chunk)
+                        total_written += chunk_len
+                        cumulative_rows += chunk_len
                         offset += chunk_size
 
                         _log.info(
                             "Chunk written: %d rows (total %d) for %s",
-                            len(chunk), total_written, mapping.sheet_name,
+                            chunk_len, total_written, mapping.sheet_name,
                         )
 
-                        if len(chunk) < chunk_size:
+                        # Per-chunk progress update (within a mapping, cap at 95%).
+                        per_mapping_progress = min(
+                            0.95,
+                            total_written / max(max_rows, chunk_size * 10),
+                        )
+                        overall = (mapping_idx + per_mapping_progress) / total_mappings
+                        _update_progress(
+                            session, execution, cumulative_rows,
+                            min(95, int(overall * 95)),
+                        )
+
+                        # Memory hygiene on very large runs.
+                        if cumulative_rows > streaming_threshold:
+                            if not warned_streaming:
+                                _log.warning(
+                                    "Report exec=%s crossed streaming threshold "
+                                    "(%d rows > %d). openpyxl keeps the whole "
+                                    "workbook in RAM; consider paginating the "
+                                    "template or splitting the report.",
+                                    execution.id, cumulative_rows, streaming_threshold,
+                                )
+                                warned_streaming = True
+                            # Drop chunk reference and force collection so the
+                            # per-chunk dicts don't linger between iterations.
+                            del chunk
+                            gc.collect()
+
+                        if chunk_len < chunk_size:
                             break
 
                     if current_row > start_row:
@@ -274,7 +336,8 @@ class ExcelReportExecutor:
             output_path = filled_path
             needs_recalc = template.recalc_enabled or bool(template.output_sheet)
             if needs_recalc:
-                output_path = recalc_workbook(filled_path)
+                recalc_timeout = template.recalc_timeout_override or None
+                output_path = recalc_workbook(filled_path, timeout=recalc_timeout)
 
             # Extract sheet (TH2)
             if template.output_sheet:
@@ -288,11 +351,17 @@ class ExcelReportExecutor:
             safe_name = _re.sub(r'[^a-z0-9_-]', '_', template.name.lower())
             output_filename = f"{timestamp}_{safe_name}.xlsx"
             object_path = f"{template.output_prefix}{output_filename}"
-            upload_file(minio, out_bucket, object_path, output_path)
+            out_size_limit = settings.REPORT_MAX_OUTPUT_SIZE_MB * 1024 * 1024
+            upload_file(
+                minio, out_bucket, object_path, output_path,
+                max_size_bytes=out_size_limit,
+            )
 
             execution.status = ExecutionStatusEnum.SUCCESS
             execution.output_minio_path = f"{out_bucket}/{object_path}"
             execution.output_url = None  # Use /download proxy endpoint instead
+            execution.processed_rows = cumulative_rows
+            execution.progress_pct = 100
             execution.completed_at = datetime.now(UTC)
             session.add(execution)
             session.commit()

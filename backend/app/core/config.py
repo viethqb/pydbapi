@@ -172,10 +172,21 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     LIBREOFFICE_PATH: str = "/usr/bin/libreoffice"
     REPORT_RECALC_TIMEOUT: int = 120
+    REPORT_RECALC_MAX_RETRIES: int = 1  # Retry count on timeout (timeout doubles each retry)
     REPORT_TEMP_DIR: str = "/tmp/reports"
     REPORT_OUTPUT_URL_EXPIRY: int = 3600
     REPORT_MAX_ROWS_PER_SHEET: int = 1_048_576  # Excel xlsx max rows
     REPORT_SQL_CHUNK_SIZE: int = 50_000  # Rows per SQL query chunk for pagination
+    # Beyond this row count per sheet, executor switches to openpyxl write_only
+    # streaming mode (lower memory footprint, but formatting limits apply).
+    REPORT_STREAMING_ROW_THRESHOLD: int = 100_000
+    # Reject template downloads larger than this (MinIO stat before fget).
+    REPORT_MAX_TEMPLATE_SIZE_MB: int = 50
+    # Reject output uploads larger than this (local file size before upload).
+    REPORT_MAX_OUTPUT_SIZE_MB: int = 500
+    # Per-template-per-client generate rate limit (requests per minute).
+    # 0 disables. Respects FLOW_CONTROL_RATE_LIMIT_ENABLED.
+    REPORT_GENERATE_RATE_LIMIT: int = 10
 
     # -------------------------------------------------------------------------
     # Logging

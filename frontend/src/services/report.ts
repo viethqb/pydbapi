@@ -1,4 +1,4 @@
-import { request, requestNoContent } from "@/lib/api-request"
+import { request } from "@/lib/api-request"
 
 // ---------- Types ----------
 
@@ -202,6 +202,8 @@ export type ReportExecutionPublic = {
   output_minio_path: string | null
   output_url: string | null
   error_message: string | null
+  processed_rows?: number | null
+  progress_pct?: number | null
   started_at: string | null
   completed_at: string | null
   created_at: string
@@ -232,6 +234,24 @@ export type GenerateReportOut = {
   output_minio_path: string | null
 }
 
+export type ReportPreviewIn = {
+  parameters?: Record<string, unknown>
+  row_limit?: number
+}
+
+export type MappingPreviewOut = {
+  mapping_id: string
+  sheet_name: string
+  start_cell: string
+  columns: string[]
+  rows: Record<string, unknown>[]
+  error: string | null
+}
+
+export type ReportPreviewOut = {
+  mappings: MappingPreviewOut[]
+}
+
 // ---------- Report Module Service ----------
 
 export const ReportModuleService = {
@@ -241,8 +261,14 @@ export const ReportModuleService = {
   listFiles: async (datasourceId: string, bucket: string): Promise<string[]> =>
     request<string[]>(`/api/v1/report-modules/files/${datasourceId}/${bucket}`),
 
-  listSheets: async (datasourceId: string, bucket: string, filePath: string): Promise<string[]> =>
-    request<string[]>(`/api/v1/report-modules/sheets/${datasourceId}/${bucket}/${filePath}`),
+  listSheets: async (
+    datasourceId: string,
+    bucket: string,
+    filePath: string,
+  ): Promise<string[]> =>
+    request<string[]>(
+      `/api/v1/report-modules/sheets/${datasourceId}/${bucket}/${filePath}`,
+    ),
 
   list: async (body: ReportModuleListIn = {}): Promise<ReportModuleListOut> => {
     const requestBody: ReportModuleListIn = {
@@ -335,7 +361,10 @@ export const ReportModuleService = {
   ): Promise<ReportTemplateListOut> => {
     return request<ReportTemplateListOut>(
       `/api/v1/report-modules/${moduleId}/templates/list`,
-      { method: "POST", body: JSON.stringify({ page: 1, page_size: 100, ...body }) },
+      {
+        method: "POST",
+        body: JSON.stringify({ page: 1, page_size: 100, ...body }),
+      },
     )
   },
 
@@ -478,6 +507,22 @@ export const ReportModuleService = {
       {
         method: "POST",
         body: JSON.stringify(body),
+      },
+    )
+  },
+
+  // --- Preview (dry-run) ---
+
+  preview: async (
+    moduleId: string,
+    templateId: string,
+    body: ReportPreviewIn = {},
+  ): Promise<ReportPreviewOut> => {
+    return request<ReportPreviewOut>(
+      `/api/v1/report-modules/${moduleId}/templates/${templateId}/preview`,
+      {
+        method: "POST",
+        body: JSON.stringify({ row_limit: 5, ...body }),
       },
     )
   },
