@@ -25,7 +25,6 @@ import {
   createReportTemplate,
   deleteReportModule,
   deleteReportModulesMatching,
-  deleteReportTemplate,
 } from "./utils/reportModule.ts"
 
 test.describe.configure({ mode: "serial" })

@@ -35,7 +35,7 @@ export async function logInUser(
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 15_000,
     })
-  } catch (err) {
+  } catch (_err) {
     const url = page.url()
     throw new Error(
       `logInUser: did not land on dashboard.\n  url=${url}\n  console=${errors.join(" | ")}`,

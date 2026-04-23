@@ -158,7 +158,7 @@ const FILTERS: Array<{ name: string; description: string; example: string }> = [
   {
     name: "fromjson",
     description: "Parses a JSON string into a dict/list for use in templates.",
-    example: '{% set f = param | fromjson %}',
+    example: "{% set f = param | fromjson %}",
   },
   {
     name: "compare",
@@ -586,8 +586,8 @@ LIMIT {{ limit | sql_int }} OFFSET {{ offset | sql_int }};`}
               <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
                 compare
               </code>{" "}
-              filter converts a JSON comparison object into a safe SQL expression.
-              Pass parameters as a JSON string with{" "}
+              filter converts a JSON comparison object into a safe SQL
+              expression. Pass parameters as a JSON string with{" "}
               <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
                 combinator
               </code>{" "}
@@ -656,8 +656,8 @@ AND amount BETWEEN 100.0 AND 500.0`}
                   <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
                     sql_ident
                   </code>{" "}
-                  to safely output column names in a loop — avoids
-                  repeating the same pattern for many compare parameters:
+                  to safely output column names in a loop — avoids repeating the
+                  same pattern for many compare parameters:
                 </p>
                 <CodeBlock
                   code={`{% set compare_fields = [

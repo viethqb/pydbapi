@@ -457,7 +457,9 @@ function ConnectionCreate() {
               type="button"
               variant="outline"
               onClick={handleTest}
-              disabled={!canCreate || testMutation.isPending || createMutation.isPending}
+              disabled={
+                !canCreate || testMutation.isPending || createMutation.isPending
+              }
             >
               {testMutation.isPending ? (
                 <>
@@ -479,7 +481,9 @@ function ConnectionCreate() {
             <LoadingButton
               type="submit"
               loading={createMutation.isPending}
-              disabled={!canCreate || testMutation.isPending || !testConnectionSuccess}
+              disabled={
+                !canCreate || testMutation.isPending || !testConnectionSuccess
+              }
             >
               Create Data Source
             </LoadingButton>

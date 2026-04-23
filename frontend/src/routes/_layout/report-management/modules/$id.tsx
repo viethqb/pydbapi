@@ -1,22 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Pencil, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { BucketSelect } from "@/components/ReportManagement/BucketSelect"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
@@ -39,8 +29,8 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { ClientsService } from "@/services/clients"
 import { DataSourceService } from "@/services/datasource"
 import {
-  type ReportTemplateCreate,
   ReportModuleService,
+  type ReportTemplateCreate,
 } from "@/services/report"
 
 export const Route = createFileRoute("/_layout/report-management/modules/$id")({
@@ -52,7 +42,7 @@ export const Route = createFileRoute("/_layout/report-management/modules/$id")({
 
 function ModuleDetailPage() {
   const { id } = Route.useParams()
-  const navigate = useNavigate()
+  const _navigate = useNavigate()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -114,7 +104,7 @@ function ModuleDetailPage() {
   })
 
   // --- Templates tab ---
-  const [showCreateTemplate, setShowCreateTemplate] = useState(false)
+  const [_showCreateTemplate, setShowCreateTemplate] = useState(false)
   const [newTemplate, setNewTemplate] = useState<ReportTemplateCreate>({
     name: "",
     template_bucket: "",
@@ -125,7 +115,7 @@ function ModuleDetailPage() {
     output_sheet: null,
   })
 
-  const createTemplateMutation = useMutation({
+  const _createTemplateMutation = useMutation({
     mutationFn: () => ReportModuleService.createTemplate(id, newTemplate),
     onSuccess: () => {
       showSuccessToast("Template created successfully")
@@ -144,7 +134,7 @@ function ModuleDetailPage() {
     onError: (error: Error) => showErrorToast(error.message),
   })
 
-  const deleteTemplateMutation = useMutation({
+  const _deleteTemplateMutation = useMutation({
     mutationFn: (templateId: string) =>
       ReportModuleService.deleteTemplate(id, templateId),
     onSuccess: () => {
@@ -156,7 +146,7 @@ function ModuleDetailPage() {
 
   // --- Clients tab ---
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([])
-  const [clientsDirty, setClientsDirty] = useState(false)
+  const [_clientsDirty, setClientsDirty] = useState(false)
 
   useEffect(() => {
     if (module?.client_ids) {
@@ -164,7 +154,7 @@ function ModuleDetailPage() {
     }
   }, [module?.client_ids])
 
-  const setClientsMutation = useMutation({
+  const _setClientsMutation = useMutation({
     mutationFn: () => ReportModuleService.setClients(id, selectedClientIds),
     onSuccess: () => {
       showSuccessToast("Module clients updated successfully")
@@ -174,7 +164,7 @@ function ModuleDetailPage() {
     onError: (error: Error) => showErrorToast(error.message),
   })
 
-  const handleClientToggle = (clientId: string, checked: boolean) => {
+  const _handleClientToggle = (clientId: string, checked: boolean) => {
     setClientsDirty(true)
     if (checked) {
       setSelectedClientIds((prev) => [...prev, clientId])
@@ -259,22 +249,37 @@ function ModuleDetailPage() {
                       <TableRow>
                         <TableHead className="w-[200px]">Name</TableHead>
                         <TableCell>
-                          <Input value={configName} onChange={(e) => setConfigName(e.target.value)} />
+                          <Input
+                            value={configName}
+                            onChange={(e) => setConfigName(e.target.value)}
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableHead>Description</TableHead>
                         <TableCell>
-                          <Textarea value={configDesc} onChange={(e) => setConfigDesc(e.target.value)} />
+                          <Textarea
+                            value={configDesc}
+                            onChange={(e) => setConfigDesc(e.target.value)}
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableHead>MinIO Datasource</TableHead>
                         <TableCell>
-                          <Select value={configMinio} onValueChange={setConfigMinio}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                          <Select
+                            value={configMinio}
+                            onValueChange={setConfigMinio}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
                             <SelectContent>
-                              {minioDatasources.map((ds) => (<SelectItem key={ds.id} value={ds.id}>{ds.name}</SelectItem>))}
+                              {minioDatasources.map((ds) => (
+                                <SelectItem key={ds.id} value={ds.id}>
+                                  {ds.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -282,10 +287,19 @@ function ModuleDetailPage() {
                       <TableRow>
                         <TableHead>SQL Datasource</TableHead>
                         <TableCell>
-                          <Select value={configSql} onValueChange={setConfigSql}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                          <Select
+                            value={configSql}
+                            onValueChange={setConfigSql}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
                             <SelectContent>
-                              {sqlDatasources.map((ds) => (<SelectItem key={ds.id} value={ds.id}>{ds.name} ({ds.product_type})</SelectItem>))}
+                              {sqlDatasources.map((ds) => (
+                                <SelectItem key={ds.id} value={ds.id}>
+                                  {ds.name} ({ds.product_type})
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -293,13 +307,23 @@ function ModuleDetailPage() {
                       <TableRow>
                         <TableHead>Default Template Bucket</TableHead>
                         <TableCell>
-                          <BucketSelect datasourceId={configMinio || undefined} value={configTemplateBucket} onChange={setConfigTemplateBucket} placeholder="Select template bucket" />
+                          <BucketSelect
+                            datasourceId={configMinio || undefined}
+                            value={configTemplateBucket}
+                            onChange={setConfigTemplateBucket}
+                            placeholder="Select template bucket"
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableHead>Default Output Bucket</TableHead>
                         <TableCell>
-                          <BucketSelect datasourceId={configMinio || undefined} value={configOutputBucket} onChange={setConfigOutputBucket} placeholder="Select output bucket" />
+                          <BucketSelect
+                            datasourceId={configMinio || undefined}
+                            value={configOutputBucket}
+                            onChange={setConfigOutputBucket}
+                            placeholder="Select output bucket"
+                          />
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -355,7 +379,9 @@ function ModuleDetailPage() {
                         Default Template Bucket
                       </TableHead>
                       <TableCell className="font-mono text-sm">
-                        {module.default_template_bucket || <span className="text-muted-foreground">--</span>}
+                        {module.default_template_bucket || (
+                          <span className="text-muted-foreground">--</span>
+                        )}
                       </TableCell>
                     </TableRow>
                     <TableRow>
@@ -363,7 +389,9 @@ function ModuleDetailPage() {
                         Default Output Bucket
                       </TableHead>
                       <TableCell className="font-mono text-sm">
-                        {module.default_output_bucket || <span className="text-muted-foreground">--</span>}
+                        {module.default_output_bucket || (
+                          <span className="text-muted-foreground">--</span>
+                        )}
                       </TableCell>
                     </TableRow>
                     <TableRow>
@@ -384,7 +412,10 @@ function ModuleDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Templates in this module</CardTitle>
-              <Link to="/report-management/templates/create" search={{ module_id: id }}>
+              <Link
+                to="/report-management/templates/create"
+                search={{ module_id: id }}
+              >
                 <Button size="sm">
                   <Plus className="mr-2 h-3 w-3" />
                   Create Template
@@ -418,7 +449,9 @@ function ModuleDetailPage() {
                           {tpl.template_path || "Blank"}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={tpl.is_active ? "default" : "secondary"}>
+                          <Badge
+                            variant={tpl.is_active ? "default" : "secondary"}
+                          >
                             {tpl.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
@@ -437,7 +470,6 @@ function ModuleDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
       </Tabs>
     </div>
   )

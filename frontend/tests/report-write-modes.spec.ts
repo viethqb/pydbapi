@@ -15,10 +15,8 @@ import {
 import { expect, test } from "./utils/fixtures.ts"
 import {
   createReportModule,
-  createReportTemplate,
   deleteReportModule,
   deleteReportModulesMatching,
-  deleteReportTemplate,
 } from "./utils/reportModule.ts"
 
 test.describe.configure({ mode: "serial" })

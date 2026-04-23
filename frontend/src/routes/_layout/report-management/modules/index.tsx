@@ -28,14 +28,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
-import {
-  type ReportModuleListIn,
-  ReportModuleService,
-} from "@/services/report"
+import { type ReportModuleListIn, ReportModuleService } from "@/services/report"
 
-export const Route = createFileRoute(
-  "/_layout/report-management/modules/",
-)({
+export const Route = createFileRoute("/_layout/report-management/modules/")({
   component: ModulesPage,
   head: () => ({
     meta: [{ title: "Report Modules" }],
@@ -300,9 +295,7 @@ function ModulesPage() {
                       variant="outline"
                       size="sm"
                       disabled={page === 1}
-                      onClick={() =>
-                        setFilters({ ...filters, page: page - 1 })
-                      }
+                      onClick={() => setFilters({ ...filters, page: page - 1 })}
                     >
                       Previous
                     </Button>
@@ -310,9 +303,7 @@ function ModulesPage() {
                       variant="outline"
                       size="sm"
                       disabled={page * pageSize >= total}
-                      onClick={() =>
-                        setFilters({ ...filters, page: page + 1 })
-                      }
+                      onClick={() => setFilters({ ...filters, page: page + 1 })}
                     >
                       Next
                     </Button>

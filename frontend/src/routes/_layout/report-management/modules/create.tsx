@@ -18,7 +18,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -80,14 +79,10 @@ function CreateReportModulePage() {
   })
 
   const minioDatasources =
-    dsData?.data.filter(
-      (ds) => (ds.product_type as string) === "minio",
-    ) || []
+    dsData?.data.filter((ds) => (ds.product_type as string) === "minio") || []
 
   const sqlDatasources =
-    dsData?.data.filter(
-      (ds) => (ds.product_type as string) !== "minio",
-    ) || []
+    dsData?.data.filter((ds) => (ds.product_type as string) !== "minio") || []
 
   const form = useForm<CreateFormValues>({
     resolver: zodResolver(createFormSchema),
@@ -158,83 +153,162 @@ function CreateReportModulePage() {
                   <TableRow>
                     <TableHead className="w-[200px]">Name *</TableHead>
                     <TableCell>
-                      <FormField control={form.control} name="name" render={({ field }) => (
-                        <FormItem>
-                          <FormControl><Input placeholder="Report module name" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                placeholder="Report module name"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableHead>Description</TableHead>
                     <TableCell>
-                      <FormField control={form.control} name="description" render={({ field }) => (
-                        <FormItem>
-                          <FormControl><Textarea placeholder="Module description" {...field} value={field.value || ""} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Module description"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableHead>MinIO Datasource *</TableHead>
                     <TableCell>
-                      <FormField control={form.control} name="minio_datasource_id" render={({ field }) => (
-                        <FormItem>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select MinIO datasource" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {minioDatasources.map((ds) => (<SelectItem key={ds.id} value={ds.id}>{ds.name}</SelectItem>))}
-                              {minioDatasources.length === 0 && (<SelectItem value="_none" disabled>No MinIO datasources available</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="minio_datasource_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select MinIO datasource" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {minioDatasources.map((ds) => (
+                                  <SelectItem key={ds.id} value={ds.id}>
+                                    {ds.name}
+                                  </SelectItem>
+                                ))}
+                                {minioDatasources.length === 0 && (
+                                  <SelectItem value="_none" disabled>
+                                    No MinIO datasources available
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableHead>SQL Datasource *</TableHead>
                     <TableCell>
-                      <FormField control={form.control} name="sql_datasource_id" render={({ field }) => (
-                        <FormItem>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select SQL datasource" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {sqlDatasources.map((ds) => (<SelectItem key={ds.id} value={ds.id}>{ds.name} ({ds.product_type})</SelectItem>))}
-                              {sqlDatasources.length === 0 && (<SelectItem value="_none" disabled>No SQL datasources available</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="sql_datasource_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select SQL datasource" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {sqlDatasources.map((ds) => (
+                                  <SelectItem key={ds.id} value={ds.id}>
+                                    {ds.name} ({ds.product_type})
+                                  </SelectItem>
+                                ))}
+                                {sqlDatasources.length === 0 && (
+                                  <SelectItem value="_none" disabled>
+                                    No SQL datasources available
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableHead>Default Template Bucket *</TableHead>
                     <TableCell>
-                      <FormField control={form.control} name="default_template_bucket" render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <BucketSelect datasourceId={form.watch("minio_datasource_id") || undefined} value={field.value ?? ""} onChange={field.onChange} placeholder="Select template bucket" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="default_template_bucket"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <BucketSelect
+                                datasourceId={
+                                  form.watch("minio_datasource_id") || undefined
+                                }
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                placeholder="Select template bucket"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableHead>Default Output Bucket *</TableHead>
                     <TableCell>
-                      <FormField control={form.control} name="default_output_bucket" render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <BucketSelect datasourceId={form.watch("minio_datasource_id") || undefined} value={field.value ?? ""} onChange={field.onChange} placeholder="Select output bucket" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="default_output_bucket"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <BucketSelect
+                                datasourceId={
+                                  form.watch("minio_datasource_id") || undefined
+                                }
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                placeholder="Select output bucket"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                 </TableBody>

@@ -22,9 +22,7 @@ type ApiWithMeta = Awaited<ReturnType<typeof ApiAssignmentsService.get>> & {
   fullPath: string
 }
 
-function buildApiPath(
-  api: { path: string },
-): string {
+function buildApiPath(api: { path: string }): string {
   const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
   return `/api/${apiPath}`
 }

@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { ReportModuleService } from "@/services/report"
 
 export function SheetSelect({
@@ -19,7 +18,8 @@ export function SheetSelect({
 }) {
   const { data: sheets, isLoading } = useQuery({
     queryKey: ["excel-sheets", datasourceId, bucket, filePath],
-    queryFn: () => ReportModuleService.listSheets(datasourceId!, bucket!, filePath!),
+    queryFn: () =>
+      ReportModuleService.listSheets(datasourceId!, bucket!, filePath!),
     enabled: !!datasourceId && !!bucket && !!filePath,
   })
 

@@ -765,9 +765,10 @@ function EditClientPage() {
                                     <div className="flex flex-wrap gap-1 flex-1">
                                       {field.value && field.value.length > 0 ? (
                                         field.value.map((modId) => {
-                                          const mod = reportModulesData?.data?.find(
-                                            (m) => m.id === modId,
-                                          )
+                                          const mod =
+                                            reportModulesData?.data?.find(
+                                              (m) => m.id === modId,
+                                            )
                                           if (!mod) return null
                                           return (
                                             <Badge
@@ -818,41 +819,46 @@ function EditClientPage() {
                                   className="w-[400px] max-h-[300px] overflow-y-auto"
                                   align="start"
                                 >
-                                  {(reportModulesData?.data ?? []).map((mod) => {
-                                    const isSelected = field.value?.includes(mod.id)
-                                    return (
-                                      <DropdownMenuItem
-                                        key={mod.id}
-                                        onSelect={(e) => e.preventDefault()}
-                                        onClick={() => {
-                                          if (isSelected) {
-                                            field.onChange(
-                                              field.value.filter(
-                                                (id) => id !== mod.id,
-                                              ),
-                                            )
-                                          } else {
-                                            field.onChange([
-                                              ...(field.value || []),
-                                              mod.id,
-                                            ])
-                                          }
-                                        }}
-                                      >
-                                        <Checkbox
-                                          checked={isSelected}
-                                          className="mr-2"
-                                        />
-                                        <span>{mod.name}</span>
-                                        {mod.description && (
-                                          <span className="text-xs text-muted-foreground ml-2">
-                                            — {mod.description}
-                                          </span>
-                                        )}
-                                      </DropdownMenuItem>
-                                    )
-                                  })}
-                                  {(reportModulesData?.data ?? []).length === 0 && (
+                                  {(reportModulesData?.data ?? []).map(
+                                    (mod) => {
+                                      const isSelected = field.value?.includes(
+                                        mod.id,
+                                      )
+                                      return (
+                                        <DropdownMenuItem
+                                          key={mod.id}
+                                          onSelect={(e) => e.preventDefault()}
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              field.onChange(
+                                                field.value.filter(
+                                                  (id) => id !== mod.id,
+                                                ),
+                                              )
+                                            } else {
+                                              field.onChange([
+                                                ...(field.value || []),
+                                                mod.id,
+                                              ])
+                                            }
+                                          }}
+                                        >
+                                          <Checkbox
+                                            checked={isSelected}
+                                            className="mr-2"
+                                          />
+                                          <span>{mod.name}</span>
+                                          {mod.description && (
+                                            <span className="text-xs text-muted-foreground ml-2">
+                                              — {mod.description}
+                                            </span>
+                                          )}
+                                        </DropdownMenuItem>
+                                      )
+                                    },
+                                  )}
+                                  {(reportModulesData?.data ?? []).length ===
+                                    0 && (
                                     <DropdownMenuItem disabled>
                                       No report modules available
                                     </DropdownMenuItem>
@@ -861,7 +867,8 @@ function EditClientPage() {
                               </DropdownMenu>
                             </FormControl>
                             <FormDescription>
-                              Report modules this client can generate reports for
+                              Report modules this client can generate reports
+                              for
                             </FormDescription>
                             <FormMessage />
                           </FormItem>

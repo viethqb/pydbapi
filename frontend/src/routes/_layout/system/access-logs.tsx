@@ -179,19 +179,14 @@ function AccessLogsPage() {
     const p = (api.path || "").replace(/^\/+|\/+$/g, "")
     return `/api/${p}`
   }
-  const formatApiLabel = (api: {
-    http_method: string
-    path: string
-  }) => {
+  const formatApiLabel = (api: { http_method: string; path: string }) => {
     return `[${api.http_method}] ${formatApiFullPath(api)}`
   }
 
   const modulesFiltered = (modulesList ?? []).filter((m) => {
     const q = moduleSearch.trim().toLowerCase()
     if (!q) return true
-    return (
-      m.name.toLowerCase().includes(q)
-    )
+    return m.name.toLowerCase().includes(q)
   })
   const apisFiltered = (apiList?.data ?? []).filter((a) => {
     const q = apiSearch.trim().toLowerCase()

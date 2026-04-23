@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Eye, MoreHorizontal, Pencil, Play, Trash2 } from "lucide-react"
+import { Eye, MoreHorizontal, Play, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -78,9 +78,15 @@ export const reportTemplatesColumns: ColumnDef<TemplateTableData>[] = [
     cell: ({ row }) =>
       row.original.output_sheet ? (
         <div className="flex gap-1 flex-wrap">
-          {row.original.output_sheet.split(",").map((s: string) => s.trim()).filter(Boolean).map((s: string) => (
-            <Badge key={s} variant="secondary">{s}</Badge>
-          ))}
+          {row.original.output_sheet
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .map((s: string) => (
+              <Badge key={s} variant="secondary">
+                {s}
+              </Badge>
+            ))}
         </div>
       ) : (
         <span className="text-muted-foreground text-sm">Full file</span>

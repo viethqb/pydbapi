@@ -55,11 +55,7 @@ export const apiColumns: ColumnDef<ApiTableData>[] = [
     cell: ({ row }) => {
       const api = row.original
       const apiPath = api.path.startsWith("/") ? api.path.slice(1) : api.path
-      return (
-        <span className="font-mono text-sm">
-          /api/{apiPath}
-        </span>
-      )
+      return <span className="font-mono text-sm">/api/{apiPath}</span>
     },
   },
   {

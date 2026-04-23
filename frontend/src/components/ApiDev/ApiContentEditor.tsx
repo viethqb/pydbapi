@@ -2,7 +2,14 @@ import Editor, { type OnMount } from "@monaco-editor/react"
 import initRuff, { format as formatPython } from "@wasm-fmt/ruff_fmt/vite"
 import { Braces, ChevronDown } from "lucide-react"
 import type * as Monaco from "monaco-editor"
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { format as formatSql } from "sql-formatter"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
@@ -25,13 +32,17 @@ export type MacroDefForCompletion = {
 
 // Shared ref for completion providers to read current in-scope macro defs
 let macroDefsForCompletionsRef: MacroDefForCompletion[] = []
-export function setMacroDefsForCompletions(defs: MacroDefForCompletion[] | null | undefined) {
+export function setMacroDefsForCompletions(
+  defs: MacroDefForCompletion[] | null | undefined,
+) {
   macroDefsForCompletionsRef = Array.isArray(defs) ? defs : []
 }
 
 // Shared ref for param names (used when suggesting {{ param }} in SQL/Jinja editor)
 const paramNamesForCompletionsRef: { current: string[] } = { current: [] }
-export function setParamNamesForCompletions(names: string[] | null | undefined) {
+export function setParamNamesForCompletions(
+  names: string[] | null | undefined,
+) {
   paramNamesForCompletionsRef.current = Array.isArray(names) ? names : []
 }
 
@@ -41,7 +52,10 @@ function parsePythonFunctionSignatures(content: string): PythonFuncInfo[] {
   const re = /def\s+(\w+)\s*\(([^)]*)\)/g
   let m = re.exec(content)
   while (m !== null) {
-    const params = m[2].split(",").map((p) => p.trim().split("=")[0]?.trim() || "").filter(Boolean)
+    const params = m[2]
+      .split(",")
+      .map((p) => p.trim().split("=")[0]?.trim() || "")
+      .filter(Boolean)
     results.push({
       name: m[1],
       signature: m[2] || "",
@@ -53,10 +67,16 @@ function parsePythonFunctionSignatures(content: string): PythonFuncInfo[] {
 }
 
 function parseJinjaMacroParams(content: string, macroName: string): string[] {
-  const re = new RegExp(`{%\\s*macro\\s+${macroName}\\s*\\(([^)]*)\\)\\s*%}`, "i")
+  const re = new RegExp(
+    `{%\\s*macro\\s+${macroName}\\s*\\(([^)]*)\\)\\s*%}`,
+    "i",
+  )
   const m = content.match(re)
   if (!m) return []
-  return m[1].split(",").map((p) => p.trim()).filter(Boolean)
+  return m[1]
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
 }
 
 type Props = {
@@ -138,18 +158,32 @@ const JINJA_FILTER_DETAILS: Record<string, string> = {
 }
 
 // Jinja2 tags for Monaco completion (plain text insert) and for dropdown (Jinja tags button)
-const JINJA_TAG_SNIPPETS: Array<{ id: string; label: string; insert: string }> = [
-  { id: "if", label: "{% if %} ... {% endif %}", insert: "{% if param %}\n  \n{% endif %}" },
-  { id: "for", label: "{% for %} ... {% endfor %}", insert: "{% for item in items %}\n  \n{% endfor %}" },
-  { id: "where", label: "{% where %} ... {% endwhere %}", insert: "{% where %}\n  {% if param %}condition\n  {% endif %}\n{% endwhere %}" },
-  { id: "set", label: "{% set %}", insert: "{% set var = value %}" },
-  { id: "else", label: "{% else %}", insert: "{% else %}" },
-  { id: "elif", label: "{% elif %}", insert: "{% elif condition %}" },
-  { id: "endif", label: "{% endif %}", insert: "{% endif %}" },
-  { id: "endfor", label: "{% endfor %}", insert: "{% endfor %}" },
-  { id: "endwhere", label: "{% endwhere %}", insert: "{% endwhere %}" },
-  { id: "comment", label: "{# comment #}", insert: "{# comment #}" },
-]
+const JINJA_TAG_SNIPPETS: Array<{ id: string; label: string; insert: string }> =
+  [
+    {
+      id: "if",
+      label: "{% if %} ... {% endif %}",
+      insert: "{% if param %}\n  \n{% endif %}",
+    },
+    {
+      id: "for",
+      label: "{% for %} ... {% endfor %}",
+      insert: "{% for item in items %}\n  \n{% endfor %}",
+    },
+    {
+      id: "where",
+      label: "{% where %} ... {% endwhere %}",
+      insert:
+        "{% where %}\n  {% if param %}condition\n  {% endif %}\n{% endwhere %}",
+    },
+    { id: "set", label: "{% set %}", insert: "{% set var = value %}" },
+    { id: "else", label: "{% else %}", insert: "{% else %}" },
+    { id: "elif", label: "{% elif %}", insert: "{% elif condition %}" },
+    { id: "endif", label: "{% endif %}", insert: "{% endif %}" },
+    { id: "endfor", label: "{% endfor %}", insert: "{% endfor %}" },
+    { id: "endwhere", label: "{% endwhere %}", insert: "{% endwhere %}" },
+    { id: "comment", label: "{# comment #}", insert: "{# comment #}" },
+  ]
 
 // For dropdown "Jinja tags" button (non-snippet plain insert)
 const JINJA_TAGS: Array<{ id: string; label: string; insert: string }> = [
@@ -204,14 +238,17 @@ function registerSqlCompletions(monaco: typeof Monaco) {
         position.lineNumber,
         word.startColumn,
         position.lineNumber,
-        word.endColumn
+        word.endColumn,
       )
-      const lineBefore = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
+      const lineBefore = model
+        .getLineContent(position.lineNumber)
+        .slice(0, position.column - 1)
       const suggestions: Monaco.languages.CompletionItem[] = []
 
       // Context: inside {% ... %} (not yet closed) → Jinja tags (if, for, where, set, else, elif, endif, endfor, endwhere, comment)
       const lastTagOpen = lineBefore.lastIndexOf("{%")
-      const afterTagOpen = lastTagOpen >= 0 ? lineBefore.slice(lastTagOpen + 2) : ""
+      const afterTagOpen =
+        lastTagOpen >= 0 ? lineBefore.slice(lastTagOpen + 2) : ""
       const inTagBlock = lastTagOpen >= 0 && !afterTagOpen.includes("%}")
       if (inTagBlock) {
         for (const t of JINJA_TAG_SNIPPETS) {
@@ -309,16 +346,20 @@ function registerSqlCompletions(monaco: typeof Monaco) {
           if (m.macro_type === "JINJA") {
             const params = parseJinjaMacroParams(m.content, m.name)
             const paramsStr = params.length > 0 ? params.join(", ") : ""
-            const insertParams = params.length > 0
-              ? params.map((p, i) => `\${${i + 1}:${p}}`).join(", ")
-              : "$1"
+            const insertParams =
+              params.length > 0
+                ? params.map((p, i) => `\${${i + 1}:${p}}`).join(", ")
+                : "$1"
             suggestions.push({
               label: m.name,
               kind: monaco.languages.CompletionItemKind.Function,
               insertText: `{{ ${m.name}(${insertParams}) }}`,
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              insertTextRules:
+                monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range,
-              detail: paramsStr ? `Macro: ${m.name}(${paramsStr})` : `Macro: ${m.name}`,
+              detail: paramsStr
+                ? `Macro: ${m.name}(${paramsStr})`
+                : `Macro: ${m.name}`,
             })
           }
         }
@@ -332,18 +373,58 @@ function registerSqlCompletions(monaco: typeof Monaco) {
 }
 
 // Built-in globals for Python script. Kind (Module/Variable) applied in provider.
-const PYTHON_SCRIPT_GLOBALS: Array<{ label: string; detail: string; kind: "module" | "variable" }> = [
-  { label: "db", detail: "Database: query, query_one, execute, insert, update, delete", kind: "module" },
-  { label: "http", detail: "HTTP client: get, post, put, delete", kind: "module" },
-  { label: "cache", detail: "Cache (Redis): get, set, delete, exists, incr, decr", kind: "module" },
-  { label: "env", detail: "Environment: get, get_int, get_bool", kind: "module" },
+const PYTHON_SCRIPT_GLOBALS: Array<{
+  label: string
+  detail: string
+  kind: "module" | "variable"
+}> = [
+  {
+    label: "db",
+    detail: "Database: query, query_one, execute, insert, update, delete",
+    kind: "module",
+  },
+  {
+    label: "http",
+    detail: "HTTP client: get, post, put, delete",
+    kind: "module",
+  },
+  {
+    label: "cache",
+    detail: "Cache (Redis): get, set, delete, exists, incr, decr",
+    kind: "module",
+  },
+  {
+    label: "env",
+    detail: "Environment: get, get_int, get_bool",
+    kind: "module",
+  },
   { label: "log", detail: "Logging: info, warn, error, debug", kind: "module" },
-  { label: "req", detail: "Request params dict (same as params in execute)", kind: "variable" },
-  { label: "tx", detail: "Transaction: begin, commit, rollback", kind: "module" },
-  { label: "ds", detail: "DataSource metadata: id, name, host, database", kind: "variable" },
-  { label: "params", detail: "Request params dict (argument of execute)", kind: "variable" },
+  {
+    label: "req",
+    detail: "Request params dict (same as params in execute)",
+    kind: "variable",
+  },
+  {
+    label: "tx",
+    detail: "Transaction: begin, commit, rollback",
+    kind: "module",
+  },
+  {
+    label: "ds",
+    detail: "DataSource metadata: id, name, host, database",
+    kind: "variable",
+  },
+  {
+    label: "params",
+    detail: "Request params dict (argument of execute)",
+    kind: "variable",
+  },
   { label: "json", detail: "json.loads, json.dumps", kind: "module" },
-  { label: "datetime", detail: "datetime, date, time, timedelta", kind: "module" },
+  {
+    label: "datetime",
+    detail: "datetime, date, time, timedelta",
+    kind: "module",
+  },
 ]
 
 function registerPythonCompletions(monaco: typeof Monaco) {
@@ -356,7 +437,7 @@ function registerPythonCompletions(monaco: typeof Monaco) {
         position.lineNumber,
         word.startColumn,
         position.lineNumber,
-        word.endColumn
+        word.endColumn,
       )
       const lineContent = model.getLineContent(position.lineNumber)
       const textBeforeCursor = lineContent.slice(0, position.column - 1)
@@ -367,62 +448,266 @@ function registerPythonCompletions(monaco: typeof Monaco) {
       // Member completion: db.*, http.*, cache.*, env.*, log.*, tx.* (single-quote strings for Monaco ${n:placeholder})
       if (trimmed.endsWith("db.")) {
         suggestions.push(
-          { label: "query", insertText: `query(\${1:sql}, \${2:params=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "list[dict]. Run SELECT; params: (tuple) or [list] for %s" },
-          { label: "query_one", insertText: `query_one(\${1:sql}, \${2:params=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "dict | None. Single row" },
-          { label: "execute", insertText: `execute(\${1:sql}, \${2:params=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. Run INSERT/UPDATE/DELETE; returns rowcount" },
-          { label: "insert", insertText: `insert(\${1:sql}, \${2:params=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. INSERT" },
-          { label: "update", insertText: `update(\${1:sql}, \${2:params=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. UPDATE" },
-          { label: "delete", insertText: `delete(\${1:sql}, \${2:params=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "int. DELETE" },
+          {
+            label: "query",
+            insertText: `query(\${1:sql}, \${2:params=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "list[dict]. Run SELECT; params: (tuple) or [list] for %s",
+          },
+          {
+            label: "query_one",
+            insertText: `query_one(\${1:sql}, \${2:params=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "dict | None. Single row",
+          },
+          {
+            label: "execute",
+            insertText: `execute(\${1:sql}, \${2:params=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "int. Run INSERT/UPDATE/DELETE; returns rowcount",
+          },
+          {
+            label: "insert",
+            insertText: `insert(\${1:sql}, \${2:params=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "int. INSERT",
+          },
+          {
+            label: "update",
+            insertText: `update(\${1:sql}, \${2:params=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "int. UPDATE",
+          },
+          {
+            label: "delete",
+            insertText: `delete(\${1:sql}, \${2:params=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "int. DELETE",
+          },
         )
       } else if (trimmed.endsWith("http.")) {
         suggestions.push(
-          { label: "get", insertText: `get(\${1:url})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "GET request; returns JSON or text" },
-          { label: "post", insertText: `post(\${1:url}, \${2:json=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "POST request" },
-          { label: "put", insertText: `put(\${1:url}, \${2:json=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "PUT request" },
-          { label: "delete", insertText: `delete(\${1:url})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "DELETE request" },
+          {
+            label: "get",
+            insertText: `get(\${1:url})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "GET request; returns JSON or text",
+          },
+          {
+            label: "post",
+            insertText: `post(\${1:url}, \${2:json=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "POST request",
+          },
+          {
+            label: "put",
+            insertText: `put(\${1:url}, \${2:json=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "PUT request",
+          },
+          {
+            label: "delete",
+            insertText: `delete(\${1:url})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "DELETE request",
+          },
         )
       } else if (trimmed.endsWith("cache.")) {
         suggestions.push(
-          { label: "get", insertText: `get(\${1:key})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get value by key" },
-          { label: "set", insertText: `set(\${1:key}, \${2:value}, \${3:ttl_seconds=None})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Set key=value; optional TTL" },
-          { label: "delete", insertText: `delete(\${1:key})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Delete key" },
-          { label: "exists", insertText: `exists(\${1:key})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "bool" },
-          { label: "incr", insertText: `incr(\${1:key}, \${2:amount=1})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Increment counter" },
-          { label: "decr", insertText: `decr(\${1:key}, \${2:amount=1})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Decrement counter" },
+          {
+            label: "get",
+            insertText: `get(\${1:key})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Get value by key",
+          },
+          {
+            label: "set",
+            insertText: `set(\${1:key}, \${2:value}, \${3:ttl_seconds=None})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Set key=value; optional TTL",
+          },
+          {
+            label: "delete",
+            insertText: `delete(\${1:key})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Delete key",
+          },
+          {
+            label: "exists",
+            insertText: `exists(\${1:key})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "bool",
+          },
+          {
+            label: "incr",
+            insertText: `incr(\${1:key}, \${2:amount=1})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Increment counter",
+          },
+          {
+            label: "decr",
+            insertText: `decr(\${1:key}, \${2:amount=1})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Decrement counter",
+          },
         )
       } else if (trimmed.endsWith("env.")) {
         suggestions.push(
-          { label: "get", insertText: `get(\${1:key})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get env/settings value (whitelisted keys)" },
-          { label: "get_int", insertText: `get_int(\${1:key})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get as int" },
-          { label: "get_bool", insertText: `get_bool(\${1:key})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Get as bool" },
+          {
+            label: "get",
+            insertText: `get(\${1:key})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Get env/settings value (whitelisted keys)",
+          },
+          {
+            label: "get_int",
+            insertText: `get_int(\${1:key})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Get as int",
+          },
+          {
+            label: "get_bool",
+            insertText: `get_bool(\${1:key})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Get as bool",
+          },
         )
       } else if (trimmed.endsWith("log.")) {
         suggestions.push(
-          { label: "info", insertText: `info(\${1:msg})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log info" },
-          { label: "warn", insertText: `warn(\${1:msg})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log warning" },
-          { label: "error", insertText: `error(\${1:msg})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log error" },
-          { label: "debug", insertText: `debug(\${1:msg})`, insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range, kind: monaco.languages.CompletionItemKind.Method, detail: "Log debug" },
+          {
+            label: "info",
+            insertText: `info(\${1:msg})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Log info",
+          },
+          {
+            label: "warn",
+            insertText: `warn(\${1:msg})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Log warning",
+          },
+          {
+            label: "error",
+            insertText: `error(\${1:msg})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Log error",
+          },
+          {
+            label: "debug",
+            insertText: `debug(\${1:msg})`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Log debug",
+          },
         )
       } else if (trimmed.endsWith("tx.")) {
         suggestions.push(
-          { label: "begin", insertText: "begin()", range, kind: monaco.languages.CompletionItemKind.Method, detail: "Start transaction" },
-          { label: "commit", insertText: "commit()", range, kind: monaco.languages.CompletionItemKind.Method, detail: "Commit transaction" },
-          { label: "rollback", insertText: "rollback()", range, kind: monaco.languages.CompletionItemKind.Method, detail: "Rollback transaction" },
+          {
+            label: "begin",
+            insertText: "begin()",
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Start transaction",
+          },
+          {
+            label: "commit",
+            insertText: "commit()",
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Commit transaction",
+          },
+          {
+            label: "rollback",
+            insertText: "rollback()",
+            range,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: "Rollback transaction",
+          },
         )
       } else {
         // Macro def functions (Python macros)
         for (const m of macroDefsForCompletionsRef) {
           if (m.macro_type === "PYTHON") {
             for (const fn of parsePythonFunctionSignatures(m.content)) {
-              const insertParams = fn.params.length > 0
-                ? fn.params.map((p, i) => `\${${i + 1}:${p}}`).join(", ")
-                : "$1"
+              const insertParams =
+                fn.params.length > 0
+                  ? fn.params.map((p, i) => `\${${i + 1}:${p}}`).join(", ")
+                  : "$1"
               const sigStr = fn.signature ? `(${fn.signature})` : "()"
               suggestions.push({
                 label: fn.name,
                 kind: monaco.languages.CompletionItemKind.Function,
                 insertText: `${fn.name}(${insertParams})`,
-                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                 range,
                 detail: `Macro ${m.name}: def ${fn.name}${sigStr}`,
               })
@@ -445,8 +730,9 @@ function registerPythonCompletions(monaco: typeof Monaco) {
           {
             label: "execute(params=None) (snippet)",
             kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: `def execute(params=None):\n    ${"${1:params = params or {}}\n    sql = \"${2:SELECT 1 AS col}\"\n    rows = db.query(sql)\n    return ${3:rows}\n".replace(/\$/g, "\\$")}`,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertText: `def execute(params=None):\n    ${'${1:params = params or {}}\n    sql = "${2:SELECT 1 AS col}"\n    rows = db.query(sql)\n    return ${3:rows}\n'.replace(/\$/g, "\\$")}`,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range,
             detail: "Main entry: params from request, return dict/list",
           },
@@ -454,7 +740,8 @@ function registerPythonCompletions(monaco: typeof Monaco) {
             label: "params.get",
             kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: `params.get(\${1:"key"}\${2:, default})`,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range,
             detail: "Get request param with optional default",
           },
@@ -462,7 +749,8 @@ function registerPythonCompletions(monaco: typeof Monaco) {
             label: "db.query(sql)",
             kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: `db.query(\${1:"SELECT * FROM table"}\${2:, (param1,)})\n\${3:return }rows`,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range,
             detail: "Run SELECT, get list of dicts",
           },
@@ -470,7 +758,8 @@ function registerPythonCompletions(monaco: typeof Monaco) {
             label: "db.query_one(sql)",
             kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: `row = db.query_one(\${1:"SELECT * FROM table WHERE id = %s"}, (\${2:id},))`,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range,
             detail: "Single row or None",
           },
@@ -478,7 +767,8 @@ function registerPythonCompletions(monaco: typeof Monaco) {
             label: "return dict",
             kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: `return {\${1:"key"}: \${2:value}}`,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range,
             detail: "Return JSON object",
           },
@@ -486,7 +776,8 @@ function registerPythonCompletions(monaco: typeof Monaco) {
             label: "return list",
             kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: "return $1",
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules:
+              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range,
             detail: "Return list (e.g. rows)",
           },
@@ -532,11 +823,11 @@ export default function ApiContentEditor({
 
   const language = useMemo(
     () => getMonacoLanguage(executeEngine),
-    [executeEngine]
+    [executeEngine],
   )
   const theme = useMemo(
     () => (resolvedTheme === "dark" ? "vs-dark" : "vs"),
-    [resolvedTheme]
+    [resolvedTheme],
   )
 
   const [isFormatting, setIsFormatting] = useState(false)
@@ -601,7 +892,7 @@ export default function ApiContentEditor({
         onEditorReady(() => editor.getValue())
       }
     },
-    [onBlur, onChange, theme, onEditorReady]
+    [onBlur, onChange, theme, onEditorReady],
   )
 
   // Sync value to editor when value prop changes (e.g., when tab remounts)
@@ -659,17 +950,20 @@ export default function ApiContentEditor({
     }
   }, [onChange, value]) // Include all deps to ensure each editor has its own cleanup
 
-  const insertJinjaAtCursor = useCallback((snippet: string) => {
-    const editor = editorRef.current
-    if (!editor) return
-    const selection = editor.getSelection()
-    if (!selection) return
-    editor.executeEdits("jinja-insert", [{ range: selection, text: snippet }])
-    setJinjaOpen(false)
-    setJinjaSearch("")
-    const newValue = editor.getValue()
-    if (newValue !== valueRef.current) onChange(newValue)
-  }, [onChange])
+  const insertJinjaAtCursor = useCallback(
+    (snippet: string) => {
+      const editor = editorRef.current
+      if (!editor) return
+      const selection = editor.getSelection()
+      if (!selection) return
+      editor.executeEdits("jinja-insert", [{ range: selection, text: snippet }])
+      setJinjaOpen(false)
+      setJinjaSearch("")
+      const newValue = editor.getValue()
+      if (newValue !== valueRef.current) onChange(newValue)
+    },
+    [onChange],
+  )
 
   const handleFormat = useCallback(async () => {
     try {
@@ -705,7 +999,8 @@ export default function ApiContentEditor({
 
   const effectiveHeight = useMemo(() => {
     if (!autoHeight) return height
-    const src = (value ?? "").trim() !== "" ? (value ?? "") : (placeholder ?? "")
+    const src =
+      (value ?? "").trim() !== "" ? (value ?? "") : (placeholder ?? "")
     const lines = Math.max(1, src.split(/\r\n|\r|\n/).length)
     // Keep in sync with Monaco options lineHeight=20 (+ UI chrome padding).
     const lineHeightPx = 20
@@ -737,7 +1032,8 @@ export default function ApiContentEditor({
     const q = jinjaSearch.trim().toLowerCase()
     if (!q) return jinjaTagsWithMacros
     return jinjaTagsWithMacros.filter(
-      (t) => t.id.toLowerCase().includes(q) || t.label.toLowerCase().includes(q)
+      (t) =>
+        t.id.toLowerCase().includes(q) || t.label.toLowerCase().includes(q),
     )
   }, [jinjaSearch, jinjaTagsWithMacros])
 
@@ -749,7 +1045,13 @@ export default function ApiContentEditor({
         </div>
         <div className="flex items-center gap-2">
           {executeEngine === "SQL" && (
-            <DropdownMenu open={jinjaOpen} onOpenChange={(open) => { setJinjaOpen(open); if (!open) setJinjaSearch("") }}>
+            <DropdownMenu
+              open={jinjaOpen}
+              onOpenChange={(open) => {
+                setJinjaOpen(open)
+                if (!open) setJinjaSearch("")
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
@@ -774,7 +1076,9 @@ export default function ApiContentEditor({
                 </div>
                 <div className="max-h-64 overflow-auto p-1">
                   {jinjaTagsFiltered.length === 0 ? (
-                    <div className="py-4 text-center text-sm text-muted-foreground">No match</div>
+                    <div className="py-4 text-center text-sm text-muted-foreground">
+                      No match
+                    </div>
                   ) : (
                     jinjaTagsFiltered.map((tag) => (
                       <DropdownMenuItem

@@ -4,8 +4,8 @@ import { Loader2, Plus, Search } from "lucide-react"
 import { useState } from "react"
 import { DataTable } from "@/components/Common/DataTable"
 import {
-  type TemplateTableData,
   reportTemplatesColumns,
+  type TemplateTableData,
 } from "@/components/ReportManagement/report-templates-columns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -28,13 +28,11 @@ import {
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
 import {
-  type ReportTemplateListIn,
   ReportModuleService,
+  type ReportTemplateListIn,
 } from "@/services/report"
 
-export const Route = createFileRoute(
-  "/_layout/report-management/templates/",
-)({
+export const Route = createFileRoute("/_layout/report-management/templates/")({
   component: TemplatesListPage,
   head: () => ({
     meta: [{ title: "Report Templates" }],
@@ -137,12 +135,14 @@ function TemplatesListPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Report Templates</h1>
-        <p className="text-muted-foreground mt-1">
-          Search and manage all report templates across modules
-        </p>
-      </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Report Templates
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Search and manage all report templates across modules
+          </p>
+        </div>
         <Link to="/report-management/templates/create">
           <Button size="lg">
             <Plus className="mr-2 h-4 w-4" />
@@ -263,9 +263,7 @@ function TemplatesListPage() {
             <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
                 Showing{" "}
-                <span className="font-medium">
-                  {(page - 1) * pageSize + 1}
-                </span>{" "}
+                <span className="font-medium">{(page - 1) * pageSize + 1}</span>{" "}
                 to{" "}
                 <span className="font-medium">
                   {Math.min(page * pageSize, total)}

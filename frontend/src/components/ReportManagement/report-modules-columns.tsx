@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ExternalLink, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -116,9 +115,7 @@ export const reportModulesColumns: ColumnDef<ModuleTableData>[] = [
                 </Link>
               </DropdownMenuItem>
               {mod.canUpdate && (
-                <DropdownMenuItem
-                  onClick={() => mod.onEdit?.(mod.id)}
-                >
+                <DropdownMenuItem onClick={() => mod.onEdit?.(mod.id)}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
@@ -127,9 +124,7 @@ export const reportModulesColumns: ColumnDef<ModuleTableData>[] = [
               <DropdownMenuItem
                 disabled={!mod.canDelete}
                 onClick={
-                  !mod.canDelete
-                    ? undefined
-                    : () => mod.onDelete?.(mod.id)
+                  !mod.canDelete ? undefined : () => mod.onDelete?.(mod.id)
                 }
                 className="text-destructive"
               >

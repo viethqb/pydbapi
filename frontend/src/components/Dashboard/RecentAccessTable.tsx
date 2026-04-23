@@ -149,7 +149,9 @@ export function RecentAccessTable(props: {
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-md break-all">/api/{r.path?.replace(/^\/+/, "") ?? ""}</p>
+                          <p className="max-w-md break-all">
+                            /api/{r.path?.replace(/^\/+/, "") ?? ""}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

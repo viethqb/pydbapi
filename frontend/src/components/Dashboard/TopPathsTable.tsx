@@ -43,7 +43,14 @@ export function TopPathsTable(props: {
   days?: number
   onDaysChange?: (days: number) => void
 }) {
-  const { rows, isLoading, limit = 10, onLimitChange, days = 14, onDaysChange } = props
+  const {
+    rows,
+    isLoading,
+    limit = 10,
+    onLimitChange,
+    days = 14,
+    onDaysChange,
+  } = props
   const [localLimit, setLocalLimit] = useState(String(limit))
   const [localDays, setLocalDays] = useState(String(days))
 
@@ -137,7 +144,9 @@ export function TopPathsTable(props: {
                           <span>/api/{r.path.replace(/^\/+/, "")}</span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-md break-all">/api/{r.path.replace(/^\/+/, "")}</p>
+                          <p className="max-w-md break-all">
+                            /api/{r.path.replace(/^\/+/, "")}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -146,7 +155,9 @@ export function TopPathsTable(props: {
                     {r.count.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {r.avg_duration_ms != null ? `${r.avg_duration_ms} ms` : "—"}
+                    {r.avg_duration_ms != null
+                      ? `${r.avg_duration_ms} ms`
+                      : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-emerald-600">
                     {r.success_count.toLocaleString()}

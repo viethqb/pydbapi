@@ -1,14 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
-import { useState } from "react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft } from "lucide-react"
+import { useState } from "react"
 import { FileSelect } from "@/components/ReportManagement/FileSelect"
 import { SheetSelect } from "@/components/ReportManagement/SheetSelect"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Select,
@@ -24,7 +29,6 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { ReportModuleService } from "@/services/report"
 
@@ -60,7 +64,9 @@ function CreateTemplatePage() {
     output_sheet: "",
   })
 
-  const selectedModule = (modulesData?.data ?? []).find((m) => m.id === form.module_id)
+  const selectedModule = (modulesData?.data ?? []).find(
+    (m) => m.id === form.module_id,
+  )
   const minioDsId = selectedModule?.minio_datasource_id
 
   const createMutation = useMutation({
@@ -118,10 +124,19 @@ function CreateTemplatePage() {
               <TableRow>
                 <TableHead className="w-[200px]">Module *</TableHead>
                 <TableCell>
-                  <Select value={form.module_id} onValueChange={(v) => setForm({ ...form, module_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select module" /></SelectTrigger>
+                  <Select
+                    value={form.module_id}
+                    onValueChange={(v) => setForm({ ...form, module_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select module" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {(modulesData?.data ?? []).map((m) => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                      {(modulesData?.data ?? []).map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -129,31 +144,65 @@ function CreateTemplatePage() {
               <TableRow>
                 <TableHead>Name *</TableHead>
                 <TableCell>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="monthly-report" />
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="monthly-report"
+                  />
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableHead>Description</TableHead>
                 <TableCell>
-                  <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional" />
+                  <Input
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                    placeholder="Optional"
+                  />
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableHead>Template File</TableHead>
                 <TableCell>
-                  <FileSelect datasourceId={minioDsId} bucket={selectedModule?.default_template_bucket} value={form.template_path} onChange={(v) => setForm({ ...form, template_path: v })} placeholder="Select .xlsx file (empty = blank)" />
+                  <FileSelect
+                    datasourceId={minioDsId}
+                    bucket={selectedModule?.default_template_bucket}
+                    value={form.template_path}
+                    onChange={(v) => setForm({ ...form, template_path: v })}
+                    placeholder="Select .xlsx file (empty = blank)"
+                  />
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableHead>Output Prefix</TableHead>
                 <TableCell>
-                  <Input value={form.output_prefix} onChange={(e) => setForm({ ...form, output_prefix: e.target.value })} placeholder="finance/monthly/" />
+                  <Input
+                    value={form.output_prefix}
+                    onChange={(e) =>
+                      setForm({ ...form, output_prefix: e.target.value })
+                    }
+                    placeholder="finance/monthly/"
+                  />
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableHead>Output Sheet</TableHead>
                 <TableCell>
-                  <SheetSelect datasourceId={minioDsId} bucket={selectedModule?.default_template_bucket} filePath={form.template_path || undefined} value={form.output_sheet} onChange={(v) => setForm({ ...form, output_sheet: v, ...(v ? { recalc_enabled: true } : {}) })} />
+                  <SheetSelect
+                    datasourceId={minioDsId}
+                    bucket={selectedModule?.default_template_bucket}
+                    filePath={form.template_path || undefined}
+                    value={form.output_sheet}
+                    onChange={(v) =>
+                      setForm({
+                        ...form,
+                        output_sheet: v,
+                        ...(v ? { recalc_enabled: true } : {}),
+                      })
+                    }
+                  />
                 </TableCell>
               </TableRow>
               <TableRow>
@@ -162,12 +211,18 @@ function CreateTemplatePage() {
                   <div className="flex items-center gap-2">
                     <Checkbox
                       checked={form.recalc_enabled}
-                      onCheckedChange={(c) => setForm({ ...form, recalc_enabled: !!c })}
+                      onCheckedChange={(c) =>
+                        setForm({ ...form, recalc_enabled: !!c })
+                      }
                       disabled={!!form.output_sheet}
                     />
                     <span className="text-sm">
                       LibreOffice Recalc
-                      {form.output_sheet && <span className="text-muted-foreground ml-1">(required for Output Sheet)</span>}
+                      {form.output_sheet && (
+                        <span className="text-muted-foreground ml-1">
+                          (required for Output Sheet)
+                        </span>
+                      )}
                     </span>
                   </div>
                 </TableCell>
@@ -178,9 +233,7 @@ function CreateTemplatePage() {
           <div className="flex justify-end gap-2 pt-4">
             <Button
               variant="outline"
-              onClick={() =>
-                navigate({ to: "/report-management/templates" })
-              }
+              onClick={() => navigate({ to: "/report-management/templates" })}
             >
               Cancel
             </Button>
