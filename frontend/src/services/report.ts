@@ -234,24 +234,6 @@ export type GenerateReportOut = {
   output_minio_path: string | null
 }
 
-export type ReportPreviewIn = {
-  parameters?: Record<string, unknown>
-  row_limit?: number
-}
-
-export type MappingPreviewOut = {
-  mapping_id: string
-  sheet_name: string
-  start_cell: string
-  columns: string[]
-  rows: Record<string, unknown>[]
-  error: string | null
-}
-
-export type ReportPreviewOut = {
-  mappings: MappingPreviewOut[]
-}
-
 // ---------- Report Module Service ----------
 
 export const ReportModuleService = {
@@ -507,22 +489,6 @@ export const ReportModuleService = {
       {
         method: "POST",
         body: JSON.stringify(body),
-      },
-    )
-  },
-
-  // --- Preview (dry-run) ---
-
-  preview: async (
-    moduleId: string,
-    templateId: string,
-    body: ReportPreviewIn = {},
-  ): Promise<ReportPreviewOut> => {
-    return request<ReportPreviewOut>(
-      `/api/v1/report-modules/${moduleId}/templates/${templateId}/preview`,
-      {
-        method: "POST",
-        body: JSON.stringify({ row_limit: 5, ...body }),
       },
     )
   },

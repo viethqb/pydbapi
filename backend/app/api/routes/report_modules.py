@@ -35,7 +35,6 @@ from app.models_report import (
 from app.schemas_report import (
     ClientIdsOut,
     ClientIdsUpdate,
-    MappingPreviewOut,
     ReportExecutionListOut,
     ReportExecutionPublic,
     ReportGenerateIn,
@@ -46,8 +45,6 @@ from app.schemas_report import (
     ReportModuleListOut,
     ReportModulePublic,
     ReportModuleUpdate,
-    ReportPreviewIn,
-    ReportPreviewOut,
     ReportTemplateCreate,
     ReportTemplateDetail,
     ReportTemplateListIn,
@@ -629,71 +626,6 @@ def generate(session: SessionDep, request: Request, id: uuid.UUID, tid: uuid.UUI
     ExcelReportExecutor().execute(session, mod, tpl, mappings, exc, body.parameters)
     session.refresh(exc)
     return ReportGenerateOut(execution_id=exc.id, status=exc.status, output_url=exc.output_url, output_minio_path=exc.output_minio_path)
-
-
-@router.post("/{id}/templates/{tid}/preview", response_model=ReportPreviewOut)
-def preview_template(
-    session: SessionDep, request: Request,
-    id: uuid.UUID, tid: uuid.UUID, body: ReportPreviewIn,
-) -> Any:
-    """Dry-run: render each mapping's SQL with the given parameters and return
-    a small sample of rows. Used by the UI to validate templates before
-    triggering a full generate. Does not recalc or upload anything."""
-    auth = request.headers.get("authorization", "")
-    token = auth.replace("Bearer ", "").replace("bearer ", "").strip()
-    if not token:
-        raise HTTPException(401, "Authorization required")
-    _verify_report_access(session, id, token)
-
-    mod = session.get(ReportModule, id)
-    if not mod or not mod.is_active:
-        raise HTTPException(400, "Module not found or inactive")
-    tpl = session.get(ReportTemplate, tid)
-    if not tpl or tpl.report_module_id != id:
-        raise HTTPException(404, "Template not found")
-    mappings = list(session.exec(select(ReportSheetMapping).where(
-        ReportSheetMapping.report_template_id == tid,
-        ReportSheetMapping.is_active == True,  # noqa: E712
-    )).all())
-    if not mappings:
-        raise HTTPException(400, "No active mappings")
-
-    # Local imports to avoid circular imports during test collection.
-    from app.engines.sql import SQLTemplateEngine, execute_sql
-    from app.models_dbapi import DataSource
-
-    sql_ds = session.get(DataSource, mod.sql_datasource_id)
-    if not sql_ds or not sql_ds.is_active:
-        raise HTTPException(400, "SQL datasource not found or inactive")
-
-    engine = SQLTemplateEngine()
-    params = body.parameters or {}
-    previews: list[MappingPreviewOut] = []
-    active_sorted = sorted(mappings, key=lambda m: m.sort_order)
-    for m in active_sorted:
-        try:
-            rendered = engine.render(m.sql_content, params)
-            # If the SQL already has a LIMIT, respect it; otherwise add one.
-            sql_head = rendered.strip().upper().split("--")[0].split("/*")[0]
-            limited = rendered if "LIMIT" in sql_head else f"{rendered} LIMIT {body.row_limit}"
-            results = execute_sql(sql_ds, limited, use_pool=True)
-            data = results[0] if results else []
-            if isinstance(data, int):
-                data = []
-            # Truncate just in case the user's own LIMIT exceeded row_limit.
-            data = data[: body.row_limit]
-            columns = list(data[0].keys()) if data else []
-            previews.append(MappingPreviewOut(
-                mapping_id=m.id, sheet_name=m.sheet_name, start_cell=m.start_cell,
-                columns=columns, rows=data,
-            ))
-        except Exception as e:
-            _log.warning("Preview failed for mapping %s: %s", m.id, e)
-            previews.append(MappingPreviewOut(
-                mapping_id=m.id, sheet_name=m.sheet_name, start_cell=m.start_cell,
-                columns=[], rows=[], error=str(e)[:500],
-            ))
-    return ReportPreviewOut(mappings=previews)
 
 
 @router.get("/{id}/templates/{tid}/executions", response_model=ReportExecutionListOut)

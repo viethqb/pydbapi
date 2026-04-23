@@ -3895,53 +3895,6 @@ export const MacroTypeEnumSchema = {
     description: 'Macro type: Jinja2 for SQL templates, Python for script engine.'
 } as const;
 
-export const MappingPreviewOutSchema = {
-    properties: {
-        mapping_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Mapping Id'
-        },
-        sheet_name: {
-            type: 'string',
-            title: 'Sheet Name'
-        },
-        start_cell: {
-            type: 'string',
-            title: 'Start Cell'
-        },
-        columns: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Columns'
-        },
-        rows: {
-            items: {
-                additionalProperties: true,
-                type: 'object'
-            },
-            type: 'array',
-            title: 'Rows'
-        },
-        error: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Error'
-        }
-    },
-    type: 'object',
-    required: ['mapping_id', 'sheet_name', 'start_cell', 'columns', 'rows'],
-    title: 'MappingPreviewOut'
-} as const;
-
 export const MessageSchema = {
     properties: {
         message: {
@@ -4690,47 +4643,6 @@ export const ReportModuleUpdateSchema = {
     type: 'object',
     required: ['id'],
     title: 'ReportModuleUpdate'
-} as const;
-
-export const ReportPreviewInSchema = {
-    properties: {
-        parameters: {
-            anyOf: [
-                {
-                    additionalProperties: true,
-                    type: 'object'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Parameters'
-        },
-        row_limit: {
-            type: 'integer',
-            maximum: 100,
-            minimum: 1,
-            title: 'Row Limit',
-            default: 5
-        }
-    },
-    type: 'object',
-    title: 'ReportPreviewIn'
-} as const;
-
-export const ReportPreviewOutSchema = {
-    properties: {
-        mappings: {
-            items: {
-                '$ref': '#/components/schemas/MappingPreviewOut'
-            },
-            type: 'array',
-            title: 'Mappings'
-        }
-    },
-    type: 'object',
-    required: ['mappings'],
-    title: 'ReportPreviewOut'
 } as const;
 
 export const ReportTemplateCreateSchema = {

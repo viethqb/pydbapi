@@ -332,27 +332,3 @@ class ReportExecutionPublic(SQLModel):
 class ReportExecutionListOut(SQLModel):
     data: list[ReportExecutionPublic]
     total: int
-
-
-# ---------------------------------------------------------------------------
-# Preview (dry-run: fetch N rows per mapping without generating xlsx)
-# ---------------------------------------------------------------------------
-
-
-class ReportPreviewIn(SQLModel):
-    parameters: dict[str, Any] | None = None
-    # Rows returned per mapping (caller can cap for UI).
-    row_limit: int = Field(default=5, ge=1, le=100)
-
-
-class MappingPreviewOut(SQLModel):
-    mapping_id: uuid.UUID
-    sheet_name: str
-    start_cell: str
-    columns: list[str]
-    rows: list[dict[str, Any]]
-    error: str | None = None
-
-
-class ReportPreviewOut(SQLModel):
-    mappings: list[MappingPreviewOut]

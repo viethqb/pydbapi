@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { BookOpen, Loader2, Plus, Search } from "lucide-react"
+import { Loader2, Plus, Search } from "lucide-react"
 import { useState } from "react"
 import { DataTable } from "@/components/Common/DataTable"
 import {
@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { usePermissions } from "@/hooks/usePermissions"
 import { type ReportModuleListIn, ReportModuleService } from "@/services/report"
@@ -57,7 +56,6 @@ function ModulesPage() {
     queryFn: () => ReportModuleService.list(filters),
   })
 
-  // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const deleteMutation = useMutation({
     mutationFn: (id: string) => ReportModuleService.delete(id),
@@ -72,20 +70,14 @@ function ModulesPage() {
     },
   })
 
-  // Toggle status
   const toggleStatusMutation = useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       id,
       currentStatus,
     }: {
       id: string
       currentStatus: boolean
-    }) => {
-      return ReportModuleService.update({
-        id,
-        is_active: !currentStatus,
-      })
-    },
+    }) => ReportModuleService.update({ id, is_active: !currentStatus }),
     onSuccess: (updated) => {
       if (updated.is_active) {
         showSuccessToast("Module activated successfully")
@@ -94,9 +86,7 @@ function ModulesPage() {
       }
       queryClient.invalidateQueries({ queryKey: ["report-modules"] })
     },
-    onError: (error: Error) => {
-      showErrorToast(error.message)
-    },
+    onError: (error: Error) => showErrorToast(error.message),
   })
 
   const tableData: ModuleTableData[] = (
@@ -117,203 +107,148 @@ function ModulesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Tabs defaultValue="list" className="w-full">
-        <div className="flex items-center justify-between">
-          <TabsList className="h-11">
-            <TabsTrigger value="list" className="gap-2">
-              Modules
-            </TabsTrigger>
-            <TabsTrigger value="info" className="gap-2">
-              <BookOpen className="h-4 w-4" />
-              Info
-            </TabsTrigger>
-          </TabsList>
-          {canCreate && (
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Report Modules</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage report modules with MinIO and SQL datasource connections
+          </p>
+        </div>
+        {canCreate && (
+          <Link to="/report-management/modules/create">
+            <Button size="lg">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Module
+            </Button>
+          </Link>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search modules by name..."
+              className="pl-8"
+              value={filters.name__ilike || ""}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  name__ilike: e.target.value || null,
+                  page: 1,
+                })
+              }
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          <Select
+            value={
+              filters.is_active === null
+                ? "all"
+                : filters.is_active
+                  ? "active"
+                  : "inactive"
+            }
+            onValueChange={(value) =>
+              setFilters({
+                ...filters,
+                is_active: value === "all" ? null : value === "active",
+                page: 1,
+              })
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Results count */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {total > 0
+            ? `${total} module${total > 1 ? "s" : ""} found`
+            : "No modules found"}
+        </div>
+        {total > 0 && (
+          <Badge variant="outline" className="text-sm">
+            Page {page} of {Math.ceil(total / pageSize)}
+          </Badge>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Loading modules...</p>
+        </div>
+      ) : total === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground mb-4">
+            <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium">No modules found</p>
+            <p className="text-sm mt-2">
+              {filters.name__ilike || filters.is_active !== null
+                ? "Try adjusting your filters"
+                : "Get started by creating your first report module"}
+            </p>
+          </div>
+          {canCreate && !filters.name__ilike && filters.is_active === null && (
             <Link to="/report-management/modules/create">
-              <Button size="lg">
+              <Button className="mt-4">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Module
               </Button>
             </Link>
           )}
         </div>
+      ) : (
+        <>
+          <DataTable columns={reportModulesColumns} data={tableData} />
 
-        <TabsContent value="info" className="mt-6">
-          <div className="rounded-lg border p-6 space-y-4">
-            <h2 className="text-xl font-semibold">Report Modules</h2>
-            <p className="text-muted-foreground">
-              A report module groups templates that share the same MinIO storage
-              and SQL datasource. Each module can contain multiple templates,
-              and each template can have multiple sheet mappings.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-1">Module</h3>
-                <p className="text-sm text-muted-foreground">
-                  MinIO + SQL datasource pair. Configure once per department or
-                  data source.
-                </p>
+          {total > 0 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Showing{" "}
+                <span className="font-medium">{(page - 1) * pageSize + 1}</span>{" "}
+                to{" "}
+                <span className="font-medium">
+                  {Math.min(page * pageSize, total)}
+                </span>{" "}
+                of <span className="font-medium">{total}</span> entries
               </div>
-              <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-1">Template</h3>
-                <p className="text-sm text-muted-foreground">
-                  Excel template file with output config. Can use a template
-                  from MinIO or generate a blank file.
-                </p>
-              </div>
-              <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-1">Sheet Mapping</h3>
-                <p className="text-sm text-muted-foreground">
-                  Maps a SQL query to a specific sheet and cell. Supports rows
-                  or single value mode with optional headers.
-                </p>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="list" className="mt-6 flex flex-col gap-6">
-          {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Report Modules
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage report modules with MinIO and SQL datasource connections
-            </p>
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search modules by name..."
-                  className="pl-8"
-                  value={filters.name__ilike || ""}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      name__ilike: e.target.value || null,
-                      page: 1,
-                    })
-                  }
-                />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setFilters({ ...filters, page: page - 1 })}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page * pageSize >= total}
+                  onClick={() => setFilters({ ...filters, page: page + 1 })}
+                >
+                  Next
+                </Button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <Select
-                value={
-                  filters.is_active === null
-                    ? "all"
-                    : filters.is_active
-                      ? "active"
-                      : "inactive"
-                }
-                onValueChange={(value) =>
-                  setFilters({
-                    ...filters,
-                    is_active: value === "all" ? null : value === "active",
-                    page: 1,
-                  })
-                }
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Results count */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              {total > 0
-                ? `${total} module${total > 1 ? "s" : ""} found`
-                : "No modules found"}
-            </div>
-            {total > 0 && (
-              <Badge variant="outline" className="text-sm">
-                Page {page} of {Math.ceil(total / pageSize)}
-              </Badge>
-            )}
-          </div>
-
-          {isLoading ? (
-            <div className="text-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Loading modules...</p>
-            </div>
-          ) : total === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-muted-foreground mb-4">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No modules found</p>
-                <p className="text-sm mt-2">
-                  {filters.name__ilike || filters.is_active !== null
-                    ? "Try adjusting your filters"
-                    : "Get started by creating your first report module"}
-                </p>
-              </div>
-              {canCreate &&
-                !filters.name__ilike &&
-                filters.is_active === null && (
-                  <Link to="/report-management/modules/create">
-                    <Button className="mt-4">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Module
-                    </Button>
-                  </Link>
-                )}
-            </div>
-          ) : (
-            <>
-              <DataTable columns={reportModulesColumns} data={tableData} />
-
-              {/* Pagination */}
-              {total > 0 && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <div className="text-sm text-muted-foreground">
-                    Showing{" "}
-                    <span className="font-medium">
-                      {(page - 1) * pageSize + 1}
-                    </span>{" "}
-                    to{" "}
-                    <span className="font-medium">
-                      {Math.min(page * pageSize, total)}
-                    </span>{" "}
-                    of <span className="font-medium">{total}</span> entries
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page === 1}
-                      onClick={() => setFilters({ ...filters, page: page - 1 })}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page * pageSize >= total}
-                      onClick={() => setFilters({ ...filters, page: page + 1 })}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
           )}
-        </TabsContent>
-      </Tabs>
+        </>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>

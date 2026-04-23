@@ -1011,17 +1011,6 @@ export type MacroDefVersionCommitPublic = {
  */
 export type MacroTypeEnum = 'JINJA' | 'PYTHON';
 
-export type MappingPreviewOut = {
-    mapping_id: string;
-    sheet_name: string;
-    start_cell: string;
-    columns: Array<(string)>;
-    rows: Array<{
-        [key: string]: unknown;
-    }>;
-    error?: (string | null);
-};
-
 export type Message = {
     message: string;
 };
@@ -1197,17 +1186,6 @@ export type ReportModuleUpdate = {
     default_template_bucket?: (string | null);
     default_output_bucket?: (string | null);
     is_active?: (boolean | null);
-};
-
-export type ReportPreviewIn = {
-    parameters?: ({
-    [key: string]: unknown;
-} | null);
-    row_limit?: number;
-};
-
-export type ReportPreviewOut = {
-    mappings: Array<MappingPreviewOut>;
 };
 
 export type ReportTemplateCreate = {
@@ -2256,14 +2234,6 @@ export type ReportModulesGenerateData = {
 };
 
 export type ReportModulesGenerateResponse = (ReportGenerateOut);
-
-export type ReportModulesPreviewTemplateData = {
-    id: string;
-    requestBody: ReportPreviewIn;
-    tid: string;
-};
-
-export type ReportModulesPreviewTemplateResponse = (ReportPreviewOut);
 
 export type ReportModulesListTemplateExecutionsData = {
     id: string;

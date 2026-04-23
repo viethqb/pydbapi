@@ -1,37 +1,52 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, Pencil, Plus } from "lucide-react"
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatchRoute,
+  useNavigate,
+} from "@tanstack/react-router"
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { BucketSelect } from "@/components/ReportManagement/BucketSelect"
+import { DataTable } from "@/components/Common/DataTable"
+import {
+  reportTemplatesColumns,
+  type TemplateTableData,
+} from "@/components/ReportManagement/report-templates-columns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePermissions } from "@/hooks/usePermissions"
 import { ClientsService } from "@/services/clients"
 import { DataSourceService } from "@/services/datasource"
-import {
-  ReportModuleService,
-  type ReportTemplateCreate,
-} from "@/services/report"
+import { ReportModuleService } from "@/services/report"
 
 export const Route = createFileRoute("/_layout/report-management/modules/$id")({
   component: ModuleDetailPage,
@@ -42,103 +57,71 @@ export const Route = createFileRoute("/_layout/report-management/modules/$id")({
 
 function ModuleDetailPage() {
   const { id } = Route.useParams()
-  const _navigate = useNavigate()
+  const navigate = useNavigate()
+  const matchRoute = useMatchRoute()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { hasPermission } = usePermissions()
 
-  // Fetch module detail
+  const canUpdate = hasPermission("report_module", "update", id)
+  const canDelete = hasPermission("report_module", "delete", id)
+  const canCreateTemplate = canUpdate
+  const canDeleteTemplate = canUpdate
+
+  const isEditRoute = matchRoute({ to: "/report-management/modules/$id/edit" })
+
   const { data: module, isLoading } = useQuery({
     queryKey: ["report-module", id],
     queryFn: () => ReportModuleService.get(id),
   })
 
-  // Fetch all datasources
   const { data: dsData } = useQuery({
     queryKey: ["datasources-all"],
     queryFn: () => DataSourceService.list({ page: 1, page_size: 100 }),
+    enabled: !isEditRoute,
   })
 
-  // Fetch all clients
   const { data: clientsData } = useQuery({
     queryKey: ["clients-all"],
     queryFn: () => ClientsService.list({ page: 1, page_size: 100 }),
+    enabled: !isEditRoute,
   })
 
-  // --- Config tab state ---
-  const [editConfig, setEditConfig] = useState(false)
-  const [configName, setConfigName] = useState("")
-  const [configDesc, setConfigDesc] = useState("")
-  const [configMinio, setConfigMinio] = useState("")
-  const [configSql, setConfigSql] = useState("")
-  const [configTemplateBucket, setConfigTemplateBucket] = useState("")
-  const [configOutputBucket, setConfigOutputBucket] = useState("")
+  const [deleteModuleOpen, setDeleteModuleOpen] = useState(false)
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (module) {
-      setConfigName(module.name)
-      setConfigDesc(module.description || "")
-      setConfigMinio(module.minio_datasource_id)
-      setConfigSql(module.sql_datasource_id)
-      setConfigTemplateBucket(module.default_template_bucket || "")
-      setConfigOutputBucket(module.default_output_bucket || "")
-    }
-  }, [module])
-
-  const updateModuleMutation = useMutation({
-    mutationFn: () =>
-      ReportModuleService.update({
-        id,
-        name: configName,
-        description: configDesc || null,
-        minio_datasource_id: configMinio,
-        sql_datasource_id: configSql,
-        default_template_bucket: configTemplateBucket,
-        default_output_bucket: configOutputBucket,
-      }),
+  const deleteModuleMutation = useMutation({
+    mutationFn: () => ReportModuleService.delete(id),
     onSuccess: () => {
-      showSuccessToast("Module updated successfully")
-      queryClient.invalidateQueries({ queryKey: ["report-module", id] })
-      setEditConfig(false)
+      showSuccessToast("Module deleted successfully")
+      queryClient.invalidateQueries({ queryKey: ["report-modules"] })
+      navigate({ to: "/report-management/modules" })
     },
     onError: (error: Error) => showErrorToast(error.message),
   })
 
-  // --- Templates tab ---
-  const [_showCreateTemplate, setShowCreateTemplate] = useState(false)
-  const [newTemplate, setNewTemplate] = useState<ReportTemplateCreate>({
-    name: "",
-    template_bucket: "",
-    template_path: "",
-    output_bucket: "",
-    output_prefix: "",
-    recalc_enabled: false,
-    output_sheet: null,
-  })
-
-  const _createTemplateMutation = useMutation({
-    mutationFn: () => ReportModuleService.createTemplate(id, newTemplate),
-    onSuccess: () => {
-      showSuccessToast("Template created successfully")
-      queryClient.invalidateQueries({ queryKey: ["report-module", id] })
-      setShowCreateTemplate(false)
-      setNewTemplate({
-        name: "",
-        template_bucket: "",
-        template_path: "",
-        output_bucket: "",
-        output_prefix: "",
-        recalc_enabled: false,
-        output_sheet: null,
-      })
-    },
-    onError: (error: Error) => showErrorToast(error.message),
-  })
-
-  const _deleteTemplateMutation = useMutation({
+  const deleteTemplateMutation = useMutation({
     mutationFn: (templateId: string) =>
       ReportModuleService.deleteTemplate(id, templateId),
     onSuccess: () => {
       showSuccessToast("Template deleted successfully")
+      queryClient.invalidateQueries({ queryKey: ["report-module", id] })
+      setDeleteTemplateId(null)
+    },
+    onError: (error: Error) => {
+      showErrorToast(error.message)
+      setDeleteTemplateId(null)
+    },
+  })
+
+  const toggleTemplateMutation = useMutation({
+    mutationFn: (vars: { templateId: string; newStatus: boolean }) =>
+      ReportModuleService.updateTemplate(id, {
+        id: vars.templateId,
+        is_active: vars.newStatus,
+      }),
+    onSuccess: () => {
+      showSuccessToast("Template status updated")
       queryClient.invalidateQueries({ queryKey: ["report-module", id] })
     },
     onError: (error: Error) => showErrorToast(error.message),
@@ -146,15 +129,16 @@ function ModuleDetailPage() {
 
   // --- Clients tab ---
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([])
-  const [_clientsDirty, setClientsDirty] = useState(false)
+  const [clientsDirty, setClientsDirty] = useState(false)
 
   useEffect(() => {
     if (module?.client_ids) {
       setSelectedClientIds(module.client_ids)
+      setClientsDirty(false)
     }
   }, [module?.client_ids])
 
-  const _setClientsMutation = useMutation({
+  const setClientsMutation = useMutation({
     mutationFn: () => ReportModuleService.setClients(id, selectedClientIds),
     onSuccess: () => {
       showSuccessToast("Module clients updated successfully")
@@ -164,23 +148,21 @@ function ModuleDetailPage() {
     onError: (error: Error) => showErrorToast(error.message),
   })
 
-  const _handleClientToggle = (clientId: string, checked: boolean) => {
+  const handleClientToggle = (clientId: string, checked: boolean) => {
     setClientsDirty(true)
-    if (checked) {
-      setSelectedClientIds((prev) => [...prev, clientId])
-    } else {
-      setSelectedClientIds((prev) => prev.filter((cid) => cid !== clientId))
-    }
+    setSelectedClientIds((prev) =>
+      checked ? [...prev, clientId] : prev.filter((cid) => cid !== clientId),
+    )
   }
-
-  const minioDatasources =
-    dsData?.data.filter((ds) => (ds.product_type as string) === "minio") || []
-  const sqlDatasources =
-    dsData?.data.filter((ds) => (ds.product_type as string) !== "minio") || []
 
   const getDsName = (dsId: string) => {
     const ds = dsData?.data.find((d) => d.id === dsId)
     return ds ? ds.name : dsId
+  }
+
+  // Edit child route takes over the whole page when active.
+  if (isEditRoute) {
+    return <Outlet />
   }
 
   if (isLoading) {
@@ -200,268 +182,182 @@ function ModuleDetailPage() {
     )
   }
 
+  const templateTableData: TemplateTableData[] = (module.templates ?? []).map(
+    (tpl) => ({
+      ...tpl,
+      module_name: module.name,
+      onDelete: setDeleteTemplateId,
+      onToggleStatus: (templateId: string, currentStatus: boolean) =>
+        toggleTemplateMutation.mutate({
+          templateId,
+          newStatus: !currentStatus,
+        }),
+      canUpdate: hasPermission("report_module", "update", id),
+      canDelete: canDeleteTemplate,
+      canExecute: hasPermission("report_module", "execute", id),
+    }),
+  )
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Link to="/report-management/modules">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">{module.name}</h1>
-          <p className="text-muted-foreground">
-            {module.description || "Report module detail"}
-          </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link to="/report-management/modules">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {module.name}
+              </h1>
+              <Badge variant={module.is_active ? "default" : "secondary"}>
+                {module.is_active ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-1">
+              {module.description || "No description"}
+            </p>
+          </div>
         </div>
-        <Badge variant={module.is_active ? "default" : "secondary"}>
-          {module.is_active ? "Active" : "Inactive"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {canCreateTemplate && (
+            <Link
+              to="/report-management/templates/create"
+              search={{ module_id: id }}
+            >
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Template
+              </Button>
+            </Link>
+          )}
+          {canUpdate && (
+            <Link to="/report-management/modules/$id/edit" params={{ id }}>
+              <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+          )}
+          {canDelete && (
+            <Button
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteModuleOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Tabs defaultValue="config">
+      <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="config">Config</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="templates">
+            Templates ({module.templates?.length ?? 0})
+          </TabsTrigger>
+          <TabsTrigger value="clients">
+            Clients ({module.client_ids?.length ?? 0})
+          </TabsTrigger>
         </TabsList>
 
-        {/* Config Tab */}
-        <TabsContent value="config">
+        {/* Overview Tab — read-only summary */}
+        <TabsContent value="overview">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Module Configuration</CardTitle>
-              {!editConfig && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditConfig(true)}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
+            <CardHeader>
+              <CardTitle>Module Information</CardTitle>
+              <CardDescription>
+                Datasources and default MinIO buckets used by all templates in
+                this module.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {editConfig ? (
-                <>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableHead className="w-[200px]">Name</TableHead>
-                        <TableCell>
-                          <Input
-                            value={configName}
-                            onChange={(e) => setConfigName(e.target.value)}
-                          />
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableCell>
-                          <Textarea
-                            value={configDesc}
-                            onChange={(e) => setConfigDesc(e.target.value)}
-                          />
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead>MinIO Datasource</TableHead>
-                        <TableCell>
-                          <Select
-                            value={configMinio}
-                            onValueChange={setConfigMinio}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {minioDatasources.map((ds) => (
-                                <SelectItem key={ds.id} value={ds.id}>
-                                  {ds.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead>SQL Datasource</TableHead>
-                        <TableCell>
-                          <Select
-                            value={configSql}
-                            onValueChange={setConfigSql}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {sqlDatasources.map((ds) => (
-                                <SelectItem key={ds.id} value={ds.id}>
-                                  {ds.name} ({ds.product_type})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead>Default Template Bucket</TableHead>
-                        <TableCell>
-                          <BucketSelect
-                            datasourceId={configMinio || undefined}
-                            value={configTemplateBucket}
-                            onChange={setConfigTemplateBucket}
-                            placeholder="Select template bucket"
-                          />
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableHead>Default Output Bucket</TableHead>
-                        <TableCell>
-                          <BucketSelect
-                            datasourceId={configMinio || undefined}
-                            value={configOutputBucket}
-                            onChange={setConfigOutputBucket}
-                            placeholder="Select output bucket"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                  <div className="flex gap-2 mt-4">
-                    <LoadingButton
-                      loading={updateModuleMutation.isPending}
-                      onClick={() => updateModuleMutation.mutate()}
-                    >
-                      Save
-                    </LoadingButton>
-                    <Button
-                      variant="outline"
-                      onClick={() => setEditConfig(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableHead className="w-[180px]">Name</TableHead>
-                      <TableCell>{module.name}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead className="w-[180px]">Description</TableHead>
-                      <TableCell>
-                        {module.description || (
-                          <span className="text-muted-foreground">--</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead className="w-[180px]">
-                        MinIO Datasource
-                      </TableHead>
-                      <TableCell>
-                        {getDsName(module.minio_datasource_id)}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead className="w-[180px]">
-                        SQL Datasource
-                      </TableHead>
-                      <TableCell>
-                        {getDsName(module.sql_datasource_id)}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead className="w-[180px]">
-                        Default Template Bucket
-                      </TableHead>
-                      <TableCell className="font-mono text-sm">
-                        {module.default_template_bucket || (
-                          <span className="text-muted-foreground">--</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead className="w-[180px]">
-                        Default Output Bucket
-                      </TableHead>
-                      <TableCell className="font-mono text-sm">
-                        {module.default_output_bucket || (
-                          <span className="text-muted-foreground">--</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead className="w-[180px]">Created</TableHead>
-                      <TableCell>
-                        {new Date(module.created_at).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              )}
+              <Table>
+                <TableBody>
+                  <TableRow>
+                    <TableHead className="w-[220px]">
+                      MinIO Datasource
+                    </TableHead>
+                    <TableCell>
+                      {getDsName(module.minio_datasource_id)}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[220px]">SQL Datasource</TableHead>
+                    <TableCell>{getDsName(module.sql_datasource_id)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[220px]">
+                      Default Template Bucket
+                    </TableHead>
+                    <TableCell className="font-mono text-sm">
+                      {module.default_template_bucket || (
+                        <span className="text-muted-foreground">--</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[220px]">
+                      Default Output Bucket
+                    </TableHead>
+                    <TableCell className="font-mono text-sm">
+                      {module.default_output_bucket || (
+                        <span className="text-muted-foreground">--</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[220px]">Created</TableHead>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(module.created_at).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead className="w-[220px]">Updated</TableHead>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(module.updated_at).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Templates Tab — simple list with links */}
+        {/* Templates Tab — DataTable */}
         <TabsContent value="templates">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Templates in this module</CardTitle>
-              <Link
-                to="/report-management/templates/create"
-                search={{ module_id: id }}
-              >
-                <Button size="sm">
-                  <Plus className="mr-2 h-3 w-3" />
-                  Create Template
-                </Button>
-              </Link>
+              <div>
+                <CardTitle>Templates in this module</CardTitle>
+                <CardDescription>
+                  Report templates defined under this module.
+                </CardDescription>
+              </div>
+              {canCreateTemplate && (
+                <Link
+                  to="/report-management/templates/create"
+                  search={{ module_id: id }}
+                >
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Template
+                  </Button>
+                </Link>
+              )}
             </CardHeader>
             <CardContent>
-              {module.templates && module.templates.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Template</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Updated</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {module.templates.map((tpl) => (
-                      <TableRow key={tpl.id}>
-                        <TableCell>
-                          <Link
-                            to="/report-management/templates/$tid"
-                            params={{ tid: tpl.id }}
-                            className="font-medium hover:underline"
-                          >
-                            {tpl.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm text-muted-foreground">
-                          {tpl.template_path || "Blank"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={tpl.is_active ? "default" : "secondary"}
-                          >
-                            {tpl.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {new Date(tpl.updated_at).toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              {templateTableData.length > 0 ? (
+                <DataTable
+                  columns={reportTemplatesColumns}
+                  data={templateTableData}
+                />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   No templates yet.
@@ -470,7 +366,160 @@ function ModuleDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Clients Tab — assign gateway client access */}
+        <TabsContent value="clients">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Client Access</CardTitle>
+                <CardDescription>
+                  Gateway clients assigned here can generate reports under this
+                  module via API.
+                </CardDescription>
+              </div>
+              {canUpdate && clientsDirty && (
+                <LoadingButton
+                  loading={setClientsMutation.isPending}
+                  onClick={() => setClientsMutation.mutate()}
+                  size="sm"
+                >
+                  Save
+                </LoadingButton>
+              )}
+            </CardHeader>
+            <CardContent>
+              {clientsData?.data && clientsData.data.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {clientsData.data.map((c) => {
+                    const checked = selectedClientIds.includes(c.id)
+                    const checkboxId = `client-toggle-${c.id}`
+                    return (
+                      <div
+                        key={c.id}
+                        className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted/30"
+                      >
+                        <Checkbox
+                          id={checkboxId}
+                          checked={checked}
+                          disabled={!canUpdate}
+                          onCheckedChange={(v) =>
+                            handleClientToggle(c.id, v === true)
+                          }
+                        />
+                        <Label
+                          htmlFor={checkboxId}
+                          className="flex flex-col cursor-pointer"
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {c.client_id}
+                          </span>
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No clients configured yet.
+                </div>
+              )}
+              {clientsData?.data &&
+                clientsData.data.length > 0 &&
+                selectedClientIds.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    <Label className="inline">Tip:</Label> No clients selected —
+                    the module is reachable only via dashboard login.
+                  </p>
+                )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Render child edit route if matched (fallback, usually handled above) */}
+      <Outlet />
+
+      {/* Delete Module Dialog */}
+      <Dialog open={deleteModuleOpen} onOpenChange={setDeleteModuleOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              deleteModuleMutation.mutate()
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Delete Module</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete <strong>{module.name}</strong>?
+                This action cannot be undone. All templates, mappings, and
+                executions under this module will be permanently removed.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4">
+              <DialogClose asChild>
+                <Button
+                  variant="outline"
+                  disabled={deleteModuleMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              </DialogClose>
+              <LoadingButton
+                variant="destructive"
+                type="submit"
+                loading={deleteModuleMutation.isPending}
+              >
+                Delete
+              </LoadingButton>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Template Dialog */}
+      <Dialog
+        open={deleteTemplateId !== null}
+        onOpenChange={(open) => !open && setDeleteTemplateId(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (deleteTemplateId) {
+                deleteTemplateMutation.mutate(deleteTemplateId)
+              }
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Delete Template</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this template? All sheet
+                mappings and execution history will also be removed.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4">
+              <DialogClose asChild>
+                <Button
+                  variant="outline"
+                  disabled={deleteTemplateMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              </DialogClose>
+              <LoadingButton
+                variant="destructive"
+                type="submit"
+                loading={deleteTemplateMutation.isPending}
+              >
+                Delete
+              </LoadingButton>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

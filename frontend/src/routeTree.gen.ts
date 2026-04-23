@@ -58,6 +58,7 @@ import { Route as LayoutApiDevApisIdRouteImport } from './routes/_layout/api-dev
 import { Route as LayoutAdminRolesCreateRouteImport } from './routes/_layout/admin/roles/create'
 import { Route as LayoutAdminRolesIdRouteImport } from './routes/_layout/admin/roles/$id'
 import { Route as LayoutSystemClientsIdEditRouteImport } from './routes/_layout/system/clients/$id.edit'
+import { Route as LayoutReportManagementModulesIdEditRouteImport } from './routes/_layout/report-management/modules/$id.edit'
 import { Route as LayoutApiDevModulesIdEditRouteImport } from './routes/_layout/api-dev/modules/$id.edit'
 import { Route as LayoutApiDevMacroDefsIdEditRouteImport } from './routes/_layout/api-dev/macro-defs/$id.edit'
 import { Route as LayoutApiDevApisIdEditRouteImport } from './routes/_layout/api-dev/apis/$id.edit'
@@ -324,6 +325,12 @@ const LayoutSystemClientsIdEditRoute =
     path: '/edit',
     getParentRoute: () => LayoutSystemClientsIdRoute,
   } as any)
+const LayoutReportManagementModulesIdEditRoute =
+  LayoutReportManagementModulesIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => LayoutReportManagementModulesIdRoute,
+  } as any)
 const LayoutApiDevModulesIdEditRoute =
   LayoutApiDevModulesIdEditRouteImport.update({
     id: '/edit',
@@ -377,7 +384,7 @@ export interface FileRoutesByFullPath {
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
-  '/report-management/modules/$id': typeof LayoutReportManagementModulesIdRoute
+  '/report-management/modules/$id': typeof LayoutReportManagementModulesIdRouteWithChildren
   '/report-management/modules/create': typeof LayoutReportManagementModulesCreateRoute
   '/report-management/templates/$tid': typeof LayoutReportManagementTemplatesTidRoute
   '/report-management/templates/create': typeof LayoutReportManagementTemplatesCreateRoute
@@ -399,6 +406,7 @@ export interface FileRoutesByFullPath {
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
+  '/report-management/modules/$id/edit': typeof LayoutReportManagementModulesIdEditRoute
   '/system/clients/$id/edit': typeof LayoutSystemClientsIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -430,7 +438,7 @@ export interface FileRoutesByTo {
   '/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/connection/$id/edit': typeof LayoutConnectionIdEditRoute
-  '/report-management/modules/$id': typeof LayoutReportManagementModulesIdRoute
+  '/report-management/modules/$id': typeof LayoutReportManagementModulesIdRouteWithChildren
   '/report-management/modules/create': typeof LayoutReportManagementModulesCreateRoute
   '/report-management/templates/$tid': typeof LayoutReportManagementTemplatesTidRoute
   '/report-management/templates/create': typeof LayoutReportManagementTemplatesCreateRoute
@@ -452,6 +460,7 @@ export interface FileRoutesByTo {
   '/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
+  '/report-management/modules/$id/edit': typeof LayoutReportManagementModulesIdEditRoute
   '/system/clients/$id/edit': typeof LayoutSystemClientsIdEditRoute
 }
 export interface FileRoutesById {
@@ -486,7 +495,7 @@ export interface FileRoutesById {
   '/_layout/api-dev/modules/$id': typeof LayoutApiDevModulesIdRouteWithChildren
   '/_layout/api-dev/modules/create': typeof LayoutApiDevModulesCreateRoute
   '/_layout/connection/$id/edit': typeof LayoutConnectionIdEditRoute
-  '/_layout/report-management/modules/$id': typeof LayoutReportManagementModulesIdRoute
+  '/_layout/report-management/modules/$id': typeof LayoutReportManagementModulesIdRouteWithChildren
   '/_layout/report-management/modules/create': typeof LayoutReportManagementModulesCreateRoute
   '/_layout/report-management/templates/$tid': typeof LayoutReportManagementTemplatesTidRoute
   '/_layout/report-management/templates/create': typeof LayoutReportManagementTemplatesCreateRoute
@@ -508,6 +517,7 @@ export interface FileRoutesById {
   '/_layout/api-dev/apis/$id/edit': typeof LayoutApiDevApisIdEditRoute
   '/_layout/api-dev/macro-defs/$id/edit': typeof LayoutApiDevMacroDefsIdEditRoute
   '/_layout/api-dev/modules/$id/edit': typeof LayoutApiDevModulesIdEditRoute
+  '/_layout/report-management/modules/$id/edit': typeof LayoutReportManagementModulesIdEditRoute
   '/_layout/system/clients/$id/edit': typeof LayoutSystemClientsIdEditRoute
 }
 export interface FileRouteTypes {
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/api-dev/apis/$id/edit'
     | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
+    | '/report-management/modules/$id/edit'
     | '/system/clients/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -617,6 +628,7 @@ export interface FileRouteTypes {
     | '/api-dev/apis/$id/edit'
     | '/api-dev/macro-defs/$id/edit'
     | '/api-dev/modules/$id/edit'
+    | '/report-management/modules/$id/edit'
     | '/system/clients/$id/edit'
   id:
     | '__root__'
@@ -672,6 +684,7 @@ export interface FileRouteTypes {
     | '/_layout/api-dev/apis/$id/edit'
     | '/_layout/api-dev/macro-defs/$id/edit'
     | '/_layout/api-dev/modules/$id/edit'
+    | '/_layout/report-management/modules/$id/edit'
     | '/_layout/system/clients/$id/edit'
   fileRoutesById: FileRoutesById
 }
@@ -1028,6 +1041,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSystemClientsIdEditRouteImport
       parentRoute: typeof LayoutSystemClientsIdRoute
     }
+    '/_layout/report-management/modules/$id/edit': {
+      id: '/_layout/report-management/modules/$id/edit'
+      path: '/edit'
+      fullPath: '/report-management/modules/$id/edit'
+      preLoaderRoute: typeof LayoutReportManagementModulesIdEditRouteImport
+      parentRoute: typeof LayoutReportManagementModulesIdRoute
+    }
     '/_layout/api-dev/modules/$id/edit': {
       id: '/_layout/api-dev/modules/$id/edit'
       path: '/edit'
@@ -1153,6 +1173,21 @@ const LayoutApiDevModulesIdRouteWithChildren =
     LayoutApiDevModulesIdRouteChildren,
   )
 
+interface LayoutReportManagementModulesIdRouteChildren {
+  LayoutReportManagementModulesIdEditRoute: typeof LayoutReportManagementModulesIdEditRoute
+}
+
+const LayoutReportManagementModulesIdRouteChildren: LayoutReportManagementModulesIdRouteChildren =
+  {
+    LayoutReportManagementModulesIdEditRoute:
+      LayoutReportManagementModulesIdEditRoute,
+  }
+
+const LayoutReportManagementModulesIdRouteWithChildren =
+  LayoutReportManagementModulesIdRoute._addFileChildren(
+    LayoutReportManagementModulesIdRouteChildren,
+  )
+
 interface LayoutSystemClientsIdRouteChildren {
   LayoutSystemClientsIdEditRoute: typeof LayoutSystemClientsIdEditRoute
 }
@@ -1185,7 +1220,7 @@ interface LayoutRouteChildren {
   LayoutApiDevMacroDefsCreateRoute: typeof LayoutApiDevMacroDefsCreateRoute
   LayoutApiDevModulesIdRoute: typeof LayoutApiDevModulesIdRouteWithChildren
   LayoutApiDevModulesCreateRoute: typeof LayoutApiDevModulesCreateRoute
-  LayoutReportManagementModulesIdRoute: typeof LayoutReportManagementModulesIdRoute
+  LayoutReportManagementModulesIdRoute: typeof LayoutReportManagementModulesIdRouteWithChildren
   LayoutReportManagementModulesCreateRoute: typeof LayoutReportManagementModulesCreateRoute
   LayoutReportManagementTemplatesTidRoute: typeof LayoutReportManagementTemplatesTidRoute
   LayoutReportManagementTemplatesCreateRoute: typeof LayoutReportManagementTemplatesCreateRoute
@@ -1223,7 +1258,8 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutApiDevMacroDefsCreateRoute: LayoutApiDevMacroDefsCreateRoute,
   LayoutApiDevModulesIdRoute: LayoutApiDevModulesIdRouteWithChildren,
   LayoutApiDevModulesCreateRoute: LayoutApiDevModulesCreateRoute,
-  LayoutReportManagementModulesIdRoute: LayoutReportManagementModulesIdRoute,
+  LayoutReportManagementModulesIdRoute:
+    LayoutReportManagementModulesIdRouteWithChildren,
   LayoutReportManagementModulesCreateRoute:
     LayoutReportManagementModulesCreateRoute,
   LayoutReportManagementTemplatesTidRoute:

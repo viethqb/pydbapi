@@ -9,12 +9,17 @@ import {
   Plus,
   Trash2,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { DownloadButton } from "@/components/ReportManagement/DownloadButton"
 import { FileSelect } from "@/components/ReportManagement/FileSelect"
 import { FormatConfigEditor } from "@/components/ReportManagement/FormatConfigEditor"
-import { PreviewDialog } from "@/components/ReportManagement/PreviewDialog"
+import {
+  coerceTypedValue,
+  extractJinjaParams,
+  type JinjaParamInfo,
+} from "@/components/ReportManagement/jinjaParams"
 import { ProgressCell } from "@/components/ReportManagement/ProgressCell"
+import { SheetNameInput } from "@/components/ReportManagement/SheetNameInput"
 import { SheetSelect } from "@/components/ReportManagement/SheetSelect"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,7 +55,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 import useCustomToast from "@/hooks/useCustomToast"
-import { API_BASE, getAuthToken } from "@/lib/api-request"
+import { API_BASE } from "@/lib/api-request"
 import { ClientsService } from "@/services/clients"
 import {
   type CellFormat,
@@ -96,6 +101,21 @@ function TemplateDetailPage() {
     queryFn: () => ReportModuleService.getTemplate(moduleId!, tid),
     enabled: !!moduleId,
   })
+
+  // Pull module detail so mapping dialogs know which MinIO datasource backs
+  // the template file (used by SheetNameInput to list sheets).
+  const { data: moduleDetail } = useQuery({
+    queryKey: ["report-module-detail", moduleId],
+    queryFn: () => ReportModuleService.get(moduleId!),
+    enabled: !!moduleId,
+  })
+  const minioDsId = moduleDetail?.minio_datasource_id
+  // Blank-workbook mode when template_path is empty → SheetNameInput falls
+  // back to a free-text input. Otherwise resolve the bucket the way the
+  // backend executor does: template override → module default.
+  const templatePath = template?.template_path || ""
+  const templateBucket =
+    template?.template_bucket || moduleDetail?.default_template_bucket || ""
 
   // When we get template, extract module ID from it
   useEffect(() => {
@@ -244,24 +264,53 @@ function TemplateDetailPage() {
   }
 
   // --- Generate tab ---
+  const [paramMode, setParamMode] = useState<"form" | "json">("form")
   const [genParams, setGenParams] = useState("{}")
+  const [paramValues, setParamValues] = useState<Record<string, string>>({})
   const [genResult, setGenResult] = useState<{
     execution_id: string
     output_url: string | null
   } | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
+
+  // Detect Jinja2 parameter names + inferred dtype + required from all active
+  // mappings' SQL content.
+  const detectedParams: JinjaParamInfo[] = useMemo(() => {
+    const contents = (template?.sheet_mappings ?? [])
+      .filter((m) => m.is_active)
+      .map((m) => m.sql_content)
+    return extractJinjaParams(contents)
+  }, [template?.sheet_mappings])
+
+  // Reconcile the form state with the detected-params set: keep values for
+  // params that still exist, drop those that disappeared, init new ones to "".
+  useEffect(() => {
+    setParamValues((prev) => {
+      const next: Record<string, string> = {}
+      for (const p of detectedParams) {
+        next[p.name] = prev[p.name] ?? ""
+      }
+      return next
+    })
+  }, [detectedParams])
 
   const generateMutation = useMutation({
     mutationFn: () => {
       let parameters: Record<string, unknown> = {}
-      try {
-        parameters = JSON.parse(genParams)
-      } catch {
-        // empty
+      if (paramMode === "json") {
+        try {
+          parameters = JSON.parse(genParams || "{}")
+        } catch {
+          // empty
+        }
+      } else {
+        const typeByName = new Map(detectedParams.map((p) => [p.name, p.dtype]))
+        for (const [key, raw] of Object.entries(paramValues)) {
+          const dtype = typeByName.get(key) ?? "string"
+          const v = coerceTypedValue(raw, dtype)
+          if (v !== undefined) parameters[key] = v
+        }
       }
-      const body: GenerateReportIn = {
-        parameters,
-      }
+      const body: GenerateReportIn = { parameters }
       return ReportModuleService.generate(moduleId!, tid, body)
     },
     onSuccess: (result) => {
@@ -514,15 +563,14 @@ function TemplateDetailPage() {
                       Sheet Name *
                     </TableHead>
                     <TableCell>
-                      <Input
+                      <SheetNameInput
                         value={newMapping.sheet_name}
-                        onChange={(e) =>
-                          setNewMapping({
-                            ...newMapping,
-                            sheet_name: e.target.value,
-                          })
+                        onChange={(v) =>
+                          setNewMapping({ ...newMapping, sheet_name: v })
                         }
-                        placeholder="e.g. Sheet1"
+                        datasourceId={minioDsId}
+                        bucket={templateBucket}
+                        filePath={templatePath}
                       />
                     </TableCell>
                     <TableHead className="w-[140px] bg-muted/30">
@@ -685,15 +733,14 @@ function TemplateDetailPage() {
                       Sheet Name *
                     </TableHead>
                     <TableCell>
-                      <Input
+                      <SheetNameInput
                         value={editForm.sheet_name ?? ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            sheet_name: e.target.value,
-                          })
+                        onChange={(v) =>
+                          setEditForm({ ...editForm, sheet_name: v })
                         }
-                        placeholder="e.g. Sheet1"
+                        datasourceId={minioDsId}
+                        bucket={templateBucket}
+                        filePath={templatePath}
                       />
                     </TableCell>
                     <TableHead className="w-[140px] bg-muted/30">
@@ -865,51 +912,116 @@ function TemplateDetailPage() {
         {/* Generate Tab */}
         <TabsContent value="generate">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Generate Report</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (paramMode === "form") {
+                    // Switching to JSON: seed textarea from current form values
+                    // so the user sees what's about to be sent.
+                    const typeByName = new Map(
+                      detectedParams.map((p) => [p.name, p.dtype]),
+                    )
+                    const obj: Record<string, unknown> = {}
+                    for (const [k, v] of Object.entries(paramValues)) {
+                      const dtype = typeByName.get(k) ?? "string"
+                      const c = coerceTypedValue(v, dtype)
+                      if (c !== undefined) obj[k] = c
+                    }
+                    setGenParams(JSON.stringify(obj, null, 2))
+                    setParamMode("json")
+                  } else {
+                    setParamMode("form")
+                  }
+                }}
+              >
+                {paramMode === "form" ? "Switch to JSON" : "Switch to form"}
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Parameters (JSON)</Label>
-                <Textarea
-                  value={genParams}
-                  onChange={(e) => setGenParams(e.target.value)}
-                  placeholder='{"key": "value"}'
-                  rows={5}
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPreview(true)}
-                  disabled={!moduleId}
-                >
-                  Preview
-                </Button>
-                <LoadingButton
-                  loading={generateMutation.isPending}
-                  onClick={() => generateMutation.mutate()}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Generate
-                </LoadingButton>
-              </div>
-              {moduleId ? (
-                <PreviewDialog
-                  moduleId={moduleId}
-                  templateId={tid}
-                  parameters={(() => {
-                    try {
-                      return JSON.parse(genParams) as Record<string, unknown>
-                    } catch {
-                      return {}
-                    }
-                  })()}
-                  open={showPreview}
-                  onOpenChange={setShowPreview}
-                />
-              ) : null}
+              {paramMode === "form" ? (
+                detectedParams.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    This template has no Jinja parameters. Just click Generate.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <Label>Parameters</Label>
+                    <Table>
+                      <TableBody>
+                        {detectedParams.map((p) => (
+                          <TableRow key={p.name}>
+                            <TableHead className="w-[240px] bg-muted/30">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono">{p.name}</span>
+                                {p.required ? (
+                                  <span
+                                    className="text-destructive"
+                                    title="Required"
+                                  >
+                                    *
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="text-xs font-normal text-muted-foreground"
+                                    title="Optional (guarded by {% if %} or | default)"
+                                  >
+                                    optional
+                                  </span>
+                                )}
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] font-normal"
+                                >
+                                  {p.dtype}
+                                </Badge>
+                              </div>
+                            </TableHead>
+                            <TableCell>
+                              <ParamInput
+                                dtype={p.dtype}
+                                value={paramValues[p.name] ?? ""}
+                                onChange={(v) =>
+                                  setParamValues((prev) => ({
+                                    ...prev,
+                                    [p.name]: v,
+                                  }))
+                                }
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <p className="text-xs text-muted-foreground">
+                      Datatypes are inferred from Jinja filters (e.g.{" "}
+                      <code>sql_int</code>, <code>sql_date</code>,{" "}
+                      <code>in_list</code>). Lists take comma-separated values.
+                      Switch to JSON for nested objects.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="space-y-2">
+                  <Label>Parameters (JSON)</Label>
+                  <Textarea
+                    value={genParams}
+                    onChange={(e) => setGenParams(e.target.value)}
+                    placeholder='{"key": "value"}'
+                    rows={5}
+                    className="font-mono text-sm"
+                  />
+                </div>
+              )}
+              <LoadingButton
+                loading={generateMutation.isPending}
+                onClick={() => generateMutation.mutate()}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Generate
+              </LoadingButton>
 
               {genResult && (
                 <div className="mt-4 p-4 rounded-md border bg-muted/30 space-y-2">
@@ -1114,6 +1226,97 @@ function FormatSummary({ config }: { config: FormatConfig }) {
 }
 
 // ---------------------------------------------------------------------------
+// ParamInput — renders the right control for the detected datatype.
+// ---------------------------------------------------------------------------
+
+function ParamInput({
+  dtype,
+  value,
+  onChange,
+}: {
+  dtype: JinjaParamInfo["dtype"]
+  value: string
+  onChange: (v: string) => void
+}) {
+  switch (dtype) {
+    case "integer":
+      return (
+        <Input
+          type="number"
+          step="1"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="0"
+          className="font-mono text-sm"
+        />
+      )
+    case "number":
+      return (
+        <Input
+          type="number"
+          step="any"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="0.00"
+          className="font-mono text-sm"
+        />
+      )
+    case "boolean":
+      return (
+        <Select
+          value={value || "__unset__"}
+          onValueChange={(v) => onChange(v === "__unset__" ? "" : v)}
+        >
+          <SelectTrigger className="font-mono text-sm">
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__unset__">— unset —</SelectItem>
+            <SelectItem value="true">true</SelectItem>
+            <SelectItem value="false">false</SelectItem>
+          </SelectContent>
+        </Select>
+      )
+    case "date":
+      return (
+        <Input
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="font-mono text-sm"
+        />
+      )
+    case "datetime":
+      return (
+        <Input
+          type="datetime-local"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="font-mono text-sm"
+        />
+      )
+    case "list":
+      return (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="a, b, c"
+          className="font-mono text-sm"
+        />
+      )
+    default:
+      return (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="value"
+          className="font-mono text-sm"
+        />
+      )
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Overview Tab — editable template config
 // ---------------------------------------------------------------------------
 
@@ -1176,7 +1379,10 @@ function OverviewTab({
       }),
     onSuccess: () => {
       showSuccessToast("Template updated")
-      queryClient.invalidateQueries({ queryKey: ["report-template-detail"] })
+      queryClient.invalidateQueries({
+        queryKey: ["report-template", moduleId, template.id],
+      })
+      queryClient.invalidateQueries({ queryKey: ["report-module", moduleId] })
       setEditMode(false)
     },
     onError: (e: Error) => showErrorToast(e.message),

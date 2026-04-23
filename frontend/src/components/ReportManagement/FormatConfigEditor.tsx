@@ -585,112 +585,6 @@ function ColumnWidthsEditor({
   )
 }
 
-// --- Live CSS preview ---------------------------------------------------
-
-/** Convert a Cell_Format dict to a React CSS style object. */
-function cellFormatToCss(
-  fmt: CellFormat | null | undefined,
-): React.CSSProperties {
-  if (!fmt) return {}
-  const css: React.CSSProperties = {}
-  if (fmt.font) {
-    if (fmt.font.name) css.fontFamily = fmt.font.name
-    if (fmt.font.size) css.fontSize = `${fmt.font.size}px`
-    if (fmt.font.bold) css.fontWeight = "bold"
-    if (fmt.font.italic) css.fontStyle = "italic"
-    if (fmt.font.color) {
-      // Strip alpha prefix (FF...) if present — openpyxl stores ARGB.
-      const hex =
-        fmt.font.color.length === 8 ? fmt.font.color.slice(2) : fmt.font.color
-      css.color = `#${hex}`
-    }
-  }
-  if (fmt.fill?.bg_color) {
-    const hex =
-      fmt.fill.bg_color.length === 8
-        ? fmt.fill.bg_color.slice(2)
-        : fmt.fill.bg_color
-    css.backgroundColor = `#${hex}`
-  }
-  if (fmt.border?.style) {
-    const bc = fmt.border.color ? `#${bc_strip(fmt.border.color)}` : "#000"
-    const width = fmt.border.style === "thick" ? "2px" : "1px"
-    const style =
-      fmt.border.style === "dashed"
-        ? "dashed"
-        : fmt.border.style === "dotted"
-          ? "dotted"
-          : fmt.border.style === "double"
-            ? "double"
-            : "solid"
-    css.border = `${width} ${style} ${bc}`
-  }
-  if (fmt.alignment?.horizontal) {
-    css.textAlign = fmt.alignment.horizontal as React.CSSProperties["textAlign"]
-  }
-  if (fmt.alignment?.vertical) {
-    css.verticalAlign = fmt.alignment.vertical
-  }
-  if (fmt.alignment?.wrap_text) {
-    css.whiteSpace = "normal"
-    css.wordBreak = "break-word"
-  } else {
-    css.whiteSpace = "nowrap"
-  }
-  return css
-}
-
-function bc_strip(c: string): string {
-  return c.length === 8 ? c.slice(2) : c
-}
-
-function FormatPreview({ fmt }: { fmt: FormatConfig | null | undefined }) {
-  const header = cellFormatToCss(fmt?.header)
-  const data = cellFormatToCss(fmt?.data)
-  const wrap = !!fmt?.wrap_text
-  if (wrap) {
-    // Global wrap_text overrides per-cell when not explicitly set.
-    if (header.whiteSpace === "nowrap") header.whiteSpace = "normal"
-    if (data.whiteSpace === "nowrap") data.whiteSpace = "normal"
-  }
-
-  const base: React.CSSProperties = {
-    padding: "4px 8px",
-    minWidth: 60,
-    fontFamily: "Calibri, Arial, sans-serif",
-    fontSize: "11px",
-  }
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Live preview</p>
-      <div className="inline-block border border-border rounded overflow-hidden">
-        <table className="border-collapse">
-          <thead>
-            <tr>
-              <td style={{ ...base, ...header }}>Name</td>
-              <td style={{ ...base, ...header }}>Amount</td>
-              <td style={{ ...base, ...header }}>Date</td>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ ...base, ...data }}>Alice</td>
-              <td style={{ ...base, ...data }}>1,234.50</td>
-              <td style={{ ...base, ...data }}>2026-04-23</td>
-            </tr>
-            <tr>
-              <td style={{ ...base, ...data }}>Bob</td>
-              <td style={{ ...base, ...data }}>987.00</td>
-              <td style={{ ...base, ...data }}>2026-04-24</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
 export function FormatConfigEditor({
   value,
   onChange,
@@ -800,7 +694,6 @@ export function FormatConfigEditor({
             value={fmt.column_widths}
             onChange={(v) => update({ column_widths: v })}
           />
-          <FormatPreview fmt={fmt} />
           {configured && (
             <Button
               type="button"

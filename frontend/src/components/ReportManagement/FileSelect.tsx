@@ -3,10 +3,15 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
 import { ReportModuleService } from "@/services/report"
+
+// Radix Select doesn't accept empty-string values. Use a sentinel to represent
+// "no template file" (blank workbook) and convert on the boundary.
+const BLANK_SENTINEL = "__blank__"
 
 export function FileSelect({
   datasourceId,
@@ -28,8 +33,14 @@ export function FileSelect({
     enabled: !disabled,
   })
 
+  const selectValue = value ? value : BLANK_SENTINEL
+
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select
+      value={selectValue}
+      onValueChange={(v) => onChange(v === BLANK_SENTINEL ? "" : v)}
+      disabled={disabled}
+    >
       <SelectTrigger>
         <SelectValue
           placeholder={
@@ -43,6 +54,15 @@ export function FileSelect({
       </SelectTrigger>
       {!disabled && (
         <SelectContent>
+          <SelectItem value={BLANK_SENTINEL}>
+            <span className="flex flex-col">
+              <span className="font-medium">Blank workbook</span>
+              <span className="text-xs text-muted-foreground">
+                No template file — sheets are created from mappings
+              </span>
+            </span>
+          </SelectItem>
+          {files && files.length > 0 ? <SelectSeparator /> : null}
           {(files ?? []).map((f) => (
             <SelectItem key={f} value={f}>
               {f}
