@@ -24,10 +24,12 @@ import {
   passwordSchema,
   passwordsMatch,
   passwordsMismatchError,
+  usernameSchema,
 } from "@/lib/validations"
 
 const formSchema = z
   .object({
+    username: usernameSchema,
     email: z.email(),
     full_name: z.string().min(1, { message: "Full Name is required" }),
     password: passwordSchema,
@@ -62,6 +64,7 @@ function SignUp() {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      username: "",
       email: "",
       full_name: "",
       password: "",
@@ -89,6 +92,24 @@ function SignUp() {
           </div>
 
           <div className="grid gap-4">
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input
+                      data-testid="username-input"
+                      placeholder="username"
+                      type="text"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="full_name"

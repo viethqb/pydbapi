@@ -21,39 +21,40 @@ export function FileSelect({
   onChange: (val: string) => void
   placeholder?: string
 }) {
+  const disabled = !datasourceId || !bucket
   const { data: files, isLoading } = useQuery({
     queryKey: ["minio-files", datasourceId, bucket],
     queryFn: () => ReportModuleService.listFiles(datasourceId!, bucket!),
-    enabled: !!datasourceId && !!bucket,
+    enabled: !disabled,
   })
 
-  if (!datasourceId || !bucket) {
-    return (
-      <Select disabled>
-        <SelectTrigger>
-          <SelectValue placeholder="Select bucket first" />
-        </SelectTrigger>
-      </Select>
-    )
-  }
-
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger>
-        <SelectValue placeholder={isLoading ? "Loading..." : placeholder} />
+        <SelectValue
+          placeholder={
+            disabled
+              ? "Select bucket first"
+              : isLoading
+                ? "Loading..."
+                : placeholder
+          }
+        />
       </SelectTrigger>
-      <SelectContent>
-        {(files ?? []).map((f) => (
-          <SelectItem key={f} value={f}>
-            {f}
-          </SelectItem>
-        ))}
-        {files && files.length === 0 && (
-          <SelectItem value="_none" disabled>
-            No .xlsx files found
-          </SelectItem>
-        )}
-      </SelectContent>
+      {!disabled && (
+        <SelectContent>
+          {(files ?? []).map((f) => (
+            <SelectItem key={f} value={f}>
+              {f}
+            </SelectItem>
+          ))}
+          {files && files.length === 0 && (
+            <SelectItem value="_none" disabled>
+              No .xlsx files found
+            </SelectItem>
+          )}
+        </SelectContent>
+      )}
     </Select>
   )
 }

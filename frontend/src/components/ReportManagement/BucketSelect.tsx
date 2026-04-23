@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -9,10 +8,6 @@ import {
 } from "@/components/ui/select"
 import { ReportModuleService } from "@/services/report"
 
-/**
- * Dropdown that lists MinIO buckets from a datasource.
- * Falls back to text input if datasourceId is not provided.
- */
 export function BucketSelect({
   datasourceId,
   value,
@@ -24,49 +19,40 @@ export function BucketSelect({
   onChange: (val: string) => void
   placeholder?: string
 }) {
+  const disabled = !datasourceId
   const { data: buckets, isLoading } = useQuery({
     queryKey: ["minio-buckets", datasourceId],
     queryFn: () => ReportModuleService.listBuckets(datasourceId!),
-    enabled: !!datasourceId,
+    enabled: !disabled,
   })
 
-  if (!datasourceId) {
-    return (
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <Select disabled>
-        <SelectTrigger>
-          <SelectValue placeholder="Loading buckets..." />
-        </SelectTrigger>
-      </Select>
-    )
-  }
-
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue
+          placeholder={
+            disabled
+              ? "Select datasource first"
+              : isLoading
+                ? "Loading buckets..."
+                : placeholder
+          }
+        />
       </SelectTrigger>
-      <SelectContent>
-        {(buckets ?? []).map((b) => (
-          <SelectItem key={b} value={b}>
-            {b}
-          </SelectItem>
-        ))}
-        {buckets && buckets.length === 0 && (
-          <SelectItem value="_none" disabled>
-            No buckets found
-          </SelectItem>
-        )}
-      </SelectContent>
+      {!disabled && (
+        <SelectContent>
+          {(buckets ?? []).map((b) => (
+            <SelectItem key={b} value={b}>
+              {b}
+            </SelectItem>
+          ))}
+          {buckets && buckets.length === 0 && (
+            <SelectItem value="_none" disabled>
+              No buckets found
+            </SelectItem>
+          )}
+        </SelectContent>
+      )}
     </Select>
   )
 }

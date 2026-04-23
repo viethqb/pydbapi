@@ -47,8 +47,14 @@ const createFormSchema = z.object({
   description: z.string().max(512).optional().nullable(),
   minio_datasource_id: z.string().min(1, "MinIO datasource is required"),
   sql_datasource_id: z.string().min(1, "SQL datasource is required"),
-  default_template_bucket: z.string().max(255).optional().default(""),
-  default_output_bucket: z.string().max(255).optional().default(""),
+  default_template_bucket: z
+    .string()
+    .min(1, "Default template bucket is required")
+    .max(255),
+  default_output_bucket: z
+    .string()
+    .min(1, "Default output bucket is required")
+    .max(255),
 })
 
 type CreateFormValues = z.infer<typeof createFormSchema>
@@ -115,8 +121,8 @@ function CreateReportModulePage() {
       description: data.description,
       minio_datasource_id: data.minio_datasource_id,
       sql_datasource_id: data.sql_datasource_id,
-      default_template_bucket: data.default_template_bucket || "",
-      default_output_bucket: data.default_output_bucket || "",
+      default_template_bucket: data.default_template_bucket,
+      default_output_bucket: data.default_output_bucket,
     })
   }
 
@@ -206,7 +212,7 @@ function CreateReportModulePage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead>Default Template Bucket</TableHead>
+                    <TableHead>Default Template Bucket *</TableHead>
                     <TableCell>
                       <FormField control={form.control} name="default_template_bucket" render={({ field }) => (
                         <FormItem>
@@ -219,7 +225,7 @@ function CreateReportModulePage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableHead>Default Output Bucket</TableHead>
+                    <TableHead>Default Output Bucket *</TableHead>
                     <TableCell>
                       <FormField control={form.control} name="default_output_bucket" render={({ field }) => (
                         <FormItem>

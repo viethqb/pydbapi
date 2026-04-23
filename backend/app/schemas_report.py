@@ -68,8 +68,8 @@ class ReportModuleCreate(SQLModel):
     description: str | None = Field(default=None, max_length=512)
     minio_datasource_id: uuid.UUID
     sql_datasource_id: uuid.UUID
-    default_template_bucket: str = Field(default="", max_length=255)
-    default_output_bucket: str = Field(default="", max_length=255)
+    default_template_bucket: str = Field(..., min_length=1, max_length=255)
+    default_output_bucket: str = Field(..., min_length=1, max_length=255)
 
 class ReportModuleUpdate(SQLModel):
     id: uuid.UUID

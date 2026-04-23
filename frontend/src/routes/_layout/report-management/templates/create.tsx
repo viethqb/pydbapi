@@ -68,7 +68,9 @@ function CreateTemplatePage() {
       ReportModuleService.createTemplate(form.module_id, {
         name: form.name,
         description: form.description || undefined,
+        template_bucket: selectedModule?.default_template_bucket ?? "",
         template_path: form.template_path,
+        output_bucket: selectedModule?.default_output_bucket ?? "",
         output_prefix: form.output_prefix,
         recalc_enabled: form.recalc_enabled,
         output_sheet: form.output_sheet || undefined,

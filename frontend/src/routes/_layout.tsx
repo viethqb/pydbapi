@@ -1,6 +1,7 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
 import { Footer } from "@/components/Common/Footer"
+import { RoutePermissionGuard } from "@/components/Common/RoutePermissionGuard"
 import { TopNav } from "@/components/Sidebar/TopNav"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { isLoggedIn } from "@/hooks/useAuth"
@@ -24,7 +25,7 @@ function Layout() {
         <SidebarInset>
           <main className="flex-1 p-6 md:p-8">
             <div className="mx-auto max-w-7xl">
-              <Outlet />
+              <RoutePermissionGuard />
             </div>
           </main>
           <Footer />

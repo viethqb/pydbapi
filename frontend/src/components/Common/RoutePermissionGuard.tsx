@@ -35,12 +35,9 @@ const PATH_PERMISSIONS: {
     prefix: "/system",
     permissions: ["groups:read", "clients:read", "menu:system"],
   },
-  {
-    prefix: "/",
-    exact: true,
-    permissions: ["overview:read", "menu:dashboard", "dashboard:view"],
-  },
-  // /settings and /about have no matching entry = allow any logged-in user
+  // `/`, `/settings`, `/about` have no matching entry = allow any logged-in
+  // user. Dashboard widgets fail gracefully per-widget when their API
+  // returns 403.
 ]
 
 function canAccessPath(

@@ -25,8 +25,8 @@ export type ReportModuleCreate = {
   description?: string | null
   minio_datasource_id: string
   sql_datasource_id: string
-  default_template_bucket?: string
-  default_output_bucket?: string
+  default_template_bucket: string
+  default_output_bucket: string
   is_active?: boolean
 }
 
@@ -118,6 +118,7 @@ export type ReportTemplateDetail = ReportTemplatePublic & {
 
 export type ReportTemplateCreate = {
   name: string
+  description?: string | null
   template_bucket: string
   template_path: string
   output_bucket: string

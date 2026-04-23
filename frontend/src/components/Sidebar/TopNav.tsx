@@ -84,14 +84,14 @@ export function TopNav() {
             </SheetContent>
           </Sheet>
           <RouterLink to="/" className="flex items-center flex-1">
-            <Logo variant="responsive" />
+            <Logo variant="responsive" asLink={false} />
           </RouterLink>
           <UserDropdownContent user={currentUser} />
         </>
       ) : (
         <>
           <RouterLink to="/" className="flex items-center shrink-0">
-            <Logo variant="responsive" />
+            <Logo variant="responsive" asLink={false} />
           </RouterLink>
           <nav className="flex flex-1 items-center gap-1">
             {items.map((item) => {

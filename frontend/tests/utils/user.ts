@@ -1,35 +1,50 @@
 import { expect, type Page } from "@playwright/test"
 
-export async function signUpNewUser(
+/**
+ * UI login helper for specs that need to log in as a non-superuser.
+ * `identifier` is the `username` field (backend logs in by username).
+ */
+export async function logInUser(
   page: Page,
-  name: string,
-  email: string,
+  identifier: string,
   password: string,
 ) {
-  await page.goto("/signup")
+  // Capture any console errors during login for easier debugging.
+  const errors: string[] = []
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push(m.text())
+  })
+  page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`))
 
-  await page.getByTestId("full-name-input").fill(name)
-  await page.getByTestId("email-input").fill(email)
-  await page.getByTestId("password-input").fill(password)
-  await page.getByTestId("confirm-password-input").fill(password)
-  await page.getByRole("button", { name: "Sign Up" }).click()
   await page.goto("/login")
-}
-
-export async function logInUser(page: Page, email: string, password: string) {
-  await page.goto("/login")
-
-  await page.getByTestId("email-input").fill(email)
+  await page.getByTestId("username-input").fill(identifier)
   await page.getByTestId("password-input").fill(password)
-  await page.getByRole("button", { name: "Log In" }).click()
-  await page.waitForURL("/")
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/v1/login/access-token") &&
+        r.request().method() === "POST",
+      { timeout: 15_000 },
+    ),
+    page.getByRole("button", { name: /log in/i }).click(),
+  ])
+
+  // Settle: either the dashboard heading + /users/me response is ready, or
+  // an error toast is shown.
+  try {
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+      timeout: 15_000,
+    })
+  } catch (err) {
+    const url = page.url()
+    throw new Error(
+      `logInUser: did not land on dashboard.\n  url=${url}\n  console=${errors.join(" | ")}`,
+    )
+  }
 }
 
 export async function logOutUser(page: Page) {
   await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
-  await page.goto("/login")
+  await page.getByRole("menuitem", { name: /log out/i }).click()
+  await page.waitForURL("/login")
 }
